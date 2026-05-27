@@ -24,9 +24,9 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>FacturaFlow - Generador profesional de facturas</title>
+	<title>magikalConduce - Generador profesional de facturas</title>
 </svelte:head>
 
-<div class="relative min-h-screen bg-white text-[#171717] flex flex-col">
+<div class="relative flex min-h-screen flex-col bg-white text-[#171717]">
 	{@render children()}
 </div>

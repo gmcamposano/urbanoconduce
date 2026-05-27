@@ -32,6 +32,26 @@ create table if not exists public.invoices (
 	created_at timestamptz not null default timezone('utc'::text, now())
 );
 
+create table if not exists public.products (
+	id uuid primary key default gen_random_uuid(),
+	title text not null unique,
+	description text,
+	price_without_taxes numeric not null check (price_without_taxes >= 0),
+	created_by uuid references public.profiles(id) on delete set null,
+	created_at timestamptz not null default timezone('utc'::text, now()),
+	updated_at timestamptz not null default timezone('utc'::text, now()),
+	constraint products_title_not_blank check (btrim(title) <> '')
+);
+
+create table if not exists public.product_colors (
+	id uuid primary key default gen_random_uuid(),
+	color text not null unique,
+	created_by uuid references public.profiles(id) on delete set null,
+	created_at timestamptz not null default timezone('utc'::text, now()),
+	updated_at timestamptz not null default timezone('utc'::text, now()),
+	constraint product_colors_color_not_blank check (btrim(color) <> ''),
+);
+
 create table if not exists public.clients (
 	id uuid primary key default gen_random_uuid(),
 	client_type text not null check (client_type in ('person', 'company')),
@@ -68,12 +88,20 @@ create table if not exists public.invoice_items (
 
 alter table public.profiles enable row level security;
 alter table public.invoices enable row level security;
+alter table public.products enable row level security;
+alter table public.product_colors enable row level security;
 alter table public.clients enable row level security;
 alter table public.invoice_items enable row level security;
 
 create index if not exists profiles_role_idx on public.profiles using btree (role);
 create index if not exists invoices_created_by_idx on public.invoices using btree (created_by);
 create index if not exists invoices_created_at_idx on public.invoices using btree (created_at desc);
+create index if not exists products_created_by_idx on public.products using btree (created_by);
+create index if not exists products_created_at_idx on public.products using btree (created_at desc);
+create index if not exists products_title_idx on public.products using btree (title);
+create index if not exists product_colors_created_by_idx on public.product_colors using btree (created_by);
+create index if not exists product_colors_created_at_idx on public.product_colors using btree (created_at desc);
+create index if not exists product_colors_color_idx on public.product_colors using btree (color);
 create index if not exists clients_created_by_idx on public.clients using btree (created_by);
 create index if not exists clients_created_at_idx on public.clients using btree (created_at desc);
 create index if not exists clients_client_type_idx on public.clients using btree (client_type);
@@ -150,6 +178,18 @@ before update on public.clients
 for each row
 execute function private.touch_updated_at();
 
+drop trigger if exists products_touch_updated_at on public.products;
+create trigger products_touch_updated_at
+before update on public.products
+for each row
+execute function private.touch_updated_at();
+
+drop trigger if exists product_colors_touch_updated_at on public.product_colors;
+create trigger product_colors_touch_updated_at
+before update on public.product_colors
+for each row
+execute function private.touch_updated_at();
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
@@ -158,6 +198,8 @@ execute function private.handle_new_user();
 
 grant select, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.invoices to authenticated;
+grant select, insert, update, delete on public.products to authenticated;
+grant select, insert, update, delete on public.product_colors to authenticated;
 grant select, insert, update, delete on public.clients to authenticated;
 grant select, insert, update, delete on public.invoice_items to authenticated;
 
@@ -192,6 +234,66 @@ with check (
 		and role = (select role from public.profiles where id = auth.uid())
 	)
 );
+
+drop policy if exists "Authenticated users can read products" on public.products;
+drop policy if exists "Admins and editors can insert products" on public.products;
+drop policy if exists "Admins and editors can update products" on public.products;
+drop policy if exists "Admins can delete products" on public.products;
+
+create policy "Authenticated users can read products"
+on public.products
+for select
+to authenticated
+using (true);
+
+create policy "Admins and editors can insert products"
+on public.products
+for insert
+to authenticated
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins and editors can update products"
+on public.products
+for update
+to authenticated
+using ((select private.get_user_role()) in ('admin', 'editor'))
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins can delete products"
+on public.products
+for delete
+to authenticated
+using ((select private.get_user_role()) = 'admin');
+
+drop policy if exists "Authenticated users can read product colors" on public.product_colors;
+drop policy if exists "Admins and editors can insert product colors" on public.product_colors;
+drop policy if exists "Admins and editors can update product colors" on public.product_colors;
+drop policy if exists "Admins can delete product colors" on public.product_colors;
+
+create policy "Authenticated users can read product colors"
+on public.product_colors
+for select
+to authenticated
+using (true);
+
+create policy "Admins and editors can insert product colors"
+on public.product_colors
+for insert
+to authenticated
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins and editors can update product colors"
+on public.product_colors
+for update
+to authenticated
+using ((select private.get_user_role()) in ('admin', 'editor'))
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins can delete product colors"
+on public.product_colors
+for delete
+to authenticated
+using ((select private.get_user_role()) = 'admin');
 
 drop policy if exists "Authenticated users can read clients" on public.clients;
 drop policy if exists "Admins and editors can insert clients" on public.clients;

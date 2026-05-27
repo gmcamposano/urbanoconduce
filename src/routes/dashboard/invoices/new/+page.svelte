@@ -9,22 +9,16 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import { SvelteDate } from 'svelte/reactivity';
-	import { 
-		Plus, 
-		Trash2, 
-		ArrowLeft, 
-		Calculator, 
-		FileText,
-		Save,
-		DollarSign
-	} from '@lucide/svelte';
+	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign } from '@lucide/svelte';
 
 	let { data, form } = $props();
+
+	const products = $derived(data.products || []);
 
 	// Set up date defaults
 	const today = new SvelteDate();
 	const formattedToday = today.toISOString().split('T')[0];
-	
+
 	const thirtyDaysLater = new SvelteDate(today);
 	thirtyDaysLater.setDate(today.getDate() + 30);
 	const formattedDue = thirtyDaysLater.toISOString().split('T')[0];
@@ -41,34 +35,39 @@
 	let discountAmount = $state<number>(0);
 
 	// Line items state
-	let items = $state<Array<{ id: string; description: string; quantity: number; unit_price: number }>>([
-		{ id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0 }
-	]);
+	let items = $state<
+		Array<{ id: string; product_id: string; quantity: number; unit_price: number }>
+	>([{ id: crypto.randomUUID(), product_id: '', quantity: 1, unit_price: 0 }]);
 
 	let loading = $state(false);
 
 	// Subtotal calculations (derived)
 	const subtotal = $derived(
-		items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0)
-	);
-	
-	const taxAmount = $derived(
-		subtotal * ((Number(taxRate) || 0) / 100)
+		items.reduce(
+			(sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
+			0
+		)
 	);
 
-	const totalAmount = $derived(
-		Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0))
-	);
+	const taxAmount = $derived(subtotal * ((Number(taxRate) || 0) / 100));
+
+	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0)));
 
 	// Helpers to add or remove line items
 	function addItem() {
-		items.push({ id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0 });
+		items.push({ id: crypto.randomUUID(), product_id: '', quantity: 1, unit_price: 0 });
 	}
 
 	function removeItem(id: string) {
 		if (items.length > 1) {
 			items = items.filter((item) => item.id !== id);
 		}
+	}
+
+	function applyProductToItem(item: { product_id: string; unit_price: number }, productId: string) {
+		item.product_id = productId;
+		const product = products.find((entry) => entry.id === productId);
+		item.unit_price = Number(product?.price_without_taxes || 0);
 	}
 
 	// Formatter helper
@@ -81,10 +80,13 @@
 	<title>Nueva factura - FacturaFlow</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start text-[#171717]">
+<div class="mx-auto flex max-w-4xl flex-1 flex-col justify-start space-y-6 text-[#171717]">
 	<!-- Top back navigation link -->
 	<div>
-		<a href={resolve('/dashboard')} class="inline-flex items-center gap-1.5 text-xs text-[#707070] hover:text-[#171717] font-medium transition-colors duration-200">
+		<a
+			href={resolve('/dashboard')}
+			class="inline-flex items-center gap-1.5 text-xs font-medium text-[#707070] transition-colors duration-200 hover:text-[#171717]"
+		>
 			<ArrowLeft class="h-3.5 w-3.5" />
 			Volver al panel
 		</a>
@@ -92,22 +94,37 @@
 
 	<!-- Header Title -->
 	<div class="border-b border-[#ededed] pb-4">
-		<h1 class="text-2xl font-medium text-[#171717] tracking-tight flex items-center gap-2">
+		<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
 			<FileText class="h-6 w-6 text-[#3ecf8e]" />
 			Crear nueva factura
 		</h1>
-		<p class="text-[#707070] text-xs mt-0.5">Completa los datos del cliente, los conceptos y los impuestos para emitir la factura.</p>
+		<p class="mt-0.5 text-xs text-[#707070]">
+			Completa los datos del cliente, selecciona productos y ajusta impuestos para emitir la
+			factura.
+		</p>
 	</div>
 
 	<!-- Error Banner -->
 	{#if form?.error}
-		<div class="bg-[#e2005a]/10 border border-[#e2005a]/20 p-4 rounded-xl text-sm text-[#e2005a] flex items-start gap-2.5 shadow-sm">
-			<svg class="h-5 w-5 text-[#e2005a] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+		>
+			<svg
+				class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+				/>
 			</svg>
 			<div>
 				<p class="font-medium">No se pudo publicar la factura</p>
-				<p class="text-xs text-[#707070] mt-0.5">{form.error}</p>
+				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
 			</div>
 		</div>
 	{/if}
@@ -132,7 +149,7 @@
 			<CardHeader>
 				<CardTitle>1. Datos principales de la factura</CardTitle>
 			</CardHeader>
-			<CardContent class="grid grid-cols-1 md:grid-cols-3 gap-5">
+			<CardContent class="grid grid-cols-1 gap-5 md:grid-cols-3">
 				<Input
 					label="ID / número de factura"
 					name="invoice_number"
@@ -141,16 +158,10 @@
 					required
 					disabled={loading}
 				/>
-				
-				<Select
-					label="Estado"
-					name="status"
-					bind:value={status}
-					required
-					disabled={loading}
-				>
-						<option value="pending">Pendiente de aprobación</option>
-						<option value="draft">Borrador (sin enviar)</option>
+
+				<Select label="Estado" name="status" bind:value={status} required disabled={loading}>
+					<option value="pending">Pendiente de aprobación</option>
+					<option value="draft">Borrador (sin enviar)</option>
 				</Select>
 
 				<Input
@@ -194,7 +205,7 @@
 
 		<!-- Line Items Card -->
 		<Card>
-			<CardHeader class="flex flex-row justify-between items-center">
+			<CardHeader class="flex flex-row items-center justify-between">
 				<CardTitle>2. Conceptos de cobro</CardTitle>
 				<Button
 					type="button"
@@ -209,29 +220,41 @@
 				</Button>
 			</CardHeader>
 			<CardContent class="p-0">
-				<div class="overflow-x-auto w-full">
-			<table class="w-full text-sm text-left text-[#171717]">
-				<thead class="text-xs uppercase bg-[#fafafa] text-[#707070] border-b border-[#ededed] tracking-wider">
+				{#if !products.length}
+					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+						No hay productos disponibles. Crea al menos uno en la sección Productos.
+					</div>
+				{/if}
+				<div class="w-full overflow-x-auto">
+					<table class="w-full text-left text-sm text-[#171717]">
+						<thead
+							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+						>
 							<tr>
-								<th class="px-6 py-3 font-semibold w-1/2">Descripción</th>
-								<th class="px-6 py-3 font-semibold w-1/6">Cant.</th>
-								<th class="px-6 py-3 font-semibold w-1/6">Precio unitario</th>
-								<th class="px-6 py-3 font-semibold w-1/6">Total</th>
-								<th class="px-6 py-3 font-semibold text-right w-10"></th>
+								<th class="w-1/2 px-6 py-3 font-semibold">Producto</th>
+								<th class="w-1/6 px-6 py-3 font-semibold">Cant.</th>
+								<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
+								<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
+								<th class="w-10 px-6 py-3 text-right font-semibold"></th>
 							</tr>
 						</thead>
-				<tbody class="divide-y divide-[#ededed]">
+						<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
-							<tr class="hover:bg-[#fafafa]">
+								<tr class="hover:bg-[#fafafa]">
 									<td class="px-6 py-3">
-										<input
-											type="text"
-											required
-												placeholder="Descripción del concepto (ej. asesoría web)"
-											bind:value={item.description}
-											disabled={loading}
-							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
-						/>
+										<Select
+											label=""
+											name="product"
+											bind:value={item.product_id}
+											disabled={loading || !products.length}
+											onchange={(event) => applyProductToItem(item, event.currentTarget.value)}
+											class="text-xs"
+										>
+											<option value="">Selecciona un producto</option>
+											{#each products as product (product.id)}
+												<option value={product.id}>{product.title}</option>
+											{/each}
+										</Select>
 									</td>
 									<td class="px-6 py-3">
 										<input
@@ -241,8 +264,8 @@
 											step="any"
 											bind:value={item.quantity}
 											disabled={loading}
-							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] text-center font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
-						/>
+											class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-center font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+										/>
 									</td>
 									<td class="px-6 py-3">
 										<input
@@ -251,11 +274,12 @@
 											min="0"
 											step="any"
 											bind:value={item.unit_price}
+											readonly
 											disabled={loading}
-							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] text-right font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
-						/>
+											class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-right font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+										/>
 									</td>
-								<td class="px-6 py-3 text-right font-mono text-[#707070] text-xs">
+									<td class="px-6 py-3 text-right font-mono text-xs text-[#707070]">
 										{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
 									</td>
 									<td class="px-6 py-3 text-right">
@@ -263,7 +287,7 @@
 											type="button"
 											variant="ghost"
 											size="icon"
-							class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
+											class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
 											disabled={items.length <= 1 || loading}
 											onclick={() => removeItem(item.id)}
 										>
@@ -279,15 +303,19 @@
 		</Card>
 
 		<!-- Bottom Calculation / Settings Grid -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+		<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 			<!-- Notes Card -->
 			<Card>
 				<CardHeader>
-				<CardTitle>3. Términos y notas</CardTitle>
+					<CardTitle>3. Términos y notas</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div class="flex flex-col gap-1.5">
-				<label for="notes" class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">Términos / notas de la factura</label>
+						<label
+							for="notes"
+							class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
+							>Términos / notas de la factura</label
+						>
 						<textarea
 							id="notes"
 							name="notes"
@@ -295,7 +323,7 @@
 							bind:value={notes}
 							placeholder="Gracias por su preferencia. El pago vence en 30 días mediante transferencia bancaria."
 							disabled={loading}
-					class="w-full bg-white border border-[#dfdfdf] rounded-[6px] p-3 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e] resize-none transition-colors duration-200"
+							class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 						></textarea>
 					</div>
 				</CardContent>
@@ -303,16 +331,18 @@
 
 			<!-- Summary Pricing Card -->
 			<Card class="relative overflow-hidden">
-				<div class="absolute top-0 right-0 h-32 w-32 bg-[#3ecf8e]/10 blur-[50px] rounded-full pointer-events-none"></div>
+				<div
+					class="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-[#3ecf8e]/10 blur-[50px]"
+				></div>
 				<CardHeader>
 					<CardTitle class="flex items-center gap-1.5">
-					<Calculator class="h-4.5 w-4.5 text-[#24b47e]" />
-							Resumen y totales
+						<Calculator class="h-4.5 w-4.5 text-[#24b47e]" />
+						Resumen y totales
 					</CardTitle>
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<!-- Tax & Discount inputs -->
-				<div class="grid grid-cols-2 gap-4 border-b border-[#ededed] pb-4">
+					<div class="grid grid-cols-2 gap-4 border-b border-[#ededed] pb-4">
 						<Input
 							label="Impuesto (%)"
 							name="tax_rate"
@@ -322,7 +352,7 @@
 							bind:value={taxRate}
 							disabled={loading}
 						/>
-						
+
 						<Input
 							label="Descuento ($)"
 							name="discount_amount"
@@ -338,18 +368,20 @@
 					<div class="space-y-2 text-sm text-[#707070]">
 						<div class="flex justify-between">
 							<span>Subtotal</span>
-							<span class="font-mono text-[#171717] font-medium">{formatCurrency(subtotal)}</span>
+							<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 						</div>
 						<div class="flex justify-between">
 							<span>Impuesto ({taxRate || 0}%)</span>
-							<span class="font-mono text-[#171717] font-medium">{formatCurrency(taxAmount)}</span>
+							<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
 						</div>
 						<div class="flex justify-between">
 							<span>Descuento</span>
-							<span class="font-mono text-[#171717] font-medium">-{formatCurrency(discountAmount || 0)}</span>
+							<span class="font-mono font-medium text-[#171717]"
+								>-{formatCurrency(discountAmount || 0)}</span
+							>
 						</div>
-						
-						<div class="flex justify-between text-base font-medium pt-2 border-t border-[#ededed]">
+
+						<div class="flex justify-between border-t border-[#ededed] pt-2 text-base font-medium">
 							<span class="flex items-center gap-1 text-[#24b47e]">
 								<DollarSign class="h-4.5 w-4.5" />
 								Total a pagar
@@ -364,22 +396,18 @@
 		<!-- Submit Buttons -->
 		<div class="flex justify-end gap-3 border-t border-[#ededed] pt-6">
 			<a href={resolve('/dashboard')}>
-				<Button variant="outline" disabled={loading}>
-							Cancelar
-				</Button>
+				<Button variant="outline" disabled={loading}>Cancelar</Button>
 			</a>
-			
-			<Button
-				type="submit"
-				disabled={loading}
-				class="flex items-center gap-1.5"
-			>
+
+			<Button type="submit" disabled={loading} class="flex items-center gap-1.5">
 				{#if loading}
-						<div class="h-4 w-4 border-2 border-[#171717]/20 border-t-[#171717] rounded-full animate-spin"></div>
-							Guardando factura...
+					<div
+						class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"
+					></div>
+					Guardando factura...
 				{:else}
 					<Save class="h-4 w-4" />
-							Guardar factura
+					Guardar factura
 				{/if}
 			</Button>
 		</div>

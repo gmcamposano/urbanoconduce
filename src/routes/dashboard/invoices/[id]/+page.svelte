@@ -51,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>{invoice?.invoice_number || 'Factura'} - FacturaFlow</title>
+	<title>{invoice?.invoice_number || 'Factura'} - magikalConduce</title>
 </svelte:head>
 
 {#if invoice}
@@ -168,19 +168,19 @@
 					<!-- Header Section -->
 					<div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b pb-8 print-border border-[#ededed]">
 						<!-- Company Details -->
-						<div>
-							<div class="flex items-center gap-2 mb-3">
-								<div class="bg-[#3ecf8e] p-2 rounded-[6px] border border-[#24b47e] text-[#171717]">
-									<FileText class="h-5 w-5" />
-								</div>
-								<span class="font-medium text-xl tracking-tight text-[#171717]">FacturaFlow</span>
+					<div>
+						<div class="flex items-center gap-2 mb-3">
+							<div class="bg-[#3ecf8e] p-2 rounded-[6px] border border-[#24b47e] text-[#171717]">
+								<FileText class="h-5 w-5" />
 							</div>
-							<p class="text-xs text-[#707070] font-medium leading-relaxed">
-								FacturaFlow Servicios SRL<br/>
-								Avenida Tecnológica 100, Oficina 400<br/>
-								Santo Domingo, República Dominicana<br/>
-								facturacion@facturaflow.com
-							</p>
+							<span class="font-medium text-xl tracking-tight text-[#171717]">FacturaFlow</span>
+						</div>
+						<p class="text-xs text-[#707070] font-medium leading-relaxed">
+							FacturaFlow Servicios SRL<br/>
+							Avenida Tecnológica 100, Oficina 400<br/>
+							Santo Domingo, República Dominicana<br/>
+							facturacion@facturaflow.com
+						</p>
 						</div>
 
 						<!-- Bill statement IDs -->

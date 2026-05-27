@@ -11,7 +11,9 @@ You are able to use the Svelte MCP server, where you have access to comprehensiv
 # Very important:
 
 1. Always after creating a migration you must push the migration to supabase. Always use mcp supabase-dev first until the user has verified it works great. If he says its OK, we then push to production.
-2. Always verify that we are following design rules `DESIGN.md`
+2. You should ask if user wants to commit and push after changes are done. If answer is yes then suggest a commit title and message.
+3. Always verify that we are following design rules `DESIGN.md`
+4. After pushing to production we should check databases are in sync. Both supabase-dev and supabse-prod.
 
 ## Available Svelte MCP Tools:
 
