@@ -16,13 +16,23 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.select('id, title, price_without_taxes')
 		.order('title', { ascending: true });
 
+	const { data: colors, error: colorsError } = await locals.supabase
+		.from('product_colors')
+		.select('id, color')
+		.order('color', { ascending: true });
+
 	if (productsError) {
 		console.error('Supabase query error in invoice load products:', productsError.message);
 	}
 
+	if (colorsError) {
+		console.error('Supabase query error in invoice load colors:', colorsError.message);
+	}
+
 	return {
 		invoiceNumberPreview,
-		products: products || []
+		products: products || [],
+		colors: colors || []
 	};
 };
 
@@ -41,7 +51,8 @@ export const actions: Actions = {
 		const dueDate = formData.get('due_date') as string;
 		const status = formData.get('status') as string;
 		const notes = formData.get('notes') as string;
-		const taxRate = Number(formData.get('tax_rate') || 0);
+		const includeTax = formData.get('include_tax') === 'true';
+		const taxRate = includeTax ? 18 : 0;
 		const discountAmount = Number(formData.get('discount_amount') || 0);
 		const itemsJson = formData.get('items') as string;
 
@@ -49,7 +60,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
 		}
 
-		let items: Array<{ product_id: string; quantity: number }> = [];
+		let items: Array<{ product_id: string; color: string; quantity: number }> = [];
 		try {
 			items = JSON.parse(itemsJson || '[]');
 		} catch {
@@ -65,6 +76,22 @@ export const actions: Actions = {
 			return fail(400, { error: 'Debes seleccionar al menos un producto válido.' });
 		}
 
+		const selectedColors = [...new Set(items.map((item) => (item.color || '').trim().toLowerCase()).filter(Boolean))];
+		if (selectedColors.length === 0) {
+			const { data: existingColors, error: existingColorsError } = await locals.supabase
+				.from('product_colors')
+				.select('id')
+				.limit(1);
+
+			if (existingColorsError) {
+				return fail(400, { error: existingColorsError.message });
+			}
+
+			if ((existingColors || []).length > 0) {
+				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
+			}
+		}
+
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')
 			.select('id, title, price_without_taxes')
@@ -74,20 +101,42 @@ export const actions: Actions = {
 			return fail(400, { error: productsError.message });
 		}
 
+		if (selectedColors.length > 0) {
+			const { data: colors, error: colorsError } = await locals.supabase
+				.from('product_colors')
+				.select('color')
+				.in('color', selectedColors);
+
+			if (colorsError) {
+				return fail(400, { error: colorsError.message });
+			}
+
+			const availableColors = new Set((colors || []).map((color) => color.color));
+			if (selectedColors.some((color) => !availableColors.has(color))) {
+				return fail(400, { error: 'Los conceptos deben tener un color válido.' });
+			}
+		}
+
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
-		const normalizedItems: Array<{ description: string; quantity: number; unit_price: number; amount: number }> = [];
+		const normalizedItems: Array<{ description: string; color: string | null; quantity: number; unit_price: number; amount: number }> = [];
 
 		for (const item of items) {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
+			const color = (item.color || '').trim().toLowerCase();
 
 			if (!product || quantity <= 0) {
 				return fail(400, { error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.' });
 			}
 
+			if (selectedColors.length > 0 && !color) {
+				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
+			}
+
 			const unitPrice = Number(product.price_without_taxes);
 			normalizedItems.push({
 				description: product.title,
+				color: color || null,
 				quantity,
 				unit_price: unitPrice,
 				amount: quantity * unitPrice
@@ -124,6 +173,7 @@ export const actions: Actions = {
 			const invoiceItemsData = normalizedItems.map((item) => ({
 				invoice_id: invoice.id,
 				description: item.description,
+				color: item.color,
 				quantity: item.quantity,
 				unit_price: item.unit_price,
 				amount: item.amount

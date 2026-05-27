@@ -22,7 +22,15 @@
 		class: className = '',
 		...rest
 	}: Props = $props();
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			onClose?.();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={open ? handleKeydown : undefined} />
 
 {#if open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm" role="presentation" onclick={() => onClose?.()}>

@@ -254,11 +254,18 @@
 							</thead>
 					<tbody class="divide-y print-border divide-[#ededed]">
 								{#each items as item (item.id ?? item.description)}
-						<tr class="text-[#171717]">
-							<td class="py-4 font-medium text-[#171717]">{item.description}</td>
-							<td class="py-4 text-center font-mono text-[#707070]">{Number(item.quantity)}</td>
-							<td class="py-4 text-right font-mono text-[#707070]">{formatCurrency(Number(item.unit_price))}</td>
-							<td class="py-4 text-right font-mono text-[#171717] font-medium">{formatCurrency(Number(item.amount))}</td>
+							<tr class="text-[#171717]">
+								<td class="py-4">
+									<div class="space-y-1">
+										<p class="font-medium text-[#171717]">{item.description}</p>
+										{#if item.color}
+											<Badge variant="outline" class="capitalize">{item.color}</Badge>
+										{/if}
+									</div>
+								</td>
+								<td class="py-4 text-center font-mono text-[#707070]">{Number(item.quantity)}</td>
+								<td class="py-4 text-right font-mono text-[#707070]">{formatCurrency(Number(item.unit_price))}</td>
+								<td class="py-4 text-right font-mono text-[#171717] font-medium">{formatCurrency(Number(item.amount))}</td>
 									</tr>
 								{/each}
 							</tbody>

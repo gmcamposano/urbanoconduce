@@ -14,6 +14,8 @@
 	let { data, form } = $props();
 
 	const products = $derived(data.products || []);
+	const colors = $derived(data.colors || []);
+	const defaultColor = $derived(colors[0]?.color ?? '');
 
 	// Set up date defaults
 	const today = new SvelteDate();
@@ -31,13 +33,23 @@
 	let dueDate = $state(formattedDue);
 	let status = $state<'draft' | 'pending'>('pending');
 	let notes = $state('');
-	let taxRate = $state<number>(0);
+	let includeTax = $state(false);
 	let discountAmount = $state<number>(0);
 
 	// Line items state
+	function createItem() {
+		return {
+			id: crypto.randomUUID(),
+			product_id: '',
+			color: defaultColor,
+			quantity: 1,
+			unit_price: 0
+		};
+	}
+
 	let items = $state<
-		Array<{ id: string; product_id: string; quantity: number; unit_price: number }>
-	>([{ id: crypto.randomUUID(), product_id: '', quantity: 1, unit_price: 0 }]);
+		Array<{ id: string; product_id: string; color: string; quantity: number; unit_price: number }>
+	>([createItem()]);
 
 	let loading = $state(false);
 
@@ -49,13 +61,14 @@
 		)
 	);
 
-	const taxAmount = $derived(subtotal * ((Number(taxRate) || 0) / 100));
+	const taxRate = $derived(includeTax ? 18 : 0);
+	const taxAmount = $derived(subtotal * (taxRate / 100));
 
 	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0)));
 
 	// Helpers to add or remove line items
 	function addItem() {
-		items.push({ id: crypto.randomUUID(), product_id: '', quantity: 1, unit_price: 0 });
+		items.push(createItem());
 	}
 
 	function removeItem(id: string) {
@@ -64,7 +77,10 @@
 		}
 	}
 
-	function applyProductToItem(item: { product_id: string; unit_price: number }, productId: string) {
+	function applyProductToItem(
+		item: { product_id: string; unit_price: number },
+		productId: string
+	) {
 		item.product_id = productId;
 		const product = products.find((entry) => entry.id === productId);
 		item.unit_price = Number(product?.price_without_taxes || 0);
@@ -219,46 +235,67 @@
 					Añadir fila
 				</Button>
 			</CardHeader>
-			<CardContent class="p-0">
-				{#if !products.length}
-					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
-						No hay productos disponibles. Crea al menos uno en la sección Productos.
-					</div>
-				{/if}
-				<div class="w-full overflow-x-auto">
-					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
-								<th class="w-1/2 px-6 py-3 font-semibold">Producto</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Cant.</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
-								<th class="w-10 px-6 py-3 text-right font-semibold"></th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[#ededed]">
-							{#each items as item (item.id)}
-								<tr class="hover:bg-[#fafafa]">
-									<td class="px-6 py-3">
-										<Select
-											label=""
-											name="product"
-											bind:value={item.product_id}
-											disabled={loading || !products.length}
-											onchange={(event) => applyProductToItem(item, event.currentTarget.value)}
-											class="text-xs"
-										>
-											<option value="">Selecciona un producto</option>
-											{#each products as product (product.id)}
-												<option value={product.id}>{product.title}</option>
-											{/each}
-										</Select>
-									</td>
-									<td class="px-6 py-3">
-										<input
-											type="number"
+		<CardContent class="p-0">
+			{#if !products.length}
+				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+					No hay productos disponibles. Crea al menos uno en la sección Productos.
+				</div>
+			{/if}
+			{#if !colors.length}
+				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+					No hay colores disponibles. Crea al menos uno en la sección Colores.
+				</div>
+			{/if}
+			<div class="w-full overflow-x-auto">
+				<table class="w-full text-left text-sm text-[#171717]">
+					<thead
+						class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+					>
+						<tr>
+							<th class="w-1/3 px-6 py-3 font-semibold">Producto</th>
+							<th class="w-1/6 px-6 py-3 font-semibold">Color</th>
+							<th class="w-1/12 px-6 py-3 font-semibold">Cant.</th>
+							<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
+							<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
+							<th class="w-10 px-6 py-3 text-right font-semibold"></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[#ededed]">
+						{#each items as item (item.id)}
+							<tr class="hover:bg-[#fafafa]">
+								<td class="px-6 py-3">
+									<Select
+										label=""
+										name="product"
+										bind:value={item.product_id}
+										disabled={loading || !products.length}
+										onchange={(event) => applyProductToItem(item, event.currentTarget.value)}
+										class="text-xs"
+									>
+										<option value="">Selecciona un producto</option>
+										{#each products as product (product.id)}
+											<option value={product.id}>{product.title}</option>
+										{/each}
+									</Select>
+								</td>
+								<td class="px-6 py-3">
+									<Select
+										label=""
+										name="color"
+										bind:value={item.color}
+										disabled={loading || !colors.length}
+										required={colors.length > 0}
+										class="text-xs capitalize"
+									>
+										<option value="">{colors.length ? 'Selecciona un color' : 'No hay colores disponibles'}</option>
+										{#each colors as color (color.id)}
+											<option value={color.color}>{color.color}</option>
+										{/each}
+									</Select>
+								</td>
+								<td class="px-6 py-3">
+									<input
+										type="number"
 											required
 											min="1"
 											step="any"
@@ -342,16 +379,18 @@
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<!-- Tax & Discount inputs -->
-					<div class="grid grid-cols-2 gap-4 border-b border-[#ededed] pb-4">
-						<Input
-							label="Impuesto (%)"
-							name="tax_rate"
-							type="number"
-							min="0"
-							step="any"
-							bind:value={taxRate}
-							disabled={loading}
-						/>
+					<div class="grid grid-cols-1 gap-4 border-b border-[#ededed] pb-4 md:grid-cols-2">
+						<label class="flex items-center gap-3 rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717]">
+							<input
+								type="checkbox"
+								name="include_tax"
+								value="true"
+								bind:checked={includeTax}
+								disabled={loading}
+								class="h-4 w-4 rounded border-[#c7c7c7] accent-[#3ecf8e]"
+							/>
+							<span class="text-sm font-medium">Incluir impuesto 18%</span>
+						</label>
 
 						<Input
 							label="Descuento ($)"
@@ -371,7 +410,7 @@
 							<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 						</div>
 						<div class="flex justify-between">
-							<span>Impuesto ({taxRate || 0}%)</span>
+							<span>Impuesto ({taxRate}%)</span>
 							<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
 						</div>
 						<div class="flex justify-between">
