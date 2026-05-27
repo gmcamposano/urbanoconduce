@@ -238,6 +238,7 @@
 					{#if dev}
 						<Select label="Rol del sistema" name="role" required disabled={loading}>
 							<option value="viewer">Lector (solo lectura)</option>
+							<option value="moderator">Moderador (editar y borrar)</option>
 							<option value="editor">Editor (crear y editar)</option>
 							<option value="admin">Administrador (control total)</option>
 						</Select>

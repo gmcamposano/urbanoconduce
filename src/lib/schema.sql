@@ -12,7 +12,7 @@ create table if not exists public.profiles (
 	id uuid primary key references auth.users on delete cascade,
 	email text not null,
 	name text,
-	role text not null default 'viewer' check (role in ('admin', 'editor', 'viewer')),
+	role text not null default 'viewer' check (role in ('admin', 'editor', 'moderator', 'viewer')),
 	updated_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -80,6 +80,7 @@ create table if not exists public.invoice_items (
 	id uuid primary key default gen_random_uuid(),
 	invoice_id uuid not null references public.invoices(id) on delete cascade,
 	description text not null,
+	color text,
 	quantity numeric not null check (quantity > 0),
 	unit_price numeric not null check (unit_price >= 0),
 	amount numeric not null,
@@ -143,6 +144,7 @@ begin
 	chosen_role := case new.raw_user_meta_data->>'role'
 		when 'admin' then 'admin'
 		when 'editor' then 'editor'
+		when 'moderator' then 'moderator'
 		else 'viewer'
 	end;
 
@@ -240,35 +242,43 @@ drop policy if exists "Admins and editors can insert products" on public.product
 drop policy if exists "Admins and editors can update products" on public.products;
 drop policy if exists "Admins can delete products" on public.products;
 
+drop policy if exists "Admins, editors, and moderators can insert products" on public.products;
+drop policy if exists "Admins, editors, and moderators can update products" on public.products;
+drop policy if exists "Admins, editors, and moderators can delete products" on public.products;
+
 create policy "Authenticated users can read products"
 on public.products
 for select
 to authenticated
 using (true);
 
-create policy "Admins and editors can insert products"
+create policy "Admins, editors, and moderators can insert products"
 on public.products
 for insert
 to authenticated
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins and editors can update products"
+create policy "Admins, editors, and moderators can update products"
 on public.products
 for update
 to authenticated
-using ((select private.get_user_role()) in ('admin', 'editor'))
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'))
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins can delete products"
+create policy "Admins, editors, and moderators can delete products"
 on public.products
 for delete
 to authenticated
-using ((select private.get_user_role()) = 'admin');
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
 drop policy if exists "Authenticated users can read product colors" on public.product_colors;
 drop policy if exists "Admins and editors can insert product colors" on public.product_colors;
 drop policy if exists "Admins and editors can update product colors" on public.product_colors;
 drop policy if exists "Admins can delete product colors" on public.product_colors;
+
+drop policy if exists "Admins, editors, and moderators can insert product colors" on public.product_colors;
+drop policy if exists "Admins, editors, and moderators can update product colors" on public.product_colors;
+drop policy if exists "Admins, editors, and moderators can delete product colors" on public.product_colors;
 
 create policy "Authenticated users can read product colors"
 on public.product_colors
@@ -276,29 +286,33 @@ for select
 to authenticated
 using (true);
 
-create policy "Admins and editors can insert product colors"
+create policy "Admins, editors, and moderators can insert product colors"
 on public.product_colors
 for insert
 to authenticated
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins and editors can update product colors"
+create policy "Admins, editors, and moderators can update product colors"
 on public.product_colors
 for update
 to authenticated
-using ((select private.get_user_role()) in ('admin', 'editor'))
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'))
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins can delete product colors"
+create policy "Admins, editors, and moderators can delete product colors"
 on public.product_colors
 for delete
 to authenticated
-using ((select private.get_user_role()) = 'admin');
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
 drop policy if exists "Authenticated users can read clients" on public.clients;
 drop policy if exists "Admins and editors can insert clients" on public.clients;
 drop policy if exists "Admins and editors can update clients" on public.clients;
 drop policy if exists "Admins can delete clients" on public.clients;
+
+drop policy if exists "Admins, editors, and moderators can insert clients" on public.clients;
+drop policy if exists "Admins, editors, and moderators can update clients" on public.clients;
+drop policy if exists "Admins, editors, and moderators can delete clients" on public.clients;
 
 create policy "Authenticated users can read clients"
 on public.clients
@@ -306,24 +320,24 @@ for select
 to authenticated
 using (true);
 
-create policy "Admins and editors can insert clients"
+create policy "Admins, editors, and moderators can insert clients"
 on public.clients
 for insert
 to authenticated
-with check (true);
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins and editors can update clients"
+create policy "Admins, editors, and moderators can update clients"
 on public.clients
 for update
 to authenticated
-using ((select private.get_user_role()) in ('admin', 'editor'))
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'))
+with check ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
-create policy "Admins can delete clients"
+create policy "Admins, editors, and moderators can delete clients"
 on public.clients
 for delete
 to authenticated
-using ((select private.get_user_role()) = 'admin');
+using ((select private.get_user_role()) in ('admin', 'editor', 'moderator'));
 
 drop policy if exists "Allow authenticated users to read all invoices" on public.invoices;
 drop policy if exists "Allow admins and editors to insert invoices" on public.invoices;

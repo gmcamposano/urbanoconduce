@@ -6,13 +6,30 @@
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import { Palette, Droplets } from '@lucide/svelte';
+	import { Droplets, Edit3, Palette, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
+	const profile = $derived(data.profile);
+	const canManage = $derived(
+		profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'moderator'
+	);
 	const colors = $derived(data.colors || []);
 
 	let loading = $state(false);
+	let deleteLoadingId = $state<string | null>(null);
+	let editingColor = $state<{ id: string; color: string } | null>(null);
+	let color = $state('');
+
+	function startEditing(item: (typeof colors)[number]) {
+		editingColor = item;
+		color = item.color;
+	}
+
+	function resetForm() {
+		editingColor = null;
+		color = '';
+	}
 </script>
 
 <svelte:head>
@@ -42,7 +59,7 @@
 		<div class="bg-[#3ecf8e]/12 border border-[#3ecf8e]/25 p-4 rounded-xl text-sm text-[#171717] flex items-start gap-2.5 shadow-sm">
 			<Droplets class="h-5 w-5 flex-shrink-0 mt-0.5 text-[#24b47e]" />
 			<div>
-				<p class="font-medium">Color guardado</p>
+				<p class="font-medium">{form.message || 'Color guardado'}</p>
 				<p class="text-xs text-[#707070] mt-0.5">Ya está disponible para productos.</p>
 			</div>
 		</div>
@@ -51,26 +68,34 @@
 	<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 		<Card class="xl:col-span-1">
 			<CardHeader>
-				<CardTitle>Nuevo color</CardTitle>
+				<CardTitle>{editingColor ? 'Editar color' : 'Nuevo color'}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form
-					action="?/createColor"
+					action={editingColor ? '?/updateColor' : '?/createColor'}
 					method="POST"
 					class="space-y-4"
 					use:enhance={() => {
 						loading = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
 							loading = false;
+							if (result.type === 'success') {
+								resetForm();
+							}
 							await update();
 						};
 					}}
 				>
+					{#if editingColor}
+						<input type="hidden" name="id" value={editingColor.id} />
+					{/if}
+
 					<Input
 						label="Color"
 						name="color"
 						type="text"
 						placeholder="Azul, ciruela, verde oliva"
+						bind:value={color}
 						class="capitalize"
 						required
 						disabled={loading}
@@ -81,7 +106,14 @@
 						<p>Escribe el nombre del color manualmente, por ejemplo azul o ciruela.</p>
 					</div>
 
-					<Button type="submit" class="w-full" disabled={loading}>Guardar color</Button>
+					<div class="flex gap-3">
+						<Button type="submit" class="flex-1" disabled={loading}>
+							{editingColor ? 'Actualizar color' : 'Guardar color'}
+						</Button>
+						{#if editingColor}
+							<Button type="button" variant="outline" disabled={loading} onclick={resetForm}>Cancelar</Button>
+						{/if}
+					</div>
 				</form>
 			</CardContent>
 		</Card>
@@ -97,18 +129,59 @@
 							<tr>
 								<th class="px-6 py-4 font-bold w-16">#</th>
 								<th class="px-6 py-4 font-bold">Color</th>
+								{#if canManage}
+									<th class="px-6 py-4 font-bold text-right">Acciones</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#if colors.length === 0}
 								<tr>
-									<td colspan="2" class="px-6 py-12 text-center text-[#707070] text-xs">Aún no hay colores registrados.</td>
+									<td colspan={canManage ? 3 : 2} class="px-6 py-12 text-center text-[#707070] text-xs">Aún no hay colores registrados.</td>
 								</tr>
 							{:else}
 								{#each colors as item, index (item.id)}
 									<tr class="hover:bg-[#fafafa] transition-colors duration-150">
 										<td class="px-6 py-4 font-mono text-xs text-[#707070]">{index + 1}</td>
-						<td class="px-6 py-4 text-xs text-[#171717] capitalize">{item.color}</td>
+										<td class="px-6 py-4 text-xs text-[#171717] capitalize">{item.color}</td>
+										{#if canManage}
+											<td class="px-6 py-4 text-right whitespace-nowrap">
+												<div class="flex items-center justify-end gap-1.5">
+													<Button variant="ghost" size="icon" class="h-8 w-8 text-[#707070] hover:text-[#171717]" title="Editar color" onclick={() => startEditing(item)}>
+														<Edit3 class="h-4 w-4" />
+													</Button>
+													<form
+														action="?/deleteColor"
+														method="POST"
+														class="contents"
+														use:enhance={() => {
+															deleteLoadingId = item.id;
+															return async ({ update }) => {
+																deleteLoadingId = null;
+																await update();
+															};
+														}}
+													>
+														<input type="hidden" name="id" value={item.id} />
+														<Button
+															type="submit"
+															variant="ghost"
+															size="icon"
+															class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
+															title="Borrar color"
+															disabled={deleteLoadingId === item.id}
+															onclick={(event) => {
+																if (!confirm(`¿Eliminar el color ${item.color}?`)) {
+																	event.preventDefault();
+																}
+															}}
+														>
+															<Trash2 class="h-4 w-4" />
+														</Button>
+													</form>
+												</div>
+											</td>
+										{/if}
 									</tr>
 								{/each}
 							{/if}

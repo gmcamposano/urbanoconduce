@@ -13,7 +13,7 @@ declare global {
 				id: string;
 				email: string;
 				name: string | null;
-				role: 'admin' | 'editor' | 'viewer';
+				role: 'admin' | 'editor' | 'moderator' | 'viewer';
 			} | null;
 		}
 		// interface PageState {}

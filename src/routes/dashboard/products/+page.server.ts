@@ -1,6 +1,15 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+async function getUserRole(locals: App.Locals, userId: string) {
+	const { data } = await locals.supabase.from('profiles').select('role').eq('id', userId).single();
+	return data?.role ?? null;
+}
+
+function canManageCatalog(role: string | null) {
+	return role === 'admin' || role === 'editor' || role === 'moderator';
+}
+
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
@@ -8,7 +17,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		throw redirect(303, '/login');
 	}
 
-	if (profile.role !== 'admin' && profile.role !== 'editor') {
+	if (!canManageCatalog(profile.role)) {
 		throw redirect(303, '/dashboard');
 	}
 
@@ -32,20 +41,15 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	}
 };
 
-	export const actions: Actions = {
+export const actions: Actions = {
 	createProduct: async ({ request, locals }) => {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
 		}
 
-		const { data: profile, error: profileError } = await locals.supabase
-			.from('profiles')
-			.select('role')
-			.eq('id', user.id)
-			.single();
-
-		if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'editor')) {
+		const role = await getUserRole(locals, user.id);
+		if (!canManageCatalog(role)) {
 			return fail(403, { error: 'No tienes permisos para crear productos.' });
 		}
 
@@ -77,6 +81,84 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
 
-		return { success: true };
+		return { success: true, message: 'Producto guardado.' };
+	},
+	updateProduct: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (!canManageCatalog(role)) {
+			return fail(403, { error: 'No tienes permisos para editar productos.' });
+		}
+
+		const formData = await request.formData();
+		const productId = (formData.get('id') as string)?.trim() ?? '';
+		const title = (formData.get('title') as string)?.trim() ?? '';
+		const description = (formData.get('description') as string)?.trim() ?? '';
+		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
+
+		if (!productId) {
+			return fail(400, { error: 'El ID del producto es obligatorio.' });
+		}
+
+		if (!title) {
+			return fail(400, { error: 'El título del producto es obligatorio.' });
+		}
+
+		if (Number.isNaN(priceWithoutTaxes) || priceWithoutTaxes < 0) {
+			return fail(400, { error: 'El precio sin impuestos debe ser mayor o igual a cero.' });
+		}
+
+		try {
+			const { error } = await locals.supabase
+				.from('products')
+				.update({
+					title,
+					description: description || null,
+					price_without_taxes: priceWithoutTaxes
+				})
+				.eq('id', productId);
+
+			if (error) {
+				return fail(400, { error: error.message });
+			}
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
+
+		return { success: true, message: 'Producto actualizado.' };
+	},
+	deleteProduct: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (!canManageCatalog(role)) {
+			return fail(403, { error: 'No tienes permisos para borrar productos.' });
+		}
+
+		const formData = await request.formData();
+		const productId = (formData.get('id') as string)?.trim() ?? '';
+
+		if (!productId) {
+			return fail(400, { error: 'El ID del producto es obligatorio.' });
+		}
+
+		try {
+			const { error } = await locals.supabase.from('products').delete().eq('id', productId);
+
+			if (error) {
+				return fail(400, { error: error.message });
+			}
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
+
+		return { success: true, message: 'Producto borrado.' };
 	}
 };

@@ -8,14 +8,49 @@
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
-	import { Contact, Users } from '@lucide/svelte';
+	import { Contact, Edit3, Trash2, Users } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
+	const profile = $derived(data.profile);
+	const canManage = $derived(
+		profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'moderator'
+	);
 	const clients = $derived(data.clients || []);
 
 	let loading = $state(false);
+	let deleteLoadingId = $state<string | null>(null);
+	let editingClient = $state<{
+		id: string;
+		client_type: 'person' | 'company';
+		full_name: string | null;
+		alias: string | null;
+		rnc: string | null;
+		company_name: string | null;
+	} | null>(null);
 	let clientType = $state<'person' | 'company'>('person');
+	let fullName = $state('');
+	let alias = $state('');
+	let rnc = $state('');
+	let companyName = $state('');
+
+	function resetForm() {
+		editingClient = null;
+		clientType = 'person';
+		fullName = '';
+		alias = '';
+		rnc = '';
+		companyName = '';
+	}
+
+	function startEditing(client: (typeof clients)[number]) {
+		editingClient = client;
+		clientType = client.client_type;
+		fullName = client.full_name || '';
+		alias = client.alias || '';
+		rnc = client.rnc || '';
+		companyName = client.company_name || '';
+	}
 </script>
 
 <svelte:head>
@@ -51,7 +86,7 @@
 		>
 			<Contact class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
 			<div>
-				<p class="font-medium">Cliente guardado</p>
+				<p class="font-medium">{form.message || 'Cliente guardado'}</p>
 				<p class="mt-0.5 text-xs text-[#707070]">El registro quedó disponible en el listado.</p>
 			</div>
 		</div>
@@ -60,28 +95,29 @@
 	<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 		<Card class="xl:col-span-1">
 			<CardHeader>
-				<CardTitle>Nuevo cliente</CardTitle>
+				<CardTitle>{editingClient ? 'Editar cliente' : 'Nuevo cliente'}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form
-					action="?/createClient"
+					action={editingClient ? '?/updateClient' : '?/createClient'}
 					method="POST"
 					class="space-y-4"
 					use:enhance={() => {
 						loading = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
 							loading = false;
+							if (result.type === 'success') {
+								resetForm();
+							}
 							await update();
 						};
 					}}
 				>
-					<Select
-						label="Tipo de cliente"
-						name="client_type"
-						bind:value={clientType}
-						required
-						disabled={loading}
-					>
+					{#if editingClient}
+						<input type="hidden" name="id" value={editingClient.id} />
+					{/if}
+
+					<Select label="Tipo de cliente" name="client_type" bind:value={clientType} required disabled={loading}>
 						<option value="person">Persona</option>
 						<option value="company">Empresa</option>
 					</Select>
@@ -92,6 +128,7 @@
 							name="full_name"
 							type="text"
 							placeholder="Juan Pérez"
+							bind:value={fullName}
 							required
 							disabled={loading}
 						/>
@@ -102,6 +139,7 @@
 								name="alias"
 								type="text"
 								placeholder="CCARIBE"
+								bind:value={alias}
 								required
 								disabled={loading}
 							/>
@@ -110,6 +148,7 @@
 								name="rnc"
 								type="text"
 								placeholder="1-01-12345-6"
+								bind:value={rnc}
 								required
 								disabled={loading}
 							/>
@@ -119,6 +158,7 @@
 							name="company_name"
 							type="text"
 							placeholder="Constructora del Caribe SRL"
+							bind:value={companyName}
 							required
 							disabled={loading}
 						/>
@@ -135,7 +175,14 @@
 						</p>
 					</div>
 
-					<Button type="submit" class="w-full" disabled={loading}>Guardar cliente</Button>
+					<div class="flex gap-3">
+						<Button type="submit" class="flex-1" disabled={loading}>
+							{editingClient ? 'Actualizar cliente' : 'Guardar cliente'}
+						</Button>
+						{#if editingClient}
+							<Button type="button" variant="outline" disabled={loading} onclick={resetForm}>Cancelar</Button>
+						{/if}
+					</div>
 				</form>
 			</CardContent>
 		</Card>
@@ -154,12 +201,15 @@
 								<th class="px-6 py-4 font-bold">Tipo</th>
 								<th class="px-6 py-4 font-bold">Nombre / Empresa</th>
 								<th class="px-6 py-4 font-bold">Alias / RNC</th>
+								{#if canManage}
+									<th class="px-6 py-4 text-right font-bold">Acciones</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#if clients.length === 0}
 								<tr>
-									<td colspan="3" class="px-6 py-12 text-center text-xs text-[#707070]"
+									<td colspan={canManage ? 4 : 3} class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay clientes registrados.</td
 									>
 								</tr>
@@ -188,6 +238,44 @@
 										<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
 											{client.client_type === 'company' ? `${client.alias} / ${client.rnc}` : '—'}
 										</td>
+										{#if canManage}
+											<td class="px-6 py-4 text-right whitespace-nowrap">
+												<div class="flex items-center justify-end gap-1.5">
+													<Button variant="ghost" size="icon" class="h-8 w-8 text-[#707070] hover:text-[#171717]" title="Editar cliente" onclick={() => startEditing(client)}>
+														<Edit3 class="h-4 w-4" />
+													</Button>
+													<form
+														action="?/deleteClient"
+														method="POST"
+														class="contents"
+														use:enhance={() => {
+															deleteLoadingId = client.id;
+															return async ({ update }) => {
+																deleteLoadingId = null;
+																await update();
+															};
+														}}
+													>
+														<input type="hidden" name="id" value={client.id} />
+														<Button
+															type="submit"
+															variant="ghost"
+															size="icon"
+															class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
+															title="Borrar cliente"
+															disabled={deleteLoadingId === client.id}
+															onclick={(event) => {
+																if (!confirm(`¿Eliminar el cliente ${client.client_type === 'company' ? client.company_name : client.full_name}?`)) {
+																	event.preventDefault();
+																}
+															}}
+														>
+															<Trash2 class="h-4 w-4" />
+														</Button>
+													</form>
+												</div>
+											</td>
+										{/if}
 									</tr>
 								{/each}
 							{/if}
