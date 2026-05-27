@@ -17,7 +17,7 @@ export const actions: Actions = {
 		const password = formData.get('password') as string;
 
 		if (!email || !password) {
-			return fail(400, { email, error: 'Email and password are required.' });
+			return fail(400, { email, error: 'El correo electrónico y la contraseña son obligatorios.' });
 		}
 
 		const { error } = await locals.supabase.auth.signInWithPassword({
@@ -40,7 +40,7 @@ export const actions: Actions = {
 		const role = dev ? (formData.get('role') as string) : 'viewer';
 
 		if (!email || !password || !name || (dev && !role)) {
-			return fail(400, { email, name, role, error: 'All fields are required.' });
+			return fail(400, { email, name, role, error: 'Todos los campos son obligatorios.' });
 		}
 
 		const { data, error } = await locals.supabase.auth.signUp({
@@ -64,7 +64,7 @@ export const actions: Actions = {
 
 		return {
 			success: true,
-			message: 'Registration successful. Check your email and verify your account before signing in.'
+			message: 'Registro exitoso. Revisa tu correo y verifica tu cuenta antes de iniciar sesión.'
 		};
 	},
 

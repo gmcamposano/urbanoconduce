@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
@@ -24,13 +25,8 @@
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const isAdmin = $derived(profile?.role === 'admin');
 
-	// Local status tracking with $effect to prevent Svelte compiler state capture warning
 	let selectedStatus = $state('');
-	$effect(() => {
-		if (invoice?.status && !selectedStatus) {
-			selectedStatus = invoice.status;
-		}
-	});
+	const currentStatus = $derived(selectedStatus || invoice?.status || '');
 
 	let statusUpdating = $state(false);
 	let showDeleteModal = $state(false);
@@ -55,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>{invoice?.invoice_number || 'Invoice'} Details - InvoiceFlow</title>
+	<title>{invoice?.invoice_number || 'Factura'} - FacturaFlow</title>
 </svelte:head>
 
 {#if invoice}
@@ -63,23 +59,23 @@
 		<!-- Actions Top Panel (no-print) -->
 		<div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-zinc-950/40 p-4 border border-zinc-900 rounded-xl no-print">
 			<div class="flex items-center gap-3">
-				<a href="/dashboard" class="text-zinc-400 hover:text-zinc-200" aria-label="Back">
+				<a href={resolve('/dashboard')} class="text-zinc-400 hover:text-zinc-200" aria-label="Volver">
 					<ArrowLeft class="h-5 w-5" />
 				</a>
 				<div>
 					<h1 class="text-base font-extrabold text-white">{invoice.invoice_number}</h1>
-					<p class="text-[10px] text-zinc-500">Created by {invoice.profiles?.name || 'Unknown'}</p>
+					<p class="text-[10px] text-zinc-500">Creada por {invoice.profiles?.name || 'Desconocido'}</p>
 				</div>
 				
 				<!-- Current Status Badge -->
 				{#if invoice.status === 'paid'}
-					<Badge variant="success">Paid</Badge>
+					<Badge variant="success">Pagada</Badge>
 				{:else if invoice.status === 'pending'}
-					<Badge variant="warning">Pending</Badge>
+					<Badge variant="warning">Pendiente</Badge>
 				{:else if invoice.status === 'overdue'}
-					<Badge variant="danger">Overdue</Badge>
+					<Badge variant="danger">Vencida</Badge>
 				{:else}
-					<Badge variant="secondary">Draft</Badge>
+					<Badge variant="secondary">Borrador</Badge>
 				{/if}
 			</div>
 
@@ -88,7 +84,7 @@
 				<!-- Print Button -->
 				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
 					<Printer class="h-4 w-4" />
-					Print / Save PDF
+					Imprimir / guardar PDF
 				</Button>
 
 				<!-- Update Status Form (Admins & Editors) -->
@@ -107,14 +103,17 @@
 					>
 						<select 
 							name="status"
-							bind:value={selectedStatus}
+							value={currentStatus}
+							onchange={(event) => {
+								selectedStatus = event.currentTarget.value;
+							}}
 							disabled={statusUpdating}
 							class="flex h-8 rounded-lg border border-zinc-805 border-zinc-800 bg-zinc-950 px-2 text-xs text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 cursor-pointer"
 						>
-							<option value="draft">Draft</option>
-							<option value="pending">Pending</option>
-							<option value="paid">Paid</option>
-							<option value="overdue">Overdue</option>
+						<option value="draft">Borrador</option>
+						<option value="pending">Pendiente</option>
+						<option value="paid">Pagada</option>
+						<option value="overdue">Vencida</option>
 						</select>
 						<Button 
 							type="submit" 
@@ -124,9 +123,9 @@
 							disabled={selectedStatus === invoice.status || statusUpdating}
 						>
 							{#if statusUpdating}
-								Saving...
+							Guardando...
 							{:else}
-								Update Status
+							Actualizar estado
 							{/if}
 						</Button>
 					</form>
@@ -141,7 +140,7 @@
 						onclick={() => (showDeleteModal = true)}
 					>
 						<Trash2 class="h-4 w-4" />
-						Delete
+						Eliminar
 					</Button>
 				{/if}
 			</div>
@@ -152,7 +151,7 @@
 			<div class="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-sm text-rose-400 flex items-start gap-2.5 shadow-lg shadow-rose-500/5 no-print">
 				<AlertTriangle class="h-5 w-5 flex-shrink-0 mt-0.5" />
 				<div>
-					<p class="font-bold">Error Updating Invoice</p>
+					<p class="font-bold">No se pudo actualizar la factura</p>
 					<p class="text-xs text-zinc-400 mt-0.5">{form.error}</p>
 				</div>
 			</div>
@@ -174,28 +173,28 @@
 								<div class="bg-indigo-600 p-2 rounded text-white">
 									<FileText class="h-5 w-5" />
 								</div>
-								<span class="font-black text-xl tracking-tight text-zinc-950">Invoice<span class="text-indigo-600">Flow</span></span>
+								<span class="font-black text-xl tracking-tight text-zinc-950">FacturaFlow</span>
 							</div>
 							<p class="text-xs text-zinc-500 font-semibold leading-relaxed">
-								InvoiceFlow Services Corp.<br/>
-								100 tech space blvd, Suite 400<br/>
-								San Francisco, CA 94103<br/>
-								billing@invoiceflow.com
+								FacturaFlow Servicios SRL<br/>
+								Avenida Tecnológica 100, Oficina 400<br/>
+								Santo Domingo, República Dominicana<br/>
+								facturacion@facturaflow.com
 							</p>
 						</div>
 
 						<!-- Bill statement IDs -->
 						<div class="text-left sm:text-right space-y-1.5">
-							<h2 class="text-3xl font-extrabold text-zinc-950 tracking-tight uppercase">Invoice</h2>
+							<h2 class="text-3xl font-extrabold text-zinc-950 tracking-tight uppercase">Factura</h2>
 							<p class="text-sm font-bold text-indigo-600 font-mono">{invoice.invoice_number}</p>
 							
 							<div class="grid grid-cols-2 sm:flex sm:flex-col gap-2 pt-2 text-xs text-zinc-500 font-medium">
 								<div>
-									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Date Issued:</span>
+									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Fecha de emisión:</span>
 									<span class="font-mono text-zinc-700">{new Date(invoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
 								</div>
 								<div>
-									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Due Date:</span>
+									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Fecha de vencimiento:</span>
 									<span class="font-mono text-zinc-700">{new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
 								</div>
 							</div>
@@ -206,7 +205,7 @@
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
 						<!-- Client -->
 						<div class="space-y-2">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Billed To:</h3>
+							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Facturar a:</h3>
 							<div class="text-sm text-zinc-800 space-y-1">
 								<p class="font-extrabold text-zinc-950 text-base">{invoice.client_name}</p>
 								<p class="flex items-center gap-1.5 text-xs text-zinc-600">
@@ -218,24 +217,24 @@
 
 						<!-- Payment Status Indicator -->
 						<div class="space-y-2 sm:text-right">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Payment Status:</h3>
+							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Estado del pago:</h3>
 							<div>
 								{#if invoice.status === 'paid'}
 									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
 										<Check class="h-3.5 w-3.5" />
-										Fully Paid
+										Pagada completamente
 									</span>
 								{:else if invoice.status === 'pending'}
 									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold uppercase tracking-wider">
-										Pending
+										Pendiente
 									</span>
 								{:else if invoice.status === 'overdue'}
 									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold uppercase tracking-wider">
-										Overdue
+										Vencida
 									</span>
 								{:else}
 									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-bold uppercase tracking-wider">
-										Draft Statement
+										Borrador
 									</span>
 								{/if}
 							</div>
@@ -247,14 +246,14 @@
 						<table class="w-full text-sm text-left border-collapse">
 							<thead>
 								<tr class="border-b-2 print-border border-zinc-900 text-xs uppercase text-zinc-400 font-extrabold tracking-wider">
-									<th class="py-3 font-semibold">Item Description</th>
-									<th class="py-3 font-semibold text-center w-20">Qty</th>
-									<th class="py-3 font-semibold text-right w-32">Unit Price</th>
+									<th class="py-3 font-semibold">Descripción</th>
+									<th class="py-3 font-semibold text-center w-20">Cant.</th>
+									<th class="py-3 font-semibold text-right w-32">Precio unitario</th>
 									<th class="py-3 font-semibold text-right w-32">Total</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y print-border divide-zinc-150">
-								{#each items as item}
+								{#each items as item (item.id ?? item.description)}
 									<tr class="text-zinc-800">
 										<td class="py-4 font-semibold text-zinc-950">{item.description}</td>
 										<td class="py-4 text-center font-mono text-zinc-650">{Number(item.quantity)}</td>
@@ -274,15 +273,15 @@
 								<span class="font-mono text-zinc-950 font-bold">{formatCurrency(subtotal)}</span>
 							</div>
 							<div class="flex justify-between border-b pb-2 print-border border-zinc-150">
-								<span class="font-semibold">Tax ({invoice.tax_rate}%)</span>
+								<span class="font-semibold">Impuesto ({invoice.tax_rate}%)</span>
 								<span class="font-mono text-zinc-950 font-bold">{formatCurrency(taxAmount)}</span>
 							</div>
 							<div class="flex justify-between border-b pb-2 print-border border-zinc-150">
-								<span class="font-semibold">Discount</span>
+								<span class="font-semibold">Descuento</span>
 								<span class="font-mono text-zinc-950 font-bold">-{formatCurrency(Number(invoice.discount_amount))}</span>
 							</div>
 							<div class="flex justify-between text-base font-black text-indigo-650 pt-2 text-indigo-600">
-								<span class="uppercase tracking-wide font-extrabold">Total Amount</span>
+								<span class="uppercase tracking-wide font-extrabold">Total a pagar</span>
 								<span class="font-mono text-lg">{formatCurrency(Number(invoice.total_amount))}</span>
 							</div>
 						</div>
@@ -293,13 +292,13 @@
 				<div class="border-t print-border border-zinc-200 pt-8 mt-12 space-y-4">
 					{#if invoice.notes}
 						<div class="space-y-1">
-							<h4 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Terms & Instructions:</h4>
+							<h4 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Términos e instrucciones:</h4>
 							<p class="text-xs text-zinc-500 leading-relaxed whitespace-pre-line">{invoice.notes}</p>
 						</div>
 					{/if}
 					<div class="text-[10px] text-zinc-450 text-center leading-relaxed">
-						Please send bank wire transfers to: <strong>Silicon Valley Bank</strong>, Routing: <strong>#123456789</strong>, Account: <strong>#987654321</strong>.<br/>
-						If you have any questions about this invoice, contact billing@invoiceflow.com. Thank you for your partnership!
+						Realiza las transferencias bancarias a: <strong>Banco de Reservas</strong>, ruta: <strong>#123456789</strong>, cuenta: <strong>#987654321</strong>.<br/>
+						Si tienes preguntas sobre esta factura, escribe a facturacion@facturaflow.com. Gracias por tu confianza.
 					</div>
 				</div>
 			</div>
@@ -314,11 +313,11 @@
 			<CardContent class="p-6 space-y-4">
 				<div class="flex items-center gap-2.5 text-rose-400">
 					<AlertTriangle class="h-6 w-6" />
-					<h3 class="font-extrabold text-lg">Confirm Deletion</h3>
+						<h3 class="font-extrabold text-lg">Confirmar eliminación</h3>
 				</div>
 				
 				<p class="text-sm text-zinc-400 leading-relaxed">
-					Are you sure you want to delete invoice <strong class="text-white">{invoice?.invoice_number}</strong>? This will permanently wipe this record and all associated line items.
+						¿Seguro que deseas eliminar la factura <strong class="text-white">{invoice?.invoice_number}</strong>? Esto borrará el registro y todos los conceptos asociados de forma permanente.
 				</p>
 				
 				<div class="flex justify-end gap-3 pt-2">
@@ -328,7 +327,7 @@
 						disabled={deleteLoading}
 						onclick={() => (showDeleteModal = false)}
 					>
-						Cancel
+						Cancelar
 					</Button>
 					
 					<form 
@@ -350,9 +349,9 @@
 							disabled={deleteLoading}
 						>
 							{#if deleteLoading}
-								Deleting...
+							Eliminando...
 							{:else}
-								Delete
+							Eliminar
 							{/if}
 						</Button>
 					</form>

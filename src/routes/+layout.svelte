@@ -24,7 +24,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>InvoiceFlow - Professional Invoice Generator</title>
+	<title>FacturaFlow - Generador profesional de facturas</title>
 </svelte:head>
 
 <div class="relative min-h-screen bg-zinc-950 bg-radial-glow flex flex-col">

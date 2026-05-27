@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -65,29 +66,29 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard - InvoiceFlow</title>
+	<title>Panel - FacturaFlow</title>
 </svelte:head>
 
 <div class="space-y-8 flex-1 flex flex-col justify-start">
 	<!-- Top Bar -->
 	<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-900 pb-5">
 		<div>
-			<h1 class="text-2xl font-black text-white tracking-tight">Organization Invoices</h1>
-			<p class="text-zinc-500 text-xs mt-0.5">Track, analyze, and manage customer billing statements.</p>
+			<h1 class="text-2xl font-black text-white tracking-tight">Facturas de la organización</h1>
+			<p class="text-zinc-500 text-xs mt-0.5">Seguimiento, análisis y gestión de las facturas de clientes.</p>
 		</div>
 		
 		<!-- Only Admins & Editors can create new invoices -->
 		{#if canManage}
-			<a href="/dashboard/invoices/new" class="w-full sm:w-auto">
+			<a href={resolve('/dashboard/invoices/new')} class="w-full sm:w-auto">
 				<Button class="flex items-center justify-center gap-2 w-full sm:w-auto">
 					<Plus class="h-4.5 w-4.5" />
-					Create Invoice
+					Crear factura
 				</Button>
 			</a>
 		{:else}
 			<div class="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg flex items-center gap-1.5 self-stretch sm:self-auto">
 				<Clock class="h-4 w-4 text-zinc-400" />
-				Viewer Mode: Create Invoice Disabled
+				Modo lector: creación de facturas deshabilitada
 			</div>
 		{/if}
 	</div>
@@ -97,7 +98,7 @@
 		<div class="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-sm text-rose-400 flex items-start gap-2.5 shadow-lg shadow-rose-500/5">
 			<AlertTriangle class="h-5 w-5 flex-shrink-0 mt-0.5" />
 			<div>
-				<p class="font-bold">Database Error</p>
+					<p class="font-bold">Error de base de datos</p>
 				<p class="text-xs text-zinc-400 mt-0.5">{form.error}</p>
 			</div>
 		</div>
@@ -109,7 +110,7 @@
 		<Card class="border-zinc-800 bg-zinc-950/40">
 			<CardContent class="p-6 flex items-center justify-between">
 				<div class="space-y-1">
-					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Total Invoiced</p>
+					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Total facturado</p>
 					<p class="text-2xl font-extrabold text-white font-mono">{formatCurrency(totalInvoiced)}</p>
 				</div>
 				<div class="bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
@@ -122,7 +123,7 @@
 		<Card class="border-zinc-800 bg-zinc-950/40">
 			<CardContent class="p-6 flex items-center justify-between">
 				<div class="space-y-1">
-					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Paid amount</p>
+					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Monto pagado</p>
 					<p class="text-2xl font-extrabold text-emerald-400 font-mono">{formatCurrency(totalPaid)}</p>
 				</div>
 				<div class="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
@@ -135,7 +136,7 @@
 		<Card class="border-zinc-800 bg-zinc-950/40">
 			<CardContent class="p-6 flex items-center justify-between">
 				<div class="space-y-1">
-					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Outstanding (Pending)</p>
+					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Pendiente</p>
 					<p class="text-2xl font-extrabold text-amber-400 font-mono">{formatCurrency(totalPending)}</p>
 				</div>
 				<div class="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
@@ -148,7 +149,7 @@
 		<Card class="border-zinc-800 bg-zinc-950/40">
 			<CardContent class="p-6 flex items-center justify-between">
 				<div class="space-y-1">
-					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Overdue amount</p>
+					<p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Monto vencido</p>
 					<p class="text-2xl font-extrabold text-rose-400 font-mono">{formatCurrency(totalOverdue)}</p>
 				</div>
 				<div class="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
@@ -167,7 +168,7 @@
 			</div>
 			<input
 				type="text"
-				placeholder="Search by client or invoice ID..."
+					placeholder="Buscar por cliente o factura..."
 				bind:value={searchQuery}
 			class="block w-full pl-9 pr-3 py-2 bg-zinc-950/80 border border-zinc-800 rounded-lg text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 transition-all duration-200"
 			/>
@@ -177,9 +178,9 @@
 		<div class="flex flex-wrap items-center gap-1.5">
 			<span class="text-xs font-semibold text-zinc-500 mr-2 flex items-center gap-1">
 				<Filter class="h-3.5 w-3.5" />
-				Status:
+				Estado:
 			</span>
-			{#each ['all', 'draft', 'pending', 'paid', 'overdue'] as item}
+			{#each ['all', 'draft', 'pending', 'paid', 'overdue'] as item (item)}
 				<button
 					class="px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all duration-200 cursor-pointer {statusFilter === item ? 'bg-zinc-800 text-white border border-zinc-700' : 'text-zinc-400 hover:text-zinc-200 bg-transparent border border-transparent'}"
 					onclick={() => (statusFilter = item as any)}
@@ -196,27 +197,27 @@
 			<table class="w-full text-sm text-left text-zinc-300">
 				<thead class="text-xs uppercase bg-zinc-950 text-zinc-500 border-b border-zinc-900 tracking-wider">
 					<tr>
-						<th class="px-6 py-4 font-bold">Invoice ID</th>
-						<th class="px-6 py-4 font-bold">Client</th>
-						<th class="px-6 py-4 font-bold">Due Date</th>
-						<th class="px-6 py-4 font-bold">Amount</th>
-						<th class="px-6 py-4 font-bold">Status</th>
-						<th class="px-6 py-4 font-bold">Created By</th>
-						<th class="px-6 py-4 font-bold text-right">Actions</th>
+						<th class="px-6 py-4 font-bold">Factura</th>
+						<th class="px-6 py-4 font-bold">Cliente</th>
+						<th class="px-6 py-4 font-bold">Vence</th>
+						<th class="px-6 py-4 font-bold">Monto</th>
+						<th class="px-6 py-4 font-bold">Estado</th>
+						<th class="px-6 py-4 font-bold">Creado por</th>
+						<th class="px-6 py-4 font-bold text-right">Acciones</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-zinc-900/60">
 					{#if filteredInvoices.length === 0}
 						<tr>
 							<td colspan="7" class="px-6 py-12 text-center text-zinc-500 text-xs">
-								No invoices found. Add some billing files to get started!
+								No se encontraron facturas. Agrega una para comenzar.
 							</td>
 						</tr>
 					{:else}
-						{#each filteredInvoices as inv}
+						{#each filteredInvoices as inv (inv.id)}
 							<tr class="hover:bg-zinc-900/35 transition-colors duration-150">
 								<td class="px-6 py-4 font-bold text-white whitespace-nowrap">
-									<a href="/dashboard/invoices/{inv.id}" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+									<a href={resolve(`/dashboard/invoices/${inv.id}`)} class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
 										<FileText class="h-4 w-4 text-zinc-500" />
 										{inv.invoice_number}
 									</a>
@@ -238,22 +239,22 @@
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
 									{#if inv.status === 'paid'}
-										<Badge variant="success">Paid</Badge>
+										<Badge variant="success">Pagada</Badge>
 									{:else if inv.status === 'pending'}
-										<Badge variant="warning">Pending</Badge>
+										<Badge variant="warning">Pendiente</Badge>
 									{:else if inv.status === 'overdue'}
-										<Badge variant="danger">Overdue</Badge>
+										<Badge variant="danger">Vencida</Badge>
 									{:else}
-										<Badge variant="secondary">Draft</Badge>
+										<Badge variant="secondary">Borrador</Badge>
 									{/if}
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap text-xs text-zinc-400">
-									{inv.profiles?.name || 'Unknown User'}
+					{inv.profiles?.name || 'Usuario desconocido'}
 								</td>
 								<td class="px-6 py-4 text-right whitespace-nowrap">
 									<div class="flex items-center justify-end gap-1.5">
-										<a href="/dashboard/invoices/{inv.id}">
-											<Button variant="ghost" size="icon" class="h-8 w-8 text-zinc-400 hover:text-white" title="View details">
+									<a href={resolve(`/dashboard/invoices/${inv.id}`)}>
+						<Button variant="ghost" size="icon" class="h-8 w-8 text-zinc-400 hover:text-white" title="Ver detalles">
 												<Eye class="h-4 w-4" />
 											</Button>
 										</a>
@@ -264,7 +265,7 @@
 												variant="ghost" 
 												size="icon" 
 												class="h-8 w-8 text-zinc-500 hover:text-rose-400" 
-												title="Delete invoice"
+							title="Eliminar factura"
 												onclick={() => (invoiceToDelete = { id: inv.id, number: inv.invoice_number })}
 											>
 												<Trash2 class="h-4 w-4" />
@@ -288,11 +289,11 @@
 			<CardContent class="p-6 space-y-4">
 				<div class="flex items-center gap-2.5 text-rose-400">
 					<AlertTriangle class="h-6 w-6" />
-					<h3 class="font-extrabold text-lg">Confirm Deletion</h3>
+						<h3 class="font-extrabold text-lg">Confirmar eliminación</h3>
 				</div>
 				
 				<p class="text-sm text-zinc-400 leading-relaxed">
-					Are you sure you want to delete invoice <strong class="text-white">{invoiceToDelete.number}</strong>? This action is permanent and cannot be undone.
+						¿Seguro que deseas eliminar la factura <strong class="text-white">{invoiceToDelete.number}</strong>? Esta acción es permanente y no se puede deshacer.
 				</p>
 				
 				<div class="flex justify-end gap-3 pt-2">
@@ -302,7 +303,7 @@
 						disabled={deleteLoading}
 						onclick={() => (invoiceToDelete = null)}
 					>
-						Cancel
+						Cancelar
 					</Button>
 					
 					<form 
@@ -325,9 +326,9 @@
 							disabled={deleteLoading}
 						>
 							{#if deleteLoading}
-								Deleting...
+							Eliminando...
 							{:else}
-								Delete
+							Eliminar
 							{/if}
 						</Button>
 					</form>

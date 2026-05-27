@@ -19,7 +19,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 				profile = {
 					id: user.id,
 					email: user.email || '',
-					name: user.user_metadata?.name || 'New User',
+					name: user.user_metadata?.name || 'Nuevo usuario',
 					role: (user.user_metadata?.role as 'admin' | 'editor' | 'viewer') || 'viewer'
 				};
 			}
@@ -28,7 +28,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			profile = {
 				id: user.id,
 				email: user.email || '',
-				name: user.user_metadata?.name || 'New User',
+				name: user.user_metadata?.name || 'Nuevo usuario',
 				role: (user.user_metadata?.role as 'admin' | 'editor' | 'viewer') || 'viewer'
 			};
 		}

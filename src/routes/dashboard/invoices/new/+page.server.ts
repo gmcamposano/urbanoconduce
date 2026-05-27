@@ -40,24 +40,24 @@ export const actions: Actions = {
 		const itemsJson = formData.get('items') as string;
 
 		if (!invoiceNumber || !clientName || !clientEmail || !invoiceDate || !dueDate || !status) {
-			return fail(400, { error: 'All primary details are required.' });
+			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
 		}
 
 		let items: Array<{ description: string; quantity: number; unit_price: number }> = [];
 		try {
 			items = JSON.parse(itemsJson || '[]');
 		} catch (e) {
-			return fail(400, { error: 'Failed to process line items.' });
+			return fail(400, { error: 'No se pudieron procesar los conceptos.' });
 		}
 
 		if (items.length === 0) {
-			return fail(400, { error: 'At least one line item is required.' });
+			return fail(400, { error: 'Debes agregar al menos un concepto.' });
 		}
 
 		// Validate items values
 		for (const item of items) {
 			if (!item.description || Number(item.quantity) <= 0 || Number(item.unit_price) < 0) {
-				return fail(400, { error: 'Line items must have a valid description, quantity > 0, and unit price >= 0.' });
+				return fail(400, { error: 'Los conceptos deben tener una descripción válida, cantidad mayor que cero y precio unitario mayor o igual a cero.' });
 			}
 		}
 
@@ -111,7 +111,7 @@ export const actions: Actions = {
 
 		} catch (e: any) {
 			console.error('Invoice save exception:', e);
-			return fail(500, { error: e.message || 'An unexpected error occurred.' });
+			return fail(500, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
 
 		throw redirect(303, '/dashboard');

@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { 
 		LayoutDashboard, 
+		Users,
 		ShieldAlert, 
 		LogOut, 
 		Menu, 
@@ -23,6 +25,9 @@
 		if (path === '/dashboard') {
 			return activePath === '/dashboard' || activePath.startsWith('/dashboard/invoices/');
 		}
+		if (path === '/dashboard/clients') {
+			return activePath === '/dashboard/clients';
+		}
 		return activePath === path;
 	}
 </script>
@@ -30,11 +35,11 @@
 <div class="flex-1 flex flex-col md:flex-row min-h-screen">
 	<!-- Mobile Header -->
 	<header class="md:hidden flex items-center justify-between px-6 py-4 bg-zinc-950 border-b border-zinc-900 no-print">
-		<a href="/dashboard" class="flex items-center gap-2">
+		<a href={resolve('/dashboard')} class="flex items-center gap-2">
 			<div class="bg-indigo-600/10 p-1.5 rounded border border-indigo-500/20">
 				<FileText class="h-5 w-5 text-indigo-400" />
 			</div>
-			<span class="font-extrabold text-md tracking-tight text-white">Invoice<span class="text-indigo-400">Flow</span></span>
+			<span class="font-extrabold text-md tracking-tight text-white">Factura<span class="text-indigo-400">Flow</span></span>
 		</a>
 		<button 
 			class="p-1 text-zinc-400 hover:text-white cursor-pointer"
@@ -56,30 +61,39 @@
 				<div class="bg-indigo-600/10 p-2 rounded-lg border border-indigo-500/20">
 					<FileText class="h-6 w-6 text-indigo-400" />
 				</div>
-				<span class="font-black text-lg tracking-tight text-white">Invoice<span class="text-indigo-400">Flow</span></span>
+				<span class="font-black text-lg tracking-tight text-white">Factura<span class="text-indigo-400">Flow</span></span>
 			</div>
 
 			<!-- Navigation Links -->
 			<nav class="p-4 space-y-1">
 				<a 
-					href="/dashboard" 
+					href={resolve('/dashboard')} 
 					class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 {isActive('/dashboard') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'}"
 					onclick={() => (mobileMenuOpen = false)}
 				>
 					<LayoutDashboard class="h-4.5 w-4.5" />
-					Invoices Dashboard
+					Facturas
+				</a>
+
+					<a 
+						href={resolve('/dashboard/clients')} 
+					class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 {isActive('/dashboard/clients') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'}"
+					onclick={() => (mobileMenuOpen = false)}
+				>
+					<Users class="h-4.5 w-4.5" />
+					Clientes
 				</a>
 
 				<!-- Admin Access Page -->
 				{#if profile?.role === 'admin'}
 					<a 
-						href="/dashboard/admin" 
+						href={resolve('/dashboard/admin')} 
 						class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 {isActive('/dashboard/admin') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'}"
 						onclick={() => (mobileMenuOpen = false)}
 					>
-						<ShieldAlert class="h-4.5 w-4.5" />
-						Admin Settings
-					</a>
+					<ShieldAlert class="h-4.5 w-4.5" />
+					Administración
+				</a>
 				{/if}
 			</nav>
 		</div>
@@ -91,7 +105,7 @@
 					<User class="h-5 w-5 text-indigo-400" />
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-sm font-bold text-white truncate">{profile?.name || 'User'}</p>
+					<p class="text-sm font-bold text-white truncate">{profile?.name || 'Usuario'}</p>
 					<div class="flex items-center gap-1.5 mt-0.5">
 						<!-- Role Badges -->
 						{#if profile?.role === 'admin'}
@@ -99,7 +113,7 @@
 						{:else if profile?.role === 'editor'}
 							<Badge variant="info" class="text-[9px] px-1.5 py-0">EDITOR</Badge>
 						{:else}
-							<Badge variant="secondary" class="text-[9px] px-1.5 py-0">VIEWER</Badge>
+							<Badge variant="secondary" class="text-[9px] px-1.5 py-0">LECTOR</Badge>
 						{/if}
 						<span class="text-[10px] text-zinc-500 truncate max-w-[100px]">{profile?.email}</span>
 					</div>
@@ -113,7 +127,7 @@
 					class="w-full flex items-center justify-center gap-2 px-3 py-2 border border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400 hover:text-rose-400 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
 				>
 					<LogOut class="h-3.5 w-3.5" />
-					Sign Out
+					Cerrar sesión
 				</button>
 			</form>
 		</div>

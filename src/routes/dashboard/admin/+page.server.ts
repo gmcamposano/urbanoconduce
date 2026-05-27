@@ -41,16 +41,16 @@ export const actions: Actions = {
 		const targetRole = formData.get('role') as string;
 
 		if (!targetProfileId || !targetRole) {
-			return fail(400, { error: 'Target profile ID and new role are required.' });
+			return fail(400, { error: 'El ID del perfil y el nuevo rol son obligatorios.' });
 		}
 
 		// Prevent locking ourselves out: check if the admin is trying to demote themselves
 		if (targetProfileId === user.id) {
-			return fail(400, { error: 'Self-demotion is restricted to avoid locking out the system administrator.' });
+			return fail(400, { error: 'No puedes cambiar tu propio rol para evitar bloquear el acceso del administrador.' });
 		}
 
 		if (!['admin', 'editor', 'viewer'].includes(targetRole)) {
-			return fail(400, { error: 'Invalid role assigned.' });
+			return fail(400, { error: 'El rol asignado no es válido.' });
 		}
 
 		try {
@@ -66,7 +66,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e: any) {
-			return fail(400, { error: e.message || 'An unexpected error occurred.' });
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
 	}
 };

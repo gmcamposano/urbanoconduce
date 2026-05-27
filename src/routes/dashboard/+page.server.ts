@@ -29,7 +29,7 @@ export const actions: Actions = {
 		const id = formData.get('id') as string;
 
 		if (!id) {
-			return fail(400, { error: 'Invoice ID is required.' });
+			return fail(400, { error: 'El ID de la factura es obligatorio.' });
 		}
 
 		try {
@@ -44,7 +44,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e: any) {
-			return fail(400, { error: e.message || 'An error occurred while deleting.' });
+			return fail(400, { error: e.message || 'Ocurrió un error al eliminar.' });
 		}
 	}
 };

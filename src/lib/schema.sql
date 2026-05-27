@@ -32,6 +32,28 @@ create table if not exists public.invoices (
 	created_at timestamptz not null default timezone('utc'::text, now())
 );
 
+create table if not exists public.clients (
+	id uuid primary key default gen_random_uuid(),
+	client_type text not null check (client_type in ('person', 'company')),
+	full_name text not null,
+	email text,
+	phone text,
+	alias text,
+	rnc text,
+	company_name text,
+	created_by uuid references public.profiles(id) on delete set null,
+	created_at timestamptz not null default timezone('utc'::text, now()),
+	updated_at timestamptz not null default timezone('utc'::text, now()),
+	constraint clients_company_fields_required check (
+		client_type = 'person'
+		or (
+			btrim(coalesce(alias, '')) <> ''
+			and btrim(coalesce(rnc, '')) <> ''
+			and btrim(coalesce(company_name, '')) <> ''
+		)
+	)
+);
+
 create table if not exists public.invoice_items (
 	id uuid primary key default gen_random_uuid(),
 	invoice_id uuid not null references public.invoices(id) on delete cascade,
@@ -44,11 +66,15 @@ create table if not exists public.invoice_items (
 
 alter table public.profiles enable row level security;
 alter table public.invoices enable row level security;
+alter table public.clients enable row level security;
 alter table public.invoice_items enable row level security;
 
 create index if not exists profiles_role_idx on public.profiles using btree (role);
 create index if not exists invoices_created_by_idx on public.invoices using btree (created_by);
 create index if not exists invoices_created_at_idx on public.invoices using btree (created_at desc);
+create index if not exists clients_created_by_idx on public.clients using btree (created_by);
+create index if not exists clients_created_at_idx on public.clients using btree (created_at desc);
+create index if not exists clients_client_type_idx on public.clients using btree (client_type);
 create index if not exists invoice_items_invoice_id_idx on public.invoice_items using btree (invoice_id);
 
 create or replace function private.get_user_role()
@@ -116,6 +142,12 @@ before update on public.profiles
 for each row
 execute function private.touch_updated_at();
 
+drop trigger if exists clients_touch_updated_at on public.clients;
+create trigger clients_touch_updated_at
+before update on public.clients
+for each row
+execute function private.touch_updated_at();
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
@@ -124,6 +156,7 @@ execute function private.handle_new_user();
 
 grant select, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.invoices to authenticated;
+grant select, insert, update, delete on public.clients to authenticated;
 grant select, insert, update, delete on public.invoice_items to authenticated;
 
 drop policy if exists "Profiles are viewable by authenticated users" on public.profiles;
@@ -157,6 +190,36 @@ with check (
 		and role = (select role from public.profiles where id = auth.uid())
 	)
 );
+
+drop policy if exists "Authenticated users can read clients" on public.clients;
+drop policy if exists "Admins and editors can insert clients" on public.clients;
+drop policy if exists "Admins and editors can update clients" on public.clients;
+drop policy if exists "Admins can delete clients" on public.clients;
+
+create policy "Authenticated users can read clients"
+on public.clients
+for select
+to authenticated
+using (true);
+
+create policy "Admins and editors can insert clients"
+on public.clients
+for insert
+to authenticated
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins and editors can update clients"
+on public.clients
+for update
+to authenticated
+using ((select private.get_user_role()) in ('admin', 'editor'))
+with check ((select private.get_user_role()) in ('admin', 'editor'));
+
+create policy "Admins can delete clients"
+on public.clients
+for delete
+to authenticated
+using ((select private.get_user_role()) = 'admin');
 
 drop policy if exists "Allow authenticated users to read all invoices" on public.invoices;
 drop policy if exists "Allow admins and editors to insert invoices" on public.invoices;

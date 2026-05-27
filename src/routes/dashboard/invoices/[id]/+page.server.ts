@@ -45,7 +45,7 @@ export const actions: Actions = {
 		const status = formData.get('status') as string;
 
 		if (!status) {
-			return fail(400, { error: 'Status is required.' });
+			return fail(400, { error: 'El estado es obligatorio.' });
 		}
 
 		try {
@@ -61,7 +61,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e: any) {
-			return fail(400, { error: e.message || 'Failed to update status.' });
+			return fail(400, { error: e.message || 'No se pudo actualizar el estado.' });
 		}
 	},
 
@@ -79,7 +79,7 @@ export const actions: Actions = {
 				return fail(400, { error: error.message });
 			}
 		} catch (e: any) {
-			return fail(400, { error: e.message || 'Failed to delete.' });
+			return fail(400, { error: e.message || 'No se pudo eliminar.' });
 		}
 
 		throw redirect(303, '/dashboard');
