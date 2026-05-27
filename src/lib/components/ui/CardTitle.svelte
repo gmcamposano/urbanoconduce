@@ -14,7 +14,7 @@
 </script>
 
 <h3
-	class="text-lg font-bold tracking-tight text-white leading-none {className}"
+	class="text-[22px] font-medium tracking-tight text-[#171717] leading-none {className}"
 	{...rest}
 >
 	{#if children}

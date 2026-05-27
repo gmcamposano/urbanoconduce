@@ -25,25 +25,25 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="presentation" onclick={() => onClose?.()}>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm" role="presentation" onclick={() => onClose?.()}>
 		<div
-			class="w-full max-w-lg rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl {className}"
+			class="w-full max-w-lg rounded-xl border border-[#dfdfdf] bg-white text-[#171717] shadow-[0_16px_48px_rgba(0,0,0,0.12)] {className}"
 			role="dialog"
 			aria-modal="true"
 			onclick={(event) => event.stopPropagation()}
 			{...rest}
 		>
-			<div class="flex items-start justify-between gap-4 border-b border-zinc-900/80 p-5">
+			<div class="flex items-start justify-between gap-4 border-b border-[#ededed] p-5">
 				<div class="space-y-1">
 					{#if title}
-						<h2 class="text-lg font-bold tracking-tight">{title}</h2>
+						<h2 class="text-lg font-medium tracking-tight text-[#171717]">{title}</h2>
 					{/if}
 					{#if description}
-						<p class="text-sm text-zinc-400">{description}</p>
+						<p class="text-sm text-[#707070]">{description}</p>
 					{/if}
 				</div>
 				{#if onClose}
-					<button type="button" class="rounded-md p-1 text-zinc-500 hover:bg-zinc-900 hover:text-white" onclick={onClose} aria-label="Close dialog">
+					<button type="button" class="rounded-[6px] p-1 text-[#707070] hover:bg-[#fafafa] hover:text-[#171717]" onclick={onClose} aria-label="Close dialog">
 						<X class="h-4 w-4" />
 					</button>
 				{/if}
@@ -56,7 +56,7 @@
 			</div>
 
 			{#if footer}
-				<div class="flex items-center justify-end gap-3 border-t border-zinc-900/80 p-5">
+				<div class="flex items-center justify-end gap-3 border-t border-[#ededed] p-5">
 					{@render footer()}
 				</div>
 			{/if}

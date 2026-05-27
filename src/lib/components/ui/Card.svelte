@@ -14,7 +14,7 @@
 </script>
 
 <div
-	class="rounded-xl border border-zinc-800/80 bg-zinc-950/70 text-zinc-100 shadow-xl shadow-black/20 backdrop-blur-md overflow-hidden {className}"
+	class="rounded-lg border border-[#dfdfdf] bg-white text-[#171717] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden {className}"
 	{...rest}
 >
 	{#if children}

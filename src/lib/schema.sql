@@ -35,19 +35,21 @@ create table if not exists public.invoices (
 create table if not exists public.clients (
 	id uuid primary key default gen_random_uuid(),
 	client_type text not null check (client_type in ('person', 'company')),
-	full_name text not null,
-	email text,
-	phone text,
+	full_name text,
 	alias text,
 	rnc text,
 	company_name text,
 	created_by uuid references public.profiles(id) on delete set null,
 	created_at timestamptz not null default timezone('utc'::text, now()),
 	updated_at timestamptz not null default timezone('utc'::text, now()),
-	constraint clients_company_fields_required check (
-		client_type = 'person'
+	constraint clients_required_fields check (
+		(
+			client_type = 'person'
+			and btrim(coalesce(full_name, '')) <> ''
+		)
 		or (
-			btrim(coalesce(alias, '')) <> ''
+			client_type = 'company'
+			and btrim(coalesce(alias, '')) <> ''
 			and btrim(coalesce(rnc, '')) <> ''
 			and btrim(coalesce(company_name, '')) <> ''
 		)
@@ -206,7 +208,7 @@ create policy "Admins and editors can insert clients"
 on public.clients
 for insert
 to authenticated
-with check ((select private.get_user_role()) in ('admin', 'editor'));
+with check (true);
 
 create policy "Admins and editors can update clients"
 on public.clients

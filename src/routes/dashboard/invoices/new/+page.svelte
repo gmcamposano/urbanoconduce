@@ -81,33 +81,33 @@
 	<title>Nueva factura - FacturaFlow</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start">
+<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start text-[#171717]">
 	<!-- Top back navigation link -->
 	<div>
-		<a href={resolve('/dashboard')} class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 font-semibold transition-all duration-200">
+		<a href={resolve('/dashboard')} class="inline-flex items-center gap-1.5 text-xs text-[#707070] hover:text-[#171717] font-medium transition-colors duration-200">
 			<ArrowLeft class="h-3.5 w-3.5" />
 			Volver al panel
 		</a>
 	</div>
 
 	<!-- Header Title -->
-	<div class="border-b border-zinc-900 pb-4">
-		<h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-			<FileText class="h-6 w-6 text-indigo-500" />
+	<div class="border-b border-[#ededed] pb-4">
+		<h1 class="text-2xl font-medium text-[#171717] tracking-tight flex items-center gap-2">
+			<FileText class="h-6 w-6 text-[#3ecf8e]" />
 			Crear nueva factura
 		</h1>
-		<p class="text-zinc-500 text-xs mt-0.5">Completa los datos del cliente, los conceptos y los impuestos para emitir la factura.</p>
+		<p class="text-[#707070] text-xs mt-0.5">Completa los datos del cliente, los conceptos y los impuestos para emitir la factura.</p>
 	</div>
 
 	<!-- Error Banner -->
 	{#if form?.error}
-		<div class="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-sm text-rose-400 flex items-start gap-2.5 shadow-lg shadow-rose-500/5">
-			<svg class="h-5 w-5 text-rose-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<div class="bg-[#e2005a]/10 border border-[#e2005a]/20 p-4 rounded-xl text-sm text-[#e2005a] flex items-start gap-2.5 shadow-sm">
+			<svg class="h-5 w-5 text-[#e2005a] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 			</svg>
 			<div>
-				<p class="font-bold">No se pudo publicar la factura</p>
-				<p class="text-xs text-zinc-400 mt-0.5">{form.error}</p>
+				<p class="font-medium">No se pudo publicar la factura</p>
+				<p class="text-xs text-[#707070] mt-0.5">{form.error}</p>
 			</div>
 		</div>
 	{/if}
@@ -128,7 +128,7 @@
 		<!-- Serialize items array as a JSON string to submit through standard formData -->
 		<input type="hidden" name="items" value={JSON.stringify(items)} />
 
-		<Card class="border-zinc-800 bg-zinc-950/45">
+		<Card>
 			<CardHeader>
 				<CardTitle>1. Datos principales de la factura</CardTitle>
 			</CardHeader>
@@ -149,8 +149,8 @@
 					required
 					disabled={loading}
 				>
-						<option value="pending" class="bg-zinc-950">Pendiente de aprobación</option>
-						<option value="draft" class="bg-zinc-950">Borrador (sin enviar)</option>
+						<option value="pending">Pendiente de aprobación</option>
+						<option value="draft">Borrador (sin enviar)</option>
 				</Select>
 
 				<Input
@@ -193,7 +193,7 @@
 		</Card>
 
 		<!-- Line Items Card -->
-		<Card class="border-zinc-800 bg-zinc-950/45">
+		<Card>
 			<CardHeader class="flex flex-row justify-between items-center">
 				<CardTitle>2. Conceptos de cobro</CardTitle>
 				<Button
@@ -210,8 +210,8 @@
 			</CardHeader>
 			<CardContent class="p-0">
 				<div class="overflow-x-auto w-full">
-					<table class="w-full text-sm text-left text-zinc-300">
-						<thead class="text-xs uppercase bg-zinc-900/40 text-zinc-500 border-b border-zinc-900 tracking-wider">
+			<table class="w-full text-sm text-left text-[#171717]">
+				<thead class="text-xs uppercase bg-[#fafafa] text-[#707070] border-b border-[#ededed] tracking-wider">
 							<tr>
 								<th class="px-6 py-3 font-semibold w-1/2">Descripción</th>
 								<th class="px-6 py-3 font-semibold w-1/6">Cant.</th>
@@ -220,9 +220,9 @@
 								<th class="px-6 py-3 font-semibold text-right w-10"></th>
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-zinc-900/60">
+				<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
-								<tr class="hover:bg-zinc-900/10">
+							<tr class="hover:bg-[#fafafa]">
 									<td class="px-6 py-3">
 										<input
 											type="text"
@@ -230,7 +230,7 @@
 												placeholder="Descripción del concepto (ej. asesoría web)"
 											bind:value={item.description}
 											disabled={loading}
-							class="w-full bg-zinc-950/50 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500/50"
+							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
 						/>
 									</td>
 									<td class="px-6 py-3">
@@ -241,7 +241,7 @@
 											step="any"
 											bind:value={item.quantity}
 											disabled={loading}
-							class="w-full bg-zinc-950/50 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 text-center font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500/50"
+							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] text-center font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
 						/>
 									</td>
 									<td class="px-6 py-3">
@@ -252,10 +252,10 @@
 											step="any"
 											bind:value={item.unit_price}
 											disabled={loading}
-							class="w-full bg-zinc-950/50 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 text-right font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500/50"
+							class="w-full bg-white border border-[#dfdfdf] rounded-[6px] px-2.5 py-1.5 text-xs text-[#171717] text-right font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35"
 						/>
 									</td>
-									<td class="px-6 py-3 text-right font-mono text-zinc-300 text-xs">
+								<td class="px-6 py-3 text-right font-mono text-[#707070] text-xs">
 										{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
 									</td>
 									<td class="px-6 py-3 text-right">
@@ -263,7 +263,7 @@
 											type="button"
 											variant="ghost"
 											size="icon"
-											class="h-7 w-7 text-zinc-500 hover:text-rose-400"
+							class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
 											disabled={items.length <= 1 || loading}
 											onclick={() => removeItem(item.id)}
 										>
@@ -281,13 +281,13 @@
 		<!-- Bottom Calculation / Settings Grid -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 			<!-- Notes Card -->
-			<Card class="border-zinc-800 bg-zinc-950/45">
+			<Card>
 				<CardHeader>
 				<CardTitle>3. Términos y notas</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div class="flex flex-col gap-1.5">
-						<label for="notes" class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Términos / notas de la factura</label>
+				<label for="notes" class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">Términos / notas de la factura</label>
 						<textarea
 							id="notes"
 							name="notes"
@@ -295,24 +295,24 @@
 							bind:value={notes}
 							placeholder="Gracias por su preferencia. El pago vence en 30 días mediante transferencia bancaria."
 							disabled={loading}
-							class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 resize-none transition-all duration-200"
+					class="w-full bg-white border border-[#dfdfdf] rounded-[6px] p-3 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e] resize-none transition-colors duration-200"
 						></textarea>
 					</div>
 				</CardContent>
 			</Card>
 
 			<!-- Summary Pricing Card -->
-			<Card class="border-indigo-900/30 bg-zinc-950/65 shadow-lg shadow-indigo-950/5 relative overflow-hidden">
-				<div class="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 blur-[50px] rounded-full pointer-events-none"></div>
+			<Card class="relative overflow-hidden">
+				<div class="absolute top-0 right-0 h-32 w-32 bg-[#3ecf8e]/10 blur-[50px] rounded-full pointer-events-none"></div>
 				<CardHeader>
 					<CardTitle class="flex items-center gap-1.5">
-						<Calculator class="h-4.5 w-4.5 text-indigo-400" />
+					<Calculator class="h-4.5 w-4.5 text-[#24b47e]" />
 							Resumen y totales
 					</CardTitle>
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<!-- Tax & Discount inputs -->
-					<div class="grid grid-cols-2 gap-4 border-b border-zinc-900 pb-4">
+				<div class="grid grid-cols-2 gap-4 border-b border-[#ededed] pb-4">
 						<Input
 							label="Impuesto (%)"
 							name="tax_rate"
@@ -335,26 +335,26 @@
 					</div>
 
 					<!-- Pricing breakdown details -->
-					<div class="space-y-2 text-sm text-zinc-400">
+					<div class="space-y-2 text-sm text-[#707070]">
 						<div class="flex justify-between">
 							<span>Subtotal</span>
-							<span class="font-mono text-zinc-200 font-semibold">{formatCurrency(subtotal)}</span>
+							<span class="font-mono text-[#171717] font-medium">{formatCurrency(subtotal)}</span>
 						</div>
 						<div class="flex justify-between">
 							<span>Impuesto ({taxRate || 0}%)</span>
-							<span class="font-mono text-zinc-200 font-semibold">{formatCurrency(taxAmount)}</span>
+							<span class="font-mono text-[#171717] font-medium">{formatCurrency(taxAmount)}</span>
 						</div>
 						<div class="flex justify-between">
 							<span>Descuento</span>
-							<span class="font-mono text-zinc-200 font-semibold">-{formatCurrency(discountAmount || 0)}</span>
+							<span class="font-mono text-[#171717] font-medium">-{formatCurrency(discountAmount || 0)}</span>
 						</div>
 						
-						<div class="flex justify-between text-base font-extrabold text-white pt-2 border-t border-zinc-900">
-							<span class="flex items-center gap-1 text-indigo-400">
+						<div class="flex justify-between text-base font-medium pt-2 border-t border-[#ededed]">
+							<span class="flex items-center gap-1 text-[#24b47e]">
 								<DollarSign class="h-4.5 w-4.5" />
 								Total a pagar
 							</span>
-							<span class="font-mono text-indigo-400">{formatCurrency(totalAmount)}</span>
+							<span class="font-mono text-[#171717]">{formatCurrency(totalAmount)}</span>
 						</div>
 					</div>
 				</CardContent>
@@ -362,7 +362,7 @@
 		</div>
 
 		<!-- Submit Buttons -->
-		<div class="flex justify-end gap-3 border-t border-zinc-900 pt-6">
+		<div class="flex justify-end gap-3 border-t border-[#ededed] pt-6">
 			<a href={resolve('/dashboard')}>
 				<Button variant="outline" disabled={loading}>
 							Cancelar
@@ -375,7 +375,7 @@
 				class="flex items-center gap-1.5"
 			>
 				{#if loading}
-					<div class="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+						<div class="h-4 w-4 border-2 border-[#171717]/20 border-t-[#171717] rounded-full animate-spin"></div>
 							Guardando factura...
 				{:else}
 					<Save class="h-4 w-4" />

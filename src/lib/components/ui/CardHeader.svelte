@@ -14,7 +14,7 @@
 </script>
 
 <div
-	class="flex flex-col space-y-1.5 p-6 border-b border-zinc-900/60 {className}"
+	class="flex flex-col space-y-1.5 p-6 border-b border-[#ededed] {className}"
 	{...rest}
 >
 	{#if children}

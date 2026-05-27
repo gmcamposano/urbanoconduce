@@ -15,18 +15,18 @@
 	}: Props = $props();
 
 	const variants = {
-		default: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm shadow-indigo-500/5',
-		secondary: 'bg-zinc-800 text-zinc-300 border-zinc-700/50',
-		outline: 'bg-transparent text-zinc-400 border-zinc-800',
-		success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/5',
-		warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-sm shadow-amber-500/5',
-		danger: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-sm shadow-rose-500/5',
-		info: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-sm shadow-sky-500/5'
+		default: 'bg-[#3ecf8e] text-[#171717] border-[#3ecf8e]/35',
+		secondary: 'bg-[#fafafa] text-[#171717] border-[#dfdfdf]',
+		outline: 'bg-white text-[#707070] border-[#dfdfdf]',
+		success: 'bg-[#3ecf8e]/12 text-[#171717] border-[#3ecf8e]/35',
+		warning: 'bg-[#ffdb13]/20 text-[#171717] border-[#ffdb13]/35',
+		danger: 'bg-[#e2005a]/10 text-[#e2005a] border-[#e2005a]/20',
+		info: 'bg-[#ededed] text-[#171717] border-[#dfdfdf]'
 	};
 </script>
 
 <span
-	class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold select-none transition-colors {variants[variant]} {className}"
+	class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium select-none transition-colors {variants[variant]} {className}"
 	{...rest}
 >
 	{#if children}

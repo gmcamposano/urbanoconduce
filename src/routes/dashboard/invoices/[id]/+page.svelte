@@ -55,16 +55,16 @@
 </svelte:head>
 
 {#if invoice}
-	<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start">
+	<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start text-[#171717]">
 		<!-- Actions Top Panel (no-print) -->
-		<div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-zinc-950/40 p-4 border border-zinc-900 rounded-xl no-print">
+		<div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4 border border-[#dfdfdf] rounded-lg no-print">
 			<div class="flex items-center gap-3">
-				<a href={resolve('/dashboard')} class="text-zinc-400 hover:text-zinc-200" aria-label="Volver">
+			<a href={resolve('/dashboard')} class="text-[#707070] hover:text-[#171717]" aria-label="Volver">
 					<ArrowLeft class="h-5 w-5" />
 				</a>
 				<div>
-					<h1 class="text-base font-extrabold text-white">{invoice.invoice_number}</h1>
-					<p class="text-[10px] text-zinc-500">Creada por {invoice.profiles?.name || 'Desconocido'}</p>
+				<h1 class="text-base font-medium text-[#171717]">{invoice.invoice_number}</h1>
+				<p class="text-[10px] text-[#707070]">Creada por {invoice.profiles?.name || 'Desconocido'}</p>
 				</div>
 				
 				<!-- Current Status Badge -->
@@ -108,7 +108,7 @@
 								selectedStatus = event.currentTarget.value;
 							}}
 							disabled={statusUpdating}
-							class="flex h-8 rounded-lg border border-zinc-805 border-zinc-800 bg-zinc-950 px-2 text-xs text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 cursor-pointer"
+							class="flex h-8 rounded-[6px] border border-[#dfdfdf] bg-white px-2 text-xs text-[#171717] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e] cursor-pointer"
 						>
 						<option value="draft">Borrador</option>
 						<option value="pending">Pendiente</option>
@@ -148,34 +148,34 @@
 
 		<!-- Error Banner -->
 		{#if form?.error}
-			<div class="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-sm text-rose-400 flex items-start gap-2.5 shadow-lg shadow-rose-500/5 no-print">
+			<div class="bg-[#e2005a]/10 border border-[#e2005a]/20 p-4 rounded-xl text-sm text-[#e2005a] flex items-start gap-2.5 shadow-sm no-print">
 				<AlertTriangle class="h-5 w-5 flex-shrink-0 mt-0.5" />
 				<div>
 					<p class="font-bold">No se pudo actualizar la factura</p>
-					<p class="text-xs text-zinc-400 mt-0.5">{form.error}</p>
+					<p class="text-xs text-[#707070] mt-0.5">{form.error}</p>
 				</div>
 			</div>
 		{/if}
 
 		<!-- Beautiful Invoice Printable Sheet -->
-		<Card class="border-zinc-800 bg-zinc-950/20 shadow-2xl relative p-0 overflow-hidden print-card">
+		<Card class="relative p-0 overflow-hidden print-card">
 			<!-- Watermark glow (no-print) -->
-			<div class="absolute top-0 left-0 h-40 w-40 bg-indigo-500/5 blur-[55px] rounded-full pointer-events-none no-print"></div>
+			<div class="absolute top-0 left-0 h-40 w-40 bg-[#3ecf8e]/10 blur-[55px] rounded-full pointer-events-none no-print"></div>
 
 			<!-- Clean layout grid (looks like a paper invoice) -->
-			<div class="bg-white text-zinc-900 p-8 sm:p-12 min-h-[1000px] flex flex-col justify-between print-card print-text-dark font-sans leading-normal">
+			<div class="bg-white text-[#171717] p-8 sm:p-12 min-h-[1000px] flex flex-col justify-between print-card print-text-dark font-sans leading-normal">
 				<div class="space-y-12">
 					<!-- Header Section -->
-					<div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b pb-8 print-border border-zinc-200">
+					<div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b pb-8 print-border border-[#ededed]">
 						<!-- Company Details -->
 						<div>
 							<div class="flex items-center gap-2 mb-3">
-								<div class="bg-indigo-600 p-2 rounded text-white">
+								<div class="bg-[#3ecf8e] p-2 rounded-[6px] border border-[#24b47e] text-[#171717]">
 									<FileText class="h-5 w-5" />
 								</div>
-								<span class="font-black text-xl tracking-tight text-zinc-950">FacturaFlow</span>
+								<span class="font-medium text-xl tracking-tight text-[#171717]">FacturaFlow</span>
 							</div>
-							<p class="text-xs text-zinc-500 font-semibold leading-relaxed">
+							<p class="text-xs text-[#707070] font-medium leading-relaxed">
 								FacturaFlow Servicios SRL<br/>
 								Avenida Tecnológica 100, Oficina 400<br/>
 								Santo Domingo, República Dominicana<br/>
@@ -185,17 +185,17 @@
 
 						<!-- Bill statement IDs -->
 						<div class="text-left sm:text-right space-y-1.5">
-							<h2 class="text-3xl font-extrabold text-zinc-950 tracking-tight uppercase">Factura</h2>
-							<p class="text-sm font-bold text-indigo-600 font-mono">{invoice.invoice_number}</p>
+							<h2 class="text-3xl font-medium text-[#171717] tracking-tight uppercase">Factura</h2>
+							<p class="text-sm font-medium text-[#24b47e] font-mono">{invoice.invoice_number}</p>
 							
-							<div class="grid grid-cols-2 sm:flex sm:flex-col gap-2 pt-2 text-xs text-zinc-500 font-medium">
+							<div class="grid grid-cols-2 sm:flex sm:flex-col gap-2 pt-2 text-xs text-[#707070] font-medium">
 								<div>
-									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Fecha de emisión:</span>
-									<span class="font-mono text-zinc-700">{new Date(invoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
+								<span class="font-medium text-[#171717] uppercase tracking-wide mr-1">Fecha de emisión:</span>
+								<span class="font-mono text-[#707070]">{new Date(invoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
 								</div>
 								<div>
-									<span class="font-bold text-zinc-800 uppercase tracking-wide mr-1">Fecha de vencimiento:</span>
-									<span class="font-mono text-zinc-700">{new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
+								<span class="font-medium text-[#171717] uppercase tracking-wide mr-1">Fecha de vencimiento:</span>
+								<span class="font-mono text-[#707070]">{new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span>
 								</div>
 							</div>
 						</div>
@@ -205,35 +205,35 @@
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
 						<!-- Client -->
 						<div class="space-y-2">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Facturar a:</h3>
-							<div class="text-sm text-zinc-800 space-y-1">
-								<p class="font-extrabold text-zinc-950 text-base">{invoice.client_name}</p>
-								<p class="flex items-center gap-1.5 text-xs text-zinc-600">
-									<Mail class="h-3.5 w-3.5 text-zinc-400" />
+						<h3 class="text-xs font-medium uppercase tracking-wider text-[#707070]">Facturar a:</h3>
+						<div class="text-sm text-[#171717] space-y-1">
+							<p class="font-medium text-[#171717] text-base">{invoice.client_name}</p>
+							<p class="flex items-center gap-1.5 text-xs text-[#707070]">
+								<Mail class="h-3.5 w-3.5 text-[#9a9a9a]" />
 									{invoice.client_email}
 								</p>
 							</div>
 						</div>
 
 						<!-- Payment Status Indicator -->
-						<div class="space-y-2 sm:text-right">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Estado del pago:</h3>
+				<div class="space-y-2 sm:text-right">
+					<h3 class="text-xs font-medium uppercase tracking-wider text-[#707070]">Estado del pago:</h3>
 							<div>
 								{#if invoice.status === 'paid'}
-									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#3ecf8e]/12 text-[#171717] border border-[#3ecf8e]/25 text-xs font-medium uppercase tracking-wider">
 										<Check class="h-3.5 w-3.5" />
 										Pagada completamente
 									</span>
 								{:else if invoice.status === 'pending'}
-									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold uppercase tracking-wider">
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#ffdb13]/20 text-[#171717] border border-[#ffdb13]/35 text-xs font-medium uppercase tracking-wider">
 										Pendiente
 									</span>
 								{:else if invoice.status === 'overdue'}
-									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold uppercase tracking-wider">
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#e2005a]/10 text-[#e2005a] border border-[#e2005a]/20 text-xs font-medium uppercase tracking-wider">
 										Vencida
 									</span>
 								{:else}
-									<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-bold uppercase tracking-wider">
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#fafafa] text-[#171717] border border-[#dfdfdf] text-xs font-medium uppercase tracking-wider">
 										Borrador
 									</span>
 								{/if}
@@ -242,23 +242,23 @@
 					</div>
 
 					<!-- Items Table -->
-					<div class="space-y-4">
-						<table class="w-full text-sm text-left border-collapse">
+				<div class="space-y-4">
+					<table class="w-full text-sm text-left border-collapse">
 							<thead>
-								<tr class="border-b-2 print-border border-zinc-900 text-xs uppercase text-zinc-400 font-extrabold tracking-wider">
+						<tr class="border-b-2 print-border border-[#171717] text-xs uppercase text-[#707070] font-medium tracking-wider">
 									<th class="py-3 font-semibold">Descripción</th>
 									<th class="py-3 font-semibold text-center w-20">Cant.</th>
 									<th class="py-3 font-semibold text-right w-32">Precio unitario</th>
 									<th class="py-3 font-semibold text-right w-32">Total</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y print-border divide-zinc-150">
+					<tbody class="divide-y print-border divide-[#ededed]">
 								{#each items as item (item.id ?? item.description)}
-									<tr class="text-zinc-800">
-										<td class="py-4 font-semibold text-zinc-950">{item.description}</td>
-										<td class="py-4 text-center font-mono text-zinc-650">{Number(item.quantity)}</td>
-										<td class="py-4 text-right font-mono text-zinc-650">{formatCurrency(Number(item.unit_price))}</td>
-										<td class="py-4 text-right font-mono text-zinc-950 font-bold">{formatCurrency(Number(item.amount))}</td>
+						<tr class="text-[#171717]">
+							<td class="py-4 font-medium text-[#171717]">{item.description}</td>
+							<td class="py-4 text-center font-mono text-[#707070]">{Number(item.quantity)}</td>
+							<td class="py-4 text-right font-mono text-[#707070]">{formatCurrency(Number(item.unit_price))}</td>
+							<td class="py-4 text-right font-mono text-[#171717] font-medium">{formatCurrency(Number(item.amount))}</td>
 									</tr>
 								{/each}
 							</tbody>
@@ -267,36 +267,36 @@
 
 					<!-- Summary block -->
 					<div class="flex justify-end pt-6">
-						<div class="w-full sm:w-80 space-y-3.5 text-sm text-zinc-600">
-							<div class="flex justify-between border-b pb-2 print-border border-zinc-150">
-								<span class="font-semibold">Subtotal</span>
-								<span class="font-mono text-zinc-950 font-bold">{formatCurrency(subtotal)}</span>
+					<div class="w-full sm:w-80 space-y-3.5 text-sm text-[#707070]">
+						<div class="flex justify-between border-b pb-2 print-border border-[#ededed]">
+							<span class="font-medium">Subtotal</span>
+							<span class="font-mono text-[#171717] font-medium">{formatCurrency(subtotal)}</span>
 							</div>
-							<div class="flex justify-between border-b pb-2 print-border border-zinc-150">
-								<span class="font-semibold">Impuesto ({invoice.tax_rate}%)</span>
-								<span class="font-mono text-zinc-950 font-bold">{formatCurrency(taxAmount)}</span>
+						<div class="flex justify-between border-b pb-2 print-border border-[#ededed]">
+							<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
+							<span class="font-mono text-[#171717] font-medium">{formatCurrency(taxAmount)}</span>
 							</div>
-							<div class="flex justify-between border-b pb-2 print-border border-zinc-150">
-								<span class="font-semibold">Descuento</span>
-								<span class="font-mono text-zinc-950 font-bold">-{formatCurrency(Number(invoice.discount_amount))}</span>
+						<div class="flex justify-between border-b pb-2 print-border border-[#ededed]">
+							<span class="font-medium">Descuento</span>
+							<span class="font-mono text-[#171717] font-medium">-{formatCurrency(Number(invoice.discount_amount))}</span>
 							</div>
-							<div class="flex justify-between text-base font-black text-indigo-650 pt-2 text-indigo-600">
-								<span class="uppercase tracking-wide font-extrabold">Total a pagar</span>
-								<span class="font-mono text-lg">{formatCurrency(Number(invoice.total_amount))}</span>
+						<div class="flex justify-between text-base font-medium pt-2 text-[#24b47e]">
+							<span class="uppercase tracking-wide">Total a pagar</span>
+							<span class="font-mono text-lg text-[#171717]">{formatCurrency(Number(invoice.total_amount))}</span>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				<!-- Footer Notes -->
-				<div class="border-t print-border border-zinc-200 pt-8 mt-12 space-y-4">
+				<div class="border-t print-border border-[#ededed] pt-8 mt-12 space-y-4">
 					{#if invoice.notes}
 						<div class="space-y-1">
-							<h4 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Términos e instrucciones:</h4>
-							<p class="text-xs text-zinc-500 leading-relaxed whitespace-pre-line">{invoice.notes}</p>
+						<h4 class="text-xs font-medium uppercase tracking-wider text-[#707070]">Términos e instrucciones:</h4>
+						<p class="text-xs text-[#707070] leading-relaxed whitespace-pre-line">{invoice.notes}</p>
 						</div>
 					{/if}
-					<div class="text-[10px] text-zinc-450 text-center leading-relaxed">
+					<div class="text-[10px] text-[#707070] text-center leading-relaxed">
 						Realiza las transferencias bancarias a: <strong>Banco de Reservas</strong>, ruta: <strong>#123456789</strong>, cuenta: <strong>#987654321</strong>.<br/>
 						Si tienes preguntas sobre esta factura, escribe a facturacion@facturaflow.com. Gracias por tu confianza.
 					</div>
@@ -308,16 +308,16 @@
 
 <!-- Delete Confirmation Modal (no-print) -->
 {#if showDeleteModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm no-print">
-		<Card class="w-full max-w-sm border-zinc-800 bg-zinc-950 shadow-2xl">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm no-print">
+		<Card class="w-full max-w-sm">
 			<CardContent class="p-6 space-y-4">
-				<div class="flex items-center gap-2.5 text-rose-400">
+				<div class="flex items-center gap-2.5 text-[#e2005a]">
 					<AlertTriangle class="h-6 w-6" />
-						<h3 class="font-extrabold text-lg">Confirmar eliminación</h3>
+					<h3 class="font-medium text-lg">Confirmar eliminación</h3>
 				</div>
 				
-				<p class="text-sm text-zinc-400 leading-relaxed">
-						¿Seguro que deseas eliminar la factura <strong class="text-white">{invoice?.invoice_number}</strong>? Esto borrará el registro y todos los conceptos asociados de forma permanente.
+				<p class="text-sm text-[#707070] leading-relaxed">
+					¿Seguro que deseas eliminar la factura <strong class="text-[#171717]">{invoice?.invoice_number}</strong>? Esto borrará el registro y todos los conceptos asociados de forma permanente.
 				</p>
 				
 				<div class="flex justify-end gap-3 pt-2">

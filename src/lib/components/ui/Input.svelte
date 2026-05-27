@@ -19,7 +19,7 @@
 
 <div class="flex flex-col gap-1.5 w-full">
 	{#if label}
-		<label for={id} class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+		<label for={id} class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">
 			{label}
 		</label>
 	{/if}
@@ -27,10 +27,10 @@
 		{id}
 		{type}
 		bind:value
-		class="flex h-10 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 {error ? 'border-rose-500/60 focus-visible:ring-rose-500/30' : ''} {className}"
+		class="flex h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e] disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200 {error ? 'border-[#e2005a]/50 focus-visible:ring-[#e2005a]/20' : ''} {className}"
 		{...rest}
 	/>
 	{#if error}
-		<p class="text-xs text-rose-400 font-medium mt-0.5">{error}</p>
+		<p class="text-xs text-[#e2005a] font-medium mt-0.5">{error}</p>
 	{/if}
 </div>

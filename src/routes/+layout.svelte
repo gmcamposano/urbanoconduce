@@ -27,6 +27,6 @@
 	<title>FacturaFlow - Generador profesional de facturas</title>
 </svelte:head>
 
-<div class="relative min-h-screen bg-zinc-950 bg-radial-glow flex flex-col">
+<div class="relative min-h-screen bg-white text-[#171717] flex flex-col">
 	{@render children()}
 </div>

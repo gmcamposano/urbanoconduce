@@ -8,6 +8,11 @@
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
+# Very important:
+
+1. Always after creating a migration you must push the migration to supabase. Always use mcp supabase-dev first until the user has verified it works great. If he says its OK, we then push to production.
+2. Always verify that we are following design rules `DESIGN.md`
+
 ## Available Svelte MCP Tools:
 
 ### 1. list-sections
