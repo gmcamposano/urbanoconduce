@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { dev } from '$app/environment';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { user } = await locals.safeGetUser();
@@ -36,9 +37,9 @@ export const actions: Actions = {
 		const email = formData.get('email') as string;
 		const password = formData.get('password') as string;
 		const name = formData.get('name') as string;
-		const role = formData.get('role') as string;
+		const role = dev ? (formData.get('role') as string) : 'viewer';
 
-		if (!email || !password || !name || !role) {
+		if (!email || !password || !name || (dev && !role)) {
 			return fail(400, { email, name, role, error: 'All fields are required.' });
 		}
 
@@ -48,7 +49,7 @@ export const actions: Actions = {
 			options: {
 				data: {
 					name,
-					role
+					role: dev ? role : 'viewer'
 				}
 			}
 		});

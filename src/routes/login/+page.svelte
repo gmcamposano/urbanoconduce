@@ -7,6 +7,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import { dev } from '$app/environment';
 	import { FileText, LogIn, UserPlus, Shield, Eye, EyeOff } from '@lucide/svelte';
 
 	type LoginFormState = {
@@ -22,15 +23,7 @@
 	let showPassword = $state(false);
 	let loading = $state(false);
 
-	// Local error tracking to avoid SvelteKit form mutation type issues
-	let errorMessage = $state('');
-	$effect(() => {
-		if (form?.error) {
-			errorMessage = form.error;
-		} else {
-			errorMessage = '';
-		}
-	});
+	let errorMessage = $derived(form?.error ?? '');
 
 	// Form values (for local bindings)
 	let email = $state('');
@@ -229,25 +222,25 @@
 						</button>
 					</div>
 
-					<!-- Role selection for testing environment -->
-					<Select
-						label="Assigned System Role"
-						name="role"
-						required
-						disabled={loading}
-					>
-						<option value="viewer" class="bg-zinc-950 text-zinc-100">Viewer (Read Only)</option>
-						<option value="editor" class="bg-zinc-950 text-zinc-100">Editor (Create & Edit)</option>
-						<option value="admin" class="bg-zinc-950 text-zinc-100">Admin (Full Control)</option>
-					</Select>
+					{#if dev}
+						<!-- Role selection for testing environment -->
+						<Select
+							label="Assigned System Role"
+							name="role"
+							required
+							disabled={loading}
+						>
+							<option value="viewer" class="bg-zinc-950 text-zinc-100">Viewer (Read Only)</option>
+							<option value="editor" class="bg-zinc-950 text-zinc-100">Editor (Create & Edit)</option>
+							<option value="admin" class="bg-zinc-950 text-zinc-100">Admin (Full Control)</option>
+						</Select>
 
-					<!-- Info Tip -->
-					<div class="flex gap-2 bg-indigo-500/5 border border-indigo-500/10 p-3 rounded-lg text-[11px] text-zinc-400">
-						<Shield class="h-4 w-4 text-indigo-400 flex-shrink-0" />
-						<p>
-							Choosing a role during registration is enabled for development/review. Live Postgres RLS rules govern their permissions.
-						</p>
-					</div>
+						<!-- Info Tip -->
+						<div class="flex gap-2 bg-indigo-500/5 border border-indigo-500/10 p-3 rounded-lg text-[11px] text-zinc-400">
+							<Shield class="h-4 w-4 text-indigo-400 flex-shrink-0" />
+							<p>Choosing a role during registration is enabled for development/review only.</p>
+						</div>
+					{/if}
 
 					<Button
 						type="submit"

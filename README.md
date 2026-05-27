@@ -29,6 +29,12 @@ npm run dev
 npm run dev -- --open
 ```
 
+## Environment
+
+- Use `.env.development` for local development.
+- Use production environment variables in your deployment platform.
+- Do not reuse the same Supabase project for dev and prod.
+
 ## Building
 
 To create a production version of your app:
