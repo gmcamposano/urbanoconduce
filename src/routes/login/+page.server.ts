@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { dev } from '$app/environment';
+import { env } from '$env/dynamic/public';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { user } = await locals.safeGetUser();
@@ -53,10 +54,15 @@ export const actions: Actions = {
 			});
 		}
 
+		const siteUrl = env.PUBLIC_SITE_URL && env.PUBLIC_SITE_URL.startsWith('http')
+			? env.PUBLIC_SITE_URL
+			: null;
+
 		const { data, error } = await locals.supabase.auth.signUp({
 			email,
 			password,
 			options: {
+				emailRedirectTo: siteUrl ? `${siteUrl}/auth/callback` : undefined,
 				data: {
 					name,
 					role: dev ? role : 'viewer'
