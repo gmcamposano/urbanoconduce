@@ -27,6 +27,12 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.select('id, color')
 		.order('color', { ascending: true });
 
+	const { data: clients, error: clientsError } = await locals.supabase
+		.from('clients')
+		.select('id, client_type, full_name, company_name, alias, email')
+		.order('company_name', { ascending: true })
+		.order('full_name', { ascending: true });
+
 	if (productsError) {
 		console.error('Supabase query error in invoice load products:', productsError.message);
 	}
@@ -35,10 +41,15 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Supabase query error in invoice load colors:', colorsError.message);
 	}
 
+	if (clientsError) {
+		console.error('Supabase query error in invoice load clients:', clientsError.message);
+	}
+
 	return {
 		invoiceNumberPreview,
 		products: products || [],
-		colors: colors || []
+		colors: colors || [],
+		clients: clients || []
 	};
 };
 
@@ -52,6 +63,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
 		const invoiceNumber = invoiceNumberInput || generateInvoiceNumber();
+		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();
 		const invoiceDate = String(formData.get('invoice_date') ?? '').trim();
@@ -63,7 +75,7 @@ export const actions: Actions = {
 		const discountAmount = Number(formData.get('discount_amount') || 0);
 		const itemsJson = formData.get('items') as string;
 
-		if (!clientName || !invoiceDate || !dueDate || !status) {
+		if (!clientId || !clientName || !invoiceDate || !dueDate || !status) {
 			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
 		}
 

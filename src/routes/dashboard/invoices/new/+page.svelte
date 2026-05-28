@@ -27,11 +27,21 @@
 
 	// Form field reactive states
 	let invoiceNumber = $state('');
-	let clientName = $state('');
+	let selectedClientId = $state('');
 	let clientEmail = $state('');
 	let invoiceDate = $state(formattedToday);
 	let dueDate = $state(formattedDue);
-	
+
+	const clients = $derived(data.clients || []);
+
+	const selectedClient = $derived(clients.find((c) => c.id === selectedClientId) || null);
+
+	$effect(() => {
+		if (selectedClient) {
+			clientEmail = selectedClient.email || '';
+		}
+	});
+
 	let notes = $state('');
 	let includeTax = $state(false);
 	let discountAmount = $state<number>(0);
@@ -173,13 +183,31 @@
 
 				<input type="hidden" name="status" value="pending" />
 
-				<Input
-					label="Nombre del cliente"
-					name="client_name"
-					bind:value={clientName}
-					placeholder="Constructora del Caribe SRL"
-					required
+				<Select
+					label="Cliente"
+					name="client_id"
+					bind:value={selectedClientId}
 					disabled={loading}
+					required
+				>
+					<option value="">Selecciona un cliente</option>
+					{#each clients as client (client.id)}
+						<option value={client.id}>
+							{client.client_type === 'company'
+								? client.company_name || client.alias || 'Empresa sin nombre'
+								: client.full_name || 'Cliente sin nombre'}
+						</option>
+					{/each}
+				</Select>
+
+				<input
+					type="hidden"
+					name="client_name"
+					value={selectedClient
+						? selectedClient.client_type === 'company'
+							? selectedClient.company_name || selectedClient.alias || ''
+							: selectedClient.full_name || ''
+						: ''}
 				/>
 
 				<Input
@@ -187,7 +215,8 @@
 					name="client_email"
 					type="email"
 					bind:value={clientEmail}
-					placeholder="facturacion@cliente.com"
+					placeholder="Se autocompleta al seleccionar cliente"
+					readonly
 					disabled={loading}
 				/>
 
