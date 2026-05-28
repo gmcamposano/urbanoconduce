@@ -6,14 +6,19 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { ShieldAlert, User, AlertTriangle, Shield, Check, Edit3 } from '@lucide/svelte';
+	import { ShieldAlert, User, AlertTriangle, Shield, Check, Edit3, Mail, Plus, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
 	const profiles = $derived(data.profiles || []);
+	const allowedEmails = $derived(data.allowedEmails || []);
 
-	// Local tracking of which user is currently being updated to render spinner/loading feedback
 	let updatingUserId = $state<string | null>(null);
+	let addingEmail = $state(false);
+	let deletingEmailId = $state<string | null>(null);
+
+	const emailForm = $derived(form?.emailError ? form.emailError : null);
+	const emailSuccess = $derived(form?.emailSuccess ? true : null);
 </script>
 
 <svelte:head>
@@ -193,5 +198,185 @@
 				</tbody>
 			</table>
 		</div>
+	</Card>
+
+	<!-- Allowed Emails Management -->
+	<Card class="bg-white">
+		<CardHeader>
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<Mail class="h-5 w-5 text-[#3ecf8e]" />
+					<CardTitle class="text-lg">Correos electrónicos autorizados</CardTitle>
+				</div>
+				<Button
+					variant="secondary"
+					size="sm"
+					class="h-8 gap-1.5 px-3"
+					onclick={() => (addingEmail = !addingEmail)}
+				>
+					<Plus class="h-4 w-4" />
+					Agregar patrón
+				</Button>
+			</div>
+			<p class="mt-1 text-xs text-[#707070]">
+				Define los dominios o correos que pueden registrarse en el sistema. Si la lista está vacía, cualquier correo es aceptado.
+			</p>
+		</CardHeader>
+
+		{#if emailSuccess}
+			<div class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717]">
+				<Check class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
+				<div>
+					<p class="font-medium">Operación exitosa</p>
+					<p class="mt-0.5 text-xs text-[#707070]">El patrón de correo fue actualizado.</p>
+				</div>
+			</div>
+		{/if}
+
+		{#if emailForm}
+			<div class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a]">
+				<AlertTriangle class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]" />
+				<div>
+					<p class="font-medium">La operación falló</p>
+					<p class="mt-0.5 text-xs text-[#e2005a]">{emailForm}</p>
+				</div>
+			</div>
+		{/if}
+
+		{#if addingEmail}
+			<CardContent class="border-t border-[#ededed] pt-4">
+				<form
+					action="?/addAllowedEmail"
+					method="POST"
+					class="flex flex-col gap-3 rounded-lg border border-[#ededed] bg-[#fafafa] p-4 sm:flex-row sm:items-end"
+					use:enhance={() => {
+						return async ({ update }) => {
+							await update();
+							addingEmail = false;
+						};
+					}}
+				>
+					<div class="flex-1">
+						<label class="mb-1 block text-xs font-medium text-[#707070]" for="pattern">
+							Patrón de correo
+						</label>
+						<input
+							id="pattern"
+							name="pattern"
+							type="text"
+							placeholder="@empresa.com o usuario@empresa.com"
+							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+							required
+						/>
+					</div>
+					<div class="w-full sm:w-40">
+						<label class="mb-1 block text-xs font-medium text-[#707070]" for="pattern_type">Tipo</label>
+						<select
+							id="pattern_type"
+							name="pattern_type"
+							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+						>
+							<option value="domain">Solo dominio</option>
+							<option value="full_email">Correo completo</option>
+						</select>
+					</div>
+					<div class="flex-1">
+						<label class="mb-1 block text-xs font-medium text-[#707070]" for="description">
+							Descripción (opcional)
+						</label>
+						<input
+							id="description"
+							name="description"
+							type="text"
+							placeholder="Ej: empleados de la empresa"
+							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+						/>
+					</div>
+					<div class="flex gap-2">
+						<Button type="submit" variant="default" size="sm" class="h-9 px-4">Agregar</Button>
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							class="h-9 px-4"
+							onclick={() => (addingEmail = false)}
+						>
+							Cancelar
+						</Button>
+					</div>
+				</form>
+			</CardContent>
+		{/if}
+
+		{#if allowedEmails.length === 0}
+			<CardContent class="py-8 text-center">
+				<Mail class="mx-auto h-8 w-8 text-[#b2b2b2]" />
+				<p class="mt-2 text-sm text-[#707070]">No hay patrones de correo autorizados.</p>
+				<p class="text-xs text-[#9a9a9a]">Agrega un dominio para restringir el registro a ciertos correos.</p>
+			</CardContent>
+		{:else}
+			<div class="w-full overflow-x-auto">
+				<table class="w-full text-left text-sm text-[#171717]">
+					<thead
+						class="border-t border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+					>
+						<tr>
+							<th class="px-6 py-3 font-bold">Patrón</th>
+							<th class="px-6 py-3 font-bold">Tipo</th>
+							<th class="px-6 py-3 font-bold">Descripción</th>
+							<th class="px-6 py-3 font-bold">Estado</th>
+							<th class="px-6 py-3 text-right font-bold">Eliminar</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[#ededed]">
+						{#each allowedEmails as item (item.id)}
+							<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
+								<td class="px-6 py-4 font-mono text-xs text-[#707070]">{item.pattern}</td>
+								<td class="px-6 py-4">
+									<Badge variant={item.pattern_type === 'domain' ? 'info' : 'secondary'}>
+										{item.pattern_type === 'domain' ? 'Dominio' : 'Correo completo'}
+									</Badge>
+								</td>
+								<td class="px-6 py-4 text-xs text-[#707070]">{item.description || '—'}</td>
+								<td class="px-6 py-4">
+									<Badge variant={item.is_active ? 'success' : 'danger'}>
+										{item.is_active ? 'Activo' : 'Inactivo'}
+									</Badge>
+								</td>
+								<td class="px-6 py-4 text-right">
+									<form
+										action="?/deleteAllowedEmail"
+										method="POST"
+										class="inline-flex"
+										use:enhance={() => {
+											deletingEmailId = item.id;
+											return async ({ update }) => {
+												deletingEmailId = null;
+												await update();
+											};
+										}}
+									>
+										<input type="hidden" name="id" value={item.id} />
+										<Button
+											type="submit"
+variant="destructive"
+											size="sm"
+											class="h-8 px-2.5"
+											disabled={deletingEmailId !== null}
+										>
+											{#if deletingEmailId === item.id}
+												Eliminando...
+											{:else}
+												<Trash2 class="h-4 w-4" />
+											{/if}
+										</Button>
+									</form>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	</Card>
 </div>

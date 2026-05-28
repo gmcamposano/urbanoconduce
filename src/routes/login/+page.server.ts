@@ -43,6 +43,16 @@ export const actions: Actions = {
 			return fail(400, { email, name, role, error: 'All fields are required.' });
 		}
 
+		const { data: allowed, error: allowedError } = await locals.supabase.rpc('is_email_allowed', { email });
+		if (allowedError || !allowed) {
+			return fail(400, {
+				email,
+				name,
+				role,
+				error: 'Tu correo electrónico no está autorizado para registrarse en este sistema. Contacta al administrador.'
+			});
+		}
+
 		const { data, error } = await locals.supabase.auth.signUp({
 			email,
 			password,

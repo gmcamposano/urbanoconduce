@@ -9,8 +9,10 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { ArrowLeft, Calculator, DollarSign, FileText, Plus, Save, Trash2 } from '@lucide/svelte';
 	import type { InvoiceEditorData, InvoiceEditorState } from '$lib/invoiceEditor';
+	import type { ActionData } from './$types';
 
 	type InvoiceFormItem = {
 		id: string;
@@ -33,7 +35,7 @@
 		items: InvoiceFormItem[];
 	};
 
-	let { invoice, products, colors, initial, form: actionForm }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors'> & { initial: InvoiceEditorState; form: any } = $props();
+	let { invoice, products, colors, initial, form: actionForm }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors'> & { initial: InvoiceEditorState; form: ActionData } = $props();
 
 	function createItem(): InvoiceFormItem {
 		return {
@@ -66,6 +68,8 @@
 		seedEditor();
 	});
 	let loading = $state(false);
+
+	const canAddItem = $derived(editor.items.some((item) => item.product_id));
 
 	const subtotal = $derived(
 		editor.items.reduce(
@@ -184,7 +188,7 @@
 			<Card>
 				<CardHeader class="flex flex-row items-center justify-between">
 					<CardTitle>2. Conceptos de cobro</CardTitle>
-					<Button type="button" variant="outline" size="sm" class="flex items-center gap-1" onclick={addItem} disabled={loading}>
+					<Button type="button" variant="outline" size="sm" class="flex items-center gap-1" onclick={addItem} disabled={loading || !canAddItem}>
 						<Plus class="h-3.5 w-3.5" />
 						Añadir fila
 					</Button>
@@ -216,12 +220,13 @@
 						{#each editor.items as item (item.id)}
 									<tr class="hover:bg-[#fafafa]">
 										<td class="px-6 py-3">
-											<Select label="" name="product" bind:value={item.product_id} disabled={loading || !products.length} onchange={(event) => applyProductToItem(item, event.currentTarget.value)} class="text-xs">
-												<option value="">Selecciona un producto</option>
-												{#each products as product (product.id)}
-													<option value={product.id}>{product.title}</option>
-												{/each}
-											</Select>
+											<SearchableSelect
+												options={products.map((p) => ({ value: p.id, label: p.title }))}
+												bind:value={item.product_id}
+												placeholder="Selecciona un producto"
+												disabled={loading || !products.length}
+												onchange={(value) => applyProductToItem(item, value)}
+											/>
 										</td>
 										<td class="px-6 py-3">
 											<Select label="" name="color" bind:value={item.color} disabled={loading || !colors.length} required={colors.length > 0} class="text-xs capitalize">

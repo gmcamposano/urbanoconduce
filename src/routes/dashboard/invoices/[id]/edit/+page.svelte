@@ -1,9 +1,9 @@
 <script lang="ts">
 	import InvoiceEditor from './InvoiceEditor.svelte';
 	import { buildInvoiceEditorState } from '$lib/invoiceEditor';
-	import type { PageData } from './$types';
+	import type { PageData, ActionData } from './$types';
 
-	let { data, form }: { data: PageData; form: any } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
 <svelte:head>

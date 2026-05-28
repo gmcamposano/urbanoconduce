@@ -8,6 +8,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { SvelteDate } from 'svelte/reactivity';
 	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign } from '@lucide/svelte';
 
@@ -62,6 +63,19 @@
 	>([createItem()]);
 
 	let loading = $state(false);
+
+	const canAddItem = $derived(!!items[items.length - 1]?.product_id);
+
+	$effect(() => {
+		if (items.length > 1) {
+			const filtered = items.filter((item, index) => index === items.length - 1 || item.product_id);
+			if (filtered.length === 0) {
+				items = [createItem()];
+			} else if (filtered.length < items.length) {
+				items = filtered;
+			}
+		}
+	});
 
 	// Subtotal calculations (derived)
 	const subtotal = $derived(
@@ -250,7 +264,7 @@
 					size="sm"
 					class="flex items-center gap-1"
 					onclick={addItem}
-					disabled={loading}
+					disabled={loading || !canAddItem}
 				>
 					<Plus class="h-3.5 w-3.5" />
 					Añadir fila
@@ -285,19 +299,13 @@
 							{#each items as item (item.id)}
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-6 py-3">
-										<Select
-											label=""
-											name="product"
+										<SearchableSelect
+											options={products.map((p) => ({ value: p.id, label: p.title }))}
 											bind:value={item.product_id}
+											placeholder="Selecciona un producto"
 											disabled={loading || !products.length}
-											onchange={(event) => applyProductToItem(item, event.currentTarget.value)}
-											class="text-xs"
-										>
-											<option value="">Selecciona un producto</option>
-											{#each products as product (product.id)}
-												<option value={product.id}>{product.title}</option>
-											{/each}
-										</Select>
+											onchange={(value) => applyProductToItem(item, value)}
+										/>
 									</td>
 									<td class="px-6 py-3">
 										<Select
