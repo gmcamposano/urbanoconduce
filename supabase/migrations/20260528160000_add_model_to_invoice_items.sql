@@ -1,0 +1,1 @@
+ALTER TABLE public.invoice_items ADD COLUMN model uuid REFERENCES public.product_models(id) ON DELETE SET NULL;

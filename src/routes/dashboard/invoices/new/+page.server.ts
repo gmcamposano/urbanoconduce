@@ -27,6 +27,11 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.select('id, color')
 		.order('color', { ascending: true });
 
+	const { data: models, error: modelsError } = await locals.supabase
+		.from('product_models')
+		.select('id, model')
+		.order('model', { ascending: true });
+
 	const { data: clients, error: clientsError } = await locals.supabase
 		.from('clients')
 		.select('id, client_type, full_name, company_name, alias, email')
@@ -41,6 +46,10 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Supabase query error in invoice load colors:', colorsError.message);
 	}
 
+	if (modelsError) {
+		console.error('Supabase query error in invoice load models:', modelsError.message);
+	}
+
 	if (clientsError) {
 		console.error('Supabase query error in invoice load clients:', clientsError.message);
 	}
@@ -49,6 +58,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		invoiceNumberPreview,
 		products: products || [],
 		colors: colors || [],
+		models: models || [],
 		clients: clients || []
 	};
 };
@@ -79,7 +89,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
 		}
 
-		let items: Array<{ product_id: string; color: string; quantity: number }> = [];
+		let items: Array<{ product_id: string; color: string; model: string; quantity: number }> = [];
 		try {
 			items = JSON.parse(itemsJson || '[]');
 		} catch {
@@ -142,6 +152,7 @@ export const actions: Actions = {
 		const normalizedItems: Array<{
 			description: string;
 			color: string | null;
+			model: string | null;
 			quantity: number;
 			unit_price: number;
 			amount: number;
@@ -151,6 +162,7 @@ export const actions: Actions = {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
+			const model = (item.model || '').trim() || null;
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
@@ -166,6 +178,7 @@ export const actions: Actions = {
 			normalizedItems.push({
 				description: product.title,
 				color: color || null,
+				model,
 				quantity,
 				unit_price: unitPrice,
 				amount: quantity * unitPrice
@@ -203,6 +216,7 @@ export const actions: Actions = {
 				invoice_id: invoice.id,
 				description: item.description,
 				color: item.color,
+				model: item.model,
 				quantity: item.quantity,
 				unit_price: item.unit_price,
 				amount: item.amount

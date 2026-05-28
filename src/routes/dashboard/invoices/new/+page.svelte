@@ -16,7 +16,9 @@
 
 	const products = $derived(data.products || []);
 	const colors = $derived(data.colors || []);
+	const models = $derived(data.models || []);
 	const defaultColor = $derived(colors[0]?.color ?? '');
+	const defaultModel = $derived(models[0]?.id ?? '');
 
 	// Set up date defaults
 	const today = new SvelteDate();
@@ -53,13 +55,14 @@
 			id: crypto.randomUUID(),
 			product_id: '',
 			color: defaultColor,
+			model: defaultModel,
 			quantity: 1,
 			unit_price: 0
 		};
 	}
 
 	let items = $state<
-		Array<{ id: string; product_id: string; color: string; quantity: number; unit_price: number }>
+		Array<{ id: string; product_id: string; color: string; model: string; quantity: number; unit_price: number }>
 	>([createItem()]);
 
 	let loading = $state(false);
@@ -281,14 +284,20 @@
 						No hay colores disponibles. Crea al menos uno en la sección Colores.
 					</div>
 				{/if}
+				{#if !models.length}
+					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+						No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+					</div>
+				{/if}
 				<div class="w-full overflow-x-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
 							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-								<th class="w-1/3 px-6 py-3 font-semibold">Producto</th>
+								<th class="w-1/4 px-6 py-3 font-semibold">Producto</th>
 								<th class="w-1/6 px-6 py-3 font-semibold">Color</th>
+								<th class="w-1/6 px-6 py-3 font-semibold">Modelo</th>
 								<th class="w-1/12 px-6 py-3 font-semibold">Cant.</th>
 								<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
 								<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
@@ -323,6 +332,25 @@
 											>
 											{#each colors as color (color.id)}
 												<option value={color.color}>{color.color}</option>
+											{/each}
+										</Select>
+									</td>
+									<td class="px-6 py-3">
+										<Select
+											label=""
+											name="model"
+											bind:value={item.model}
+											disabled={loading || !models.length}
+											required={models.length > 0}
+											class="text-xs capitalize"
+										>
+											<option value=""
+												>{models.length
+													? 'Selecciona un modelo'
+													: 'No hay modelos disponibles'}</option
+											>
+											{#each models as model (model.id)}
+												<option value={model.id}>{model.model}</option>
 											{/each}
 										</Select>
 									</td>
