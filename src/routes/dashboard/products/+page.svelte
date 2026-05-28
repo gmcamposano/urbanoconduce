@@ -12,9 +12,7 @@
 	let { data, form } = $props();
 
 	const profile = $derived(data.profile);
-	const canManage = $derived(
-		profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'moderator'
-	);
+	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const products = $derived(data.products || []);
 
 	let loading = $state(false);
@@ -82,11 +80,15 @@
 			<Package class="h-6 w-6 text-[#3ecf8e]" />
 			Productos
 		</h1>
-		<p class="mt-0.5 text-xs text-[#707070]">Crea tu catálogo de servicios o productos con su precio sin impuestos.</p>
+		<p class="mt-0.5 text-xs text-[#707070]">
+			Crea tu catálogo de servicios o productos con su precio sin impuestos.
+		</p>
 	</div>
 
 	{#if form?.error}
-		<div class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm">
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+		>
 			<Tags class="mt-0.5 h-5 w-5 flex-shrink-0" />
 			<div>
 				<p class="font-medium">No se pudo guardar el producto</p>
@@ -96,7 +98,9 @@
 	{/if}
 
 	{#if form?.success}
-		<div class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm">
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm"
+		>
 			<Tags class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
 			<div>
 				<p class="font-medium">{form.message || 'Producto guardado'}</p>
@@ -126,10 +130,21 @@
 						};
 					}}
 				>
-					<Input bind:value={title} label="Título" name="title" placeholder="Consultoría SEO" required disabled={loading} />
+					<Input
+						bind:value={title}
+						label="Título"
+						name="title"
+						placeholder="Consultoría SEO"
+						required
+						disabled={loading}
+					/>
 
 					<div class="flex w-full flex-col gap-1.5">
-						<label for="description" class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">Descripción</label>
+						<label
+							for="description"
+							class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
+							>Descripción</label
+						>
 						<textarea
 							id="description"
 							name="description"
@@ -137,7 +152,7 @@
 							rows="4"
 							placeholder="Detalle breve del producto o servicio"
 							disabled={loading}
-							class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] placeholder:text-[#9a9a9a] transition-colors duration-200 focus-visible:border-[#24b47e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 disabled:cursor-not-allowed disabled:opacity-50"
+							class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						></textarea>
 					</div>
 
@@ -167,34 +182,54 @@
 			<CardContent class="p-0">
 				<div class="w-full overflow-x-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
-						<thead class="border-b border-[#ededed] bg-[#fafafa] text-xs uppercase tracking-wider text-[#707070]">
+						<thead
+							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+						>
 							<tr>
 								<th class="px-6 py-4 font-bold">Título</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
-								<th class="px-6 py-4 font-bold text-right">Precio</th>
+								<th class="px-6 py-4 text-right font-bold">Precio</th>
 								{#if canManage}
-									<th class="px-6 py-4 font-bold text-right">Acciones</th>
+									<th class="px-6 py-4 text-right font-bold">Acciones</th>
 								{/if}
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#if products.length === 0}
 								<tr>
-									<td colspan={canManage ? 4 : 3} class="px-6 py-12 text-center text-xs text-[#707070]">Aún no hay productos registrados.</td>
+									<td
+										colspan={canManage ? 4 : 3}
+										class="px-6 py-12 text-center text-xs text-[#707070]"
+										>Aún no hay productos registrados.</td
+									>
 								</tr>
 							{:else}
 								{#each products as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 										<td class="px-6 py-4 font-medium text-[#171717]">{product.title}</td>
 										<td class="px-6 py-4 text-xs text-[#707070]">{product.description || '—'}</td>
-										<td class="px-6 py-4 text-right font-mono text-[#171717]">{formatCurrency(Number(product.price_without_taxes))}</td>
+										<td class="px-6 py-4 text-right font-mono text-[#171717]"
+											>{formatCurrency(Number(product.price_without_taxes))}</td
+										>
 										{#if canManage}
-											<td class="whitespace-nowrap px-6 py-4 text-right">
+											<td class="px-6 py-4 text-right whitespace-nowrap">
 												<div class="flex items-center justify-end gap-1.5">
-													<Button variant="ghost" size="icon" class="h-8 w-8 text-[#707070] hover:text-[#171717]" title="Editar producto" onclick={() => startEditing(product)}>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+														title="Editar producto"
+														onclick={() => startEditing(product)}
+													>
 														<Edit3 class="h-4 w-4" />
 													</Button>
-													<Button variant="ghost" size="icon" class="h-8 w-8 text-[#707070] hover:text-[#e2005a]" title="Borrar producto" onclick={() => openDeleteDialog(product)}>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
+														title="Borrar producto"
+														onclick={() => openDeleteDialog(product)}
+													>
 														<Trash2 class="h-4 w-4" />
 													</Button>
 												</div>
@@ -237,10 +272,21 @@
 		>
 			<input type="hidden" name="id" value={editingProduct.id} />
 
-			<Input bind:value={editTitle} label="Título" name="title" placeholder="Consultoría SEO" required disabled={editLoading} />
+			<Input
+				bind:value={editTitle}
+				label="Título"
+				name="title"
+				placeholder="Consultoría SEO"
+				required
+				disabled={editLoading}
+			/>
 
 			<div class="flex w-full flex-col gap-1.5">
-				<label for="edit-description" class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">Descripción</label>
+				<label
+					for="edit-description"
+					class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
+					>Descripción</label
+				>
 				<textarea
 					id="edit-description"
 					name="description"
@@ -248,7 +294,7 @@
 					rows="4"
 					placeholder="Detalle breve del producto o servicio"
 					disabled={editLoading}
-					class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] placeholder:text-[#9a9a9a] transition-colors duration-200 focus-visible:border-[#24b47e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 disabled:cursor-not-allowed disabled:opacity-50"
+					class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				></textarea>
 			</div>
 
@@ -266,7 +312,9 @@
 		</form>
 
 		{#snippet footer()}
-			<Button type="button" variant="outline" disabled={editLoading} onclick={closeEditDialog}>Cancelar</Button>
+			<Button type="button" variant="outline" disabled={editLoading} onclick={closeEditDialog}
+				>Cancelar</Button
+			>
 			<Button type="submit" form="edit-product-form" disabled={editLoading}>
 				{#if editLoading}
 					Guardando...
@@ -288,7 +336,9 @@
 	>
 		<div class="space-y-3">
 			<p class="text-sm leading-relaxed text-[#707070]">
-				¿Seguro que deseas eliminar el producto <strong class="text-[#171717]">{productToDelete.title}</strong>? El registro desaparecerá del catálogo.
+				¿Seguro que deseas eliminar el producto <strong class="text-[#171717]"
+					>{productToDelete.title}</strong
+				>? El registro desaparecerá del catálogo.
 			</p>
 
 			<form
@@ -311,8 +361,15 @@
 		</div>
 
 		{#snippet footer()}
-			<Button type="button" variant="outline" disabled={deleteLoading} onclick={closeDeleteDialog}>Cancelar</Button>
-			<Button type="submit" form="delete-product-form" variant="destructive" disabled={deleteLoading}>
+			<Button type="button" variant="outline" disabled={deleteLoading} onclick={closeDeleteDialog}
+				>Cancelar</Button
+			>
+			<Button
+				type="submit"
+				form="delete-product-form"
+				variant="destructive"
+				disabled={deleteLoading}
+			>
 				{#if deleteLoading}
 					Eliminando...
 				{:else}

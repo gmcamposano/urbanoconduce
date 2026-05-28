@@ -27,18 +27,25 @@
 	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - FacturaFlow</title>
 </svelte:head>
 
-<div class="flex-1 flex flex-col justify-center items-center px-4 py-16 relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#fafafa_100%)]">
-	<div class="flex items-center gap-2 mb-10 relative z-10">
-		<div class="bg-[#3ecf8e] p-2 rounded-[6px] border border-[#24b47e] shadow-sm">
+<div
+	class="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#fafafa_100%)] px-4 py-16"
+>
+	<div class="relative z-10 mb-10 flex items-center gap-2">
+		<div class="rounded-[6px] border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
 			<FileText class="h-6 w-6 text-[#171717]" />
 		</div>
-		<span class="text-xl font-medium tracking-tight text-[#171717]">Factura<span class="text-[#3ecf8e]">Flow</span></span>
+		<span class="text-xl font-medium tracking-tight text-[#171717]"
+			>Factura<span class="text-[#3ecf8e]">Flow</span></span
+		>
 	</div>
 
-	<Card class="w-full max-w-md relative z-10">
+	<Card class="relative z-10 w-full max-w-md">
 		<div class="flex border-b border-[#ededed] bg-white">
 			<button
-				class="flex-1 py-4 text-sm font-medium text-center border-b-2 transition-colors duration-200 cursor-pointer {activeTab === 'login' ? 'border-[#3ecf8e] text-[#171717] bg-[#fafafa]' : 'border-transparent text-[#707070] hover:text-[#171717]'}"
+				class="flex-1 cursor-pointer border-b-2 py-4 text-center text-sm font-medium transition-colors duration-200 {activeTab ===
+				'login'
+					? 'border-[#3ecf8e] bg-[#fafafa] text-[#171717]'
+					: 'border-transparent text-[#707070] hover:text-[#171717]'}"
 				onclick={() => {
 					activeTab = 'login';
 				}}
@@ -49,7 +56,10 @@
 				</div>
 			</button>
 			<button
-				class="flex-1 py-4 text-sm font-medium text-center border-b-2 transition-colors duration-200 cursor-pointer {activeTab === 'register' ? 'border-[#3ecf8e] text-[#171717] bg-[#fafafa]' : 'border-transparent text-[#707070] hover:text-[#171717]'}"
+				class="flex-1 cursor-pointer border-b-2 py-4 text-center text-sm font-medium transition-colors duration-200 {activeTab ===
+				'register'
+					? 'border-[#3ecf8e] bg-[#fafafa] text-[#171717]'
+					: 'border-transparent text-[#707070] hover:text-[#171717]'}"
 				onclick={() => {
 					activeTab = 'register';
 				}}
@@ -62,35 +72,61 @@
 		</div>
 
 		<CardHeader class="pb-2">
-			<CardTitle class="text-xl text-center">
+			<CardTitle class="text-center text-xl">
 				{activeTab === 'login' ? 'Bienvenido de nuevo' : 'Crear una cuenta'}
 			</CardTitle>
-			<p class="text-[#707070] text-xs text-center mt-1">
-				{activeTab === 'login' ? 'Accede para gestionar y revisar las facturas de la organización.' : 'Configura tu nombre, correo y rol de acceso.'}
+			<p class="mt-1 text-center text-xs text-[#707070]">
+				{activeTab === 'login'
+					? 'Accede para gestionar y revisar las facturas de la organización.'
+					: 'Configura tu nombre, correo y rol de acceso.'}
 			</p>
 		</CardHeader>
 
 		<CardContent class="p-6">
 			{#if form?.success}
-				<div class="bg-[#3ecf8e]/12 border border-[#3ecf8e]/25 p-4 rounded-lg text-sm text-[#171717] mb-6 flex items-start gap-2.5">
-					<svg class="h-5 w-5 text-[#24b47e] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+				<div
+					class="mb-6 flex items-start gap-2.5 rounded-lg border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717]"
+				>
+					<svg
+						class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
 					</svg>
 					<div>
 						<p class="font-medium">Éxito</p>
-						<p class="text-xs text-[#707070] mt-0.5">{form.message}</p>
+						<p class="mt-0.5 text-xs text-[#707070]">{form.message}</p>
 					</div>
 				</div>
 			{/if}
 
 			{#if form?.error}
-				<div class="bg-[#e2005a]/10 border border-[#e2005a]/20 p-4 rounded-lg text-sm text-[#e2005a] mb-6 flex items-start gap-2.5">
-					<svg class="h-5 w-5 text-[#e2005a] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+				<div
+					class="mb-6 flex items-start gap-2.5 rounded-lg border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a]"
+				>
+					<svg
+						class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+						/>
 					</svg>
 					<div>
 						<p class="font-medium">La autenticación falló</p>
-						<p class="text-xs text-[#707070] mt-0.5">{form.error}</p>
+						<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
 					</div>
 				</div>
 			{/if}
@@ -108,7 +144,15 @@
 						};
 					}}
 				>
-					<Input label="Correo electrónico" name="email" type="email" placeholder="nombre@empresa.com" required autocomplete="email" disabled={loading} />
+					<Input
+						label="Correo electrónico"
+						name="email"
+						type="email"
+						placeholder="nombre@empresa.com"
+						required
+						autocomplete="email"
+						disabled={loading}
+					/>
 
 					<div class="relative">
 						<Input
@@ -122,7 +166,7 @@
 						/>
 						<button
 							type="button"
-							class="absolute top-7 right-3 text-[#9a9a9a] hover:text-[#171717] cursor-pointer"
+							class="absolute top-7 right-3 cursor-pointer text-[#9a9a9a] hover:text-[#171717]"
 							onclick={() => (showPassword = !showPassword)}
 						>
 							{#if showPassword}
@@ -133,9 +177,11 @@
 						</button>
 					</div>
 
-					<Button type="submit" class="w-full mt-2" disabled={loading}>
+					<Button type="submit" class="mt-2 w-full" disabled={loading}>
 						{#if loading}
-							<div class="h-4 w-4 border-2 border-[#171717]/20 border-t-[#171717] rounded-full animate-spin"></div>
+							<div
+								class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"
+							></div>
 							Iniciando sesión...
 						{:else}
 							Iniciar sesión
@@ -155,9 +201,23 @@
 						};
 					}}
 				>
-					<Input label="Nombre completo" name="name" type="text" placeholder="Juan Pérez" required disabled={loading} />
+					<Input
+						label="Nombre completo"
+						name="name"
+						type="text"
+						placeholder="Juan Pérez"
+						required
+						disabled={loading}
+					/>
 
-					<Input label="Correo electrónico" name="email" type="email" placeholder="nombre@empresa.com" required disabled={loading} />
+					<Input
+						label="Correo electrónico"
+						name="email"
+						type="email"
+						placeholder="nombre@empresa.com"
+						required
+						disabled={loading}
+					/>
 
 					<div class="relative">
 						<Input
@@ -170,7 +230,7 @@
 						/>
 						<button
 							type="button"
-							class="absolute top-7 right-3 text-[#9a9a9a] hover:text-[#171717] cursor-pointer"
+							class="absolute top-7 right-3 cursor-pointer text-[#9a9a9a] hover:text-[#171717]"
 							onclick={() => (showPassword = !showPassword)}
 						>
 							{#if showPassword}
@@ -184,20 +244,25 @@
 					{#if dev}
 						<Select label="Rol del sistema" name="role" required disabled={loading}>
 							<option value="viewer">Lector (solo lectura)</option>
-							<option value="moderator">Moderador (editar y borrar)</option>
 							<option value="editor">Editor (crear y editar)</option>
 							<option value="admin">Administrador (control total)</option>
 						</Select>
 
-						<div class="flex gap-2 bg-[#fafafa] border border-[#ededed] p-3 rounded-lg text-[11px] text-[#707070]">
-							<Shield class="h-4 w-4 text-[#3ecf8e] flex-shrink-0" />
-							<p>La selección de rol al registrarse está habilitada sólo para desarrollo o revisión.</p>
+						<div
+							class="flex gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"
+						>
+							<Shield class="h-4 w-4 flex-shrink-0 text-[#3ecf8e]" />
+							<p>
+								La selección de rol al registrarse está habilitada sólo para desarrollo o revisión.
+							</p>
 						</div>
 					{/if}
 
-					<Button type="submit" class="w-full mt-2" disabled={loading}>
+					<Button type="submit" class="mt-2 w-full" disabled={loading}>
 						{#if loading}
-							<div class="h-4 w-4 border-2 border-[#171717]/20 border-t-[#171717] rounded-full animate-spin"></div>
+							<div
+								class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"
+							></div>
 							Creando cuenta...
 						{:else}
 							Crear cuenta

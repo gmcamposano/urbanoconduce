@@ -7,7 +7,7 @@ async function getUserRole(locals: App.Locals, userId: string) {
 }
 
 function canManageCatalog(role: string | null) {
-	return role === 'admin' || role === 'editor' || role === 'moderator';
+	return role === 'admin' || role === 'editor';
 }
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
@@ -65,7 +65,9 @@ export const actions: Actions = {
 		}
 
 		if (clientType === 'company' && (!alias || !rnc || !companyName)) {
-			return fail(400, { error: 'Para una empresa debes completar alias, RNC y nombre de empresa.' });
+			return fail(400, {
+				error: 'Para una empresa debes completar alias, RNC y nombre de empresa.'
+			});
 		}
 
 		try {
@@ -118,7 +120,9 @@ export const actions: Actions = {
 		}
 
 		if (clientType === 'company' && (!alias || !rnc || !companyName)) {
-			return fail(400, { error: 'Para una empresa debes completar alias, RNC y nombre de empresa.' });
+			return fail(400, {
+				error: 'Para una empresa debes completar alias, RNC y nombre de empresa.'
+			});
 		}
 
 		try {

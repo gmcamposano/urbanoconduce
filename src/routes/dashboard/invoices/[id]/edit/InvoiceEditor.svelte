@@ -1,0 +1,326 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import CardHeader from '$lib/components/ui/CardHeader.svelte';
+	import CardTitle from '$lib/components/ui/CardTitle.svelte';
+	import CardContent from '$lib/components/ui/CardContent.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import Select from '$lib/components/ui/Select.svelte';
+	import { ArrowLeft, Calculator, DollarSign, FileText, Plus, Save, Trash2 } from '@lucide/svelte';
+	import type { InvoiceEditorData, InvoiceEditorState } from '$lib/invoiceEditor';
+
+	type InvoiceFormItem = {
+		id: string;
+		product_id: string;
+		color: string;
+		quantity: number;
+		unit_price: number;
+	};
+
+	type EditorState = {
+		invoiceNumber: string;
+		clientName: string;
+		clientEmail: string;
+		invoiceDate: string;
+		dueDate: string;
+		status: 'draft' | 'pending' | 'paid' | 'overdue';
+		notes: string;
+		includeTax: boolean;
+		discountAmount: number;
+		items: InvoiceFormItem[];
+	};
+
+	let { invoice, products, colors, initial, form: actionForm }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors'> & { initial: InvoiceEditorState; form: any } = $props();
+
+	function createItem(): InvoiceFormItem {
+		return {
+			id: crypto.randomUUID(),
+			product_id: '',
+			color: colors[0]?.color ?? '',
+			quantity: 1,
+			unit_price: 0
+		};
+	}
+
+	let editor = $state<EditorState>({
+		invoiceNumber: '',
+		clientName: '',
+		clientEmail: '',
+		invoiceDate: '',
+		dueDate: '',
+		status: 'pending',
+		notes: '',
+		includeTax: false,
+		discountAmount: 0,
+		items: []
+	});
+
+	function seedEditor() {
+		Object.assign(editor, initial);
+	}
+
+	seedEditor();
+	let loading = $state(false);
+
+	const subtotal = $derived(
+		editor.items.reduce(
+			(sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
+			0
+		)
+	);
+	const taxRate = $derived(editor.includeTax ? 18 : 0);
+	const taxAmount = $derived(subtotal * (taxRate / 100));
+	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(editor.discountAmount) || 0)));
+
+	function addItem() {
+		editor.items.push(createItem());
+	}
+
+	function removeItem(id: string) {
+		if (editor.items.length > 1) {
+			editor.items = editor.items.filter((item) => item.id !== id);
+		}
+	}
+
+	function applyProductToItem(item: InvoiceFormItem, productId: string) {
+		item.product_id = productId;
+		const product = products.find((entry) => entry.id === productId);
+		item.unit_price = Number(product?.price_without_taxes || 0);
+	}
+
+	function formatCurrency(val: number) {
+		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+	}
+</script>
+
+<svelte:head>
+	<title>Editar factura - FacturaFlow</title>
+</svelte:head>
+
+{#if invoice}
+	<div class="mx-auto flex max-w-4xl flex-1 flex-col justify-start space-y-6 text-[#171717]">
+		<div>
+			<a
+				href={resolve(`/dashboard/invoices/${invoice.id}`)}
+				class="inline-flex items-center gap-1.5 text-xs font-medium text-[#707070] transition-colors duration-200 hover:text-[#171717]"
+			>
+				<ArrowLeft class="h-3.5 w-3.5" />
+				Volver a la factura
+			</a>
+		</div>
+
+		<div class="border-b border-[#ededed] pb-4">
+			<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
+				<FileText class="h-6 w-6 text-[#3ecf8e]" />
+				Editar factura
+			</h1>
+			<p class="mt-0.5 text-xs text-[#707070]">
+				Solo un administrador puede editar los datos y conceptos de esta factura.
+			</p>
+		</div>
+
+		{#if actionForm?.error}
+			<div
+				class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+			>
+				<svg
+					class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+					/>
+				</svg>
+				<div>
+					<p class="font-medium">No se pudo guardar la factura</p>
+					<p class="mt-0.5 text-xs text-[#707070]">{actionForm.error}</p>
+				</div>
+			</div>
+		{/if}
+
+		<form
+			action="?/updateInvoice"
+			method="POST"
+			use:enhance={() => {
+				loading = true;
+				return async ({ update }) => {
+					loading = false;
+					await update();
+				};
+			}}
+			class="space-y-6"
+		>
+			<input type="hidden" name="items" value={JSON.stringify(editor.items)} />
+
+			<Card>
+				<CardHeader>
+					<CardTitle>1. Datos principales de la factura</CardTitle>
+				</CardHeader>
+				<CardContent class="grid grid-cols-1 gap-5 md:grid-cols-3">
+					<Input label="ID / número de factura" name="invoice_number" bind:value={editor.invoiceNumber} required disabled={loading} />
+					<Select label="Estado" name="status" bind:value={editor.status} required disabled={loading}>
+						<option value="pending">Pendiente de aprobación</option>
+						<option value="draft">Borrador (sin enviar)</option>
+						<option value="paid">Pagada</option>
+						<option value="overdue">Vencida</option>
+					</Select>
+					<Input label="Nombre del cliente" name="client_name" bind:value={editor.clientName} required disabled={loading} />
+					<Input label="Correo del cliente" name="client_email" type="email" bind:value={editor.clientEmail} disabled={loading} />
+					<Input label="Fecha de emisión" name="invoice_date" type="date" bind:value={editor.invoiceDate} required disabled={loading} />
+					<Input label="Fecha de vencimiento" name="due_date" type="date" bind:value={editor.dueDate} required disabled={loading} />
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader class="flex flex-row items-center justify-between">
+					<CardTitle>2. Conceptos de cobro</CardTitle>
+					<Button type="button" variant="outline" size="sm" class="flex items-center gap-1" onclick={addItem} disabled={loading}>
+						<Plus class="h-3.5 w-3.5" />
+						Añadir fila
+					</Button>
+				</CardHeader>
+				<CardContent class="p-0">
+					{#if !products.length}
+						<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+							No hay productos disponibles. Crea al menos uno en la sección Productos.
+						</div>
+					{/if}
+					{#if !colors.length}
+						<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+							No hay colores disponibles. Crea al menos uno en la sección Colores.
+						</div>
+					{/if}
+					<div class="w-full overflow-x-auto">
+						<table class="w-full text-left text-sm text-[#171717]">
+							<thead class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase">
+								<tr>
+									<th class="w-1/3 px-6 py-3 font-semibold">Producto</th>
+									<th class="w-1/6 px-6 py-3 font-semibold">Color</th>
+									<th class="w-1/12 px-6 py-3 font-semibold">Cant.</th>
+									<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
+									<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
+									<th class="w-10 px-6 py-3 text-right font-semibold"></th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-[#ededed]">
+						{#each editor.items as item (item.id)}
+									<tr class="hover:bg-[#fafafa]">
+										<td class="px-6 py-3">
+											<Select label="" name="product" bind:value={item.product_id} disabled={loading || !products.length} onchange={(event) => applyProductToItem(item, event.currentTarget.value)} class="text-xs">
+												<option value="">Selecciona un producto</option>
+												{#each products as product (product.id)}
+													<option value={product.id}>{product.title}</option>
+												{/each}
+											</Select>
+										</td>
+										<td class="px-6 py-3">
+											<Select label="" name="color" bind:value={item.color} disabled={loading || !colors.length} required={colors.length > 0} class="text-xs capitalize">
+												<option value="">{colors.length ? 'Selecciona un color' : 'No hay colores disponibles'}</option>
+												{#each colors as color (color.id)}
+													<option value={color.color}>{color.color}</option>
+												{/each}
+											</Select>
+										</td>
+										<td class="px-6 py-3">
+											<input type="number" required min="1" step="any" bind:value={item.quantity} disabled={loading} class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-center font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none" />
+										</td>
+										<td class="px-6 py-3">
+											<input type="number" required min="0" step="any" bind:value={item.unit_price} readonly disabled={loading} class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-right font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none" />
+										</td>
+										<td class="px-6 py-3 text-right font-mono text-xs text-[#707070]">
+											{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
+										</td>
+										<td class="px-6 py-3 text-right">
+									<Button type="button" variant="ghost" size="icon" class="h-7 w-7 text-[#707070] hover:text-[#e2005a]" disabled={editor.items.length <= 1 || loading} onclick={() => removeItem(item.id)}>
+												<Trash2 class="h-3.5 w-3.5" />
+											</Button>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</CardContent>
+			</Card>
+
+			<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+				<Card>
+					<CardHeader>
+						<CardTitle>3. Términos y notas</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div class="flex flex-col gap-1.5">
+							<label for="notes" class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase">Términos / notas de la factura</label>
+							<textarea id="notes" name="notes" rows="4" bind:value={editor.notes} placeholder="Gracias por su preferencia. El pago vence en 30 días mediante transferencia bancaria." disabled={loading} class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"></textarea>
+						</div>
+					</CardContent>
+				</Card>
+
+				<Card class="relative overflow-hidden">
+					<div class="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-[#3ecf8e]/10 blur-[50px]"></div>
+					<CardHeader>
+						<CardTitle class="flex items-center gap-1.5">
+							<Calculator class="h-4.5 w-4.5 text-[#24b47e]" />
+							Resumen y totales
+						</CardTitle>
+					</CardHeader>
+					<CardContent class="space-y-4">
+						<div class="grid grid-cols-1 gap-4 border-b border-[#ededed] pb-4 md:grid-cols-2">
+							<label class="flex items-center gap-3 rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717]">
+							<input type="checkbox" name="include_tax" value="true" bind:checked={editor.includeTax} disabled={loading} class="h-4 w-4 rounded border-[#c7c7c7] accent-[#3ecf8e]" />
+								<span class="text-sm font-medium">Incluir impuesto 18%</span>
+							</label>
+
+							<Input label="Descuento ($)" name="discount_amount" type="number" min="0" step="any" bind:value={editor.discountAmount} disabled={loading} />
+						</div>
+
+						<div class="space-y-2 text-sm text-[#707070]">
+							<div class="flex justify-between">
+								<span>Subtotal</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
+							</div>
+							<div class="flex justify-between">
+								<span>Impuesto ({taxRate}%)</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
+							</div>
+							<div class="flex justify-between">
+								<span>Descuento</span>
+								<span class="font-mono font-medium text-[#171717]">-{formatCurrency(editor.discountAmount || 0)}</span>
+							</div>
+							<div class="flex justify-between border-t border-[#ededed] pt-2 text-base font-medium">
+								<span class="flex items-center gap-1 text-[#24b47e]">
+									<DollarSign class="h-4.5 w-4.5" />
+									Total a pagar
+								</span>
+								<span class="font-mono text-[#171717]">{formatCurrency(totalAmount)}</span>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			<div class="flex justify-end gap-3 border-t border-[#ededed] pt-6">
+				<a href={resolve(`/dashboard/invoices/${invoice.id}`)}>
+					<Button variant="outline" disabled={loading}>Cancelar</Button>
+				</a>
+
+				<Button type="submit" disabled={loading} class="flex items-center gap-1.5">
+					{#if loading}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"></div>
+						Guardando cambios...
+					{:else}
+						<Save class="h-4 w-4" />
+						Guardar cambios
+					{/if}
+				</Button>
+			</div>
+		</form>
+	</div>
+{/if}

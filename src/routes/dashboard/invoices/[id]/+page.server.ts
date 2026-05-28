@@ -1,5 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { getUserRole } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
+
+const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { id } = params;
@@ -41,6 +44,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 export const actions: Actions = {
 	updateStatus: async ({ request, params, locals }) => {
 		const { id } = params;
+		const { user } = await locals.safeGetUser();
+
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede editar facturas.' });
+		}
+
 		const formData = await request.formData();
 		const status = formData.get('status') as string;
 
@@ -48,8 +62,12 @@ export const actions: Actions = {
 			return fail(400, { error: 'El estado es obligatorio.' });
 		}
 
+		if (!VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number])) {
+			return fail(400, { error: 'El estado seleccionado no es válido.' });
+		}
+
 		try {
-			// Enforced by RLS: Admins & Editors can update invoices
+			// Enforced by RLS: Only Admins can update invoices
 			const { error } = await locals.supabase
 				.from('invoices')
 				.update({ status })
@@ -67,6 +85,16 @@ export const actions: Actions = {
 
 	deleteInvoice: async ({ params, locals }) => {
 		const { id } = params;
+		const { user } = await locals.safeGetUser();
+
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede eliminar facturas.' });
+		}
 
 		try {
 			// Enforced by RLS: Only Admins can delete invoices

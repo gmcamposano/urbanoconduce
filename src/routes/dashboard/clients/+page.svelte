@@ -13,9 +13,7 @@
 	let { data, form } = $props();
 
 	const profile = $derived(data.profile);
-	const canManage = $derived(
-		profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'moderator'
-	);
+	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const clients = $derived(data.clients || []);
 
 	let loading = $state(false);
@@ -117,7 +115,13 @@
 						<input type="hidden" name="id" value={editingClient.id} />
 					{/if}
 
-					<Select label="Tipo de cliente" name="client_type" bind:value={clientType} required disabled={loading}>
+					<Select
+						label="Tipo de cliente"
+						name="client_type"
+						bind:value={clientType}
+						required
+						disabled={loading}
+					>
 						<option value="person">Persona</option>
 						<option value="company">Empresa</option>
 					</Select>
@@ -180,7 +184,9 @@
 							{editingClient ? 'Actualizar cliente' : 'Guardar cliente'}
 						</Button>
 						{#if editingClient}
-							<Button type="button" variant="outline" disabled={loading} onclick={resetForm}>Cancelar</Button>
+							<Button type="button" variant="outline" disabled={loading} onclick={resetForm}
+								>Cancelar</Button
+							>
 						{/if}
 					</div>
 				</form>
@@ -209,7 +215,9 @@
 						<tbody class="divide-y divide-[#ededed]">
 							{#if clients.length === 0}
 								<tr>
-									<td colspan={canManage ? 4 : 3} class="px-6 py-12 text-center text-xs text-[#707070]"
+									<td
+										colspan={canManage ? 4 : 3}
+										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay clientes registrados.</td
 									>
 								</tr>
@@ -241,7 +249,13 @@
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
 												<div class="flex items-center justify-end gap-1.5">
-													<Button variant="ghost" size="icon" class="h-8 w-8 text-[#707070] hover:text-[#171717]" title="Editar cliente" onclick={() => startEditing(client)}>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+														title="Editar cliente"
+														onclick={() => startEditing(client)}
+													>
 														<Edit3 class="h-4 w-4" />
 													</Button>
 													<form
@@ -265,7 +279,11 @@
 															title="Borrar cliente"
 															disabled={deleteLoadingId === client.id}
 															onclick={(event) => {
-																if (!confirm(`¿Eliminar el cliente ${client.client_type === 'company' ? client.company_name : client.full_name}?`)) {
+																if (
+																	!confirm(
+																		`¿Eliminar el cliente ${client.client_type === 'company' ? client.company_name : client.full_name}?`
+																	)
+																) {
 																	event.preventDefault();
 																}
 															}}

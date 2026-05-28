@@ -1,0 +1,290 @@
+import { fail, redirect } from '@sveltejs/kit';
+import { getUserRole } from '$lib/server/roles';
+import type { Actions, PageServerLoad } from './$types';
+
+const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
+
+function isValidStatus(status: string): status is (typeof VALID_STATUSES)[number] {
+	return VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number]);
+}
+
+export const load: PageServerLoad = async ({ parent, params, locals }) => {
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard');
+	}
+
+	const [invoiceResult, itemsResult, productsResult, colorsResult] = await Promise.all([
+		locals.supabase
+			.from('invoices')
+			.select('*, profiles:created_by(name, email)')
+			.eq('id', params.id)
+			.single(),
+		locals.supabase
+			.from('invoice_items')
+			.select('*')
+			.eq('invoice_id', params.id)
+			.order('created_at', { ascending: true }),
+		locals.supabase
+			.from('products')
+			.select('id, title, price_without_taxes')
+			.order('title', { ascending: true }),
+		locals.supabase
+			.from('product_colors')
+			.select('id, color')
+			.order('color', { ascending: true })
+	]);
+
+	if (invoiceResult.error || !invoiceResult.data) {
+		console.error('Error fetching invoice for edit:', invoiceResult.error?.message);
+		throw redirect(303, '/dashboard');
+	}
+
+	if (itemsResult.error) {
+		console.error('Error fetching invoice items for edit:', itemsResult.error.message);
+	}
+
+	if (productsResult.error) {
+		console.error('Error fetching products for edit:', productsResult.error.message);
+	}
+
+	if (colorsResult.error) {
+		console.error('Error fetching colors for edit:', colorsResult.error.message);
+	}
+
+	const products = productsResult.data || [];
+	const colors = colorsResult.data || [];
+	const defaultColor = colors[0]?.color ?? '';
+
+	return {
+		invoice: invoiceResult.data,
+		items:
+			itemsResult.data?.map((item) => {
+				const product = products.find((entry) => entry.title === item.description);
+
+				return {
+					id: item.id,
+					description: item.description,
+					product_id: product?.id ?? '',
+					color: item.color || defaultColor,
+					quantity: Number(item.quantity),
+					unit_price: Number(item.unit_price)
+				};
+			}) || [],
+		products,
+		colors
+	};
+};
+
+export const actions: Actions = {
+	updateInvoice: async ({ request, params, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede editar facturas.' });
+		}
+
+		const formData = await request.formData();
+		const invoiceNumber = String(formData.get('invoice_number') ?? '').trim();
+		const clientName = String(formData.get('client_name') ?? '').trim();
+		const clientEmail = String(formData.get('client_email') ?? '').trim();
+		const invoiceDate = String(formData.get('invoice_date') ?? '').trim();
+		const dueDate = String(formData.get('due_date') ?? '').trim();
+		const status = String(formData.get('status') ?? '').trim();
+		const notes = String(formData.get('notes') ?? '').trim();
+		const includeTax = formData.get('include_tax') === 'true';
+		const taxRate = includeTax ? 18 : 0;
+		const discountAmount = Number(formData.get('discount_amount') || 0);
+		const itemsJson = String(formData.get('items') ?? '[]');
+
+		if (
+			!invoiceNumber ||
+			!clientName ||
+			!invoiceDate ||
+			!dueDate ||
+			!status ||
+			!isValidStatus(status)
+		) {
+			return fail(400, { error: 'Los datos principales de la factura son obligatorios.' });
+		}
+
+		let items: Array<{ product_id: string; color: string; quantity: number }> = [];
+		try {
+			items = JSON.parse(itemsJson);
+		} catch {
+			return fail(400, { error: 'No se pudieron procesar los conceptos.' });
+		}
+
+		if (items.length === 0) {
+			return fail(400, { error: 'Debes agregar al menos un concepto.' });
+		}
+
+		const productIds = [...new Set(items.map((item) => item.product_id).filter(Boolean))];
+		if (productIds.length === 0) {
+			return fail(400, { error: 'Debes seleccionar al menos un producto válido.' });
+		}
+
+		const selectedColors = [
+			...new Set(items.map((item) => (item.color || '').trim().toLowerCase()).filter(Boolean))
+		];
+
+		const [productsResult, colorsResult, invoiceResult, existingItemsResult] = await Promise.all([
+			locals.supabase
+				.from('products')
+				.select('id, title, price_without_taxes')
+				.in('id', productIds),
+			locals.supabase
+				.from('product_colors')
+				.select('id, color')
+				.in('color', selectedColors.length ? selectedColors : ['__no_color__']),
+			locals.supabase
+				.from('invoices')
+				.select('*')
+				.eq('id', params.id)
+				.single(),
+			locals.supabase
+				.from('invoice_items')
+				.select('*')
+				.eq('invoice_id', params.id)
+		]);
+
+		if (invoiceResult.error || !invoiceResult.data) {
+			return fail(404, { error: 'No se encontró la factura que intentas editar.' });
+		}
+
+		if (productsResult.error) {
+			return fail(400, { error: productsResult.error.message });
+		}
+
+		if (colorsResult.error) {
+			return fail(400, { error: colorsResult.error.message });
+		}
+
+		if (existingItemsResult.error) {
+			return fail(400, { error: existingItemsResult.error.message });
+		}
+
+		const products = productsResult.data || [];
+		const colors = colorsResult.data || [];
+
+		if (selectedColors.length === 0 && colors.length > 0) {
+			return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
+		}
+
+		if (selectedColors.length > 0) {
+			const availableColors = new Set(colors.map((entry) => entry.color));
+			if (selectedColors.some((color) => !availableColors.has(color))) {
+				return fail(400, { error: 'Los conceptos deben tener un color válido.' });
+			}
+		}
+
+		const productMap = new Map(products.map((product) => [product.id, product]));
+		const normalizedItems: Array<{
+			description: string;
+			color: string | null;
+			quantity: number;
+			unit_price: number;
+			amount: number;
+		}> = [];
+
+		for (const item of items) {
+			const quantity = Number(item.quantity);
+			const product = productMap.get(item.product_id);
+			const color = (item.color || '').trim().toLowerCase();
+
+			if (!product || quantity <= 0) {
+				return fail(400, {
+					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
+				});
+			}
+
+			if (selectedColors.length > 0 && !color) {
+				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
+			}
+
+			const unitPrice = Number(product.price_without_taxes);
+			normalizedItems.push({
+				description: product.title,
+				color: color || null,
+				quantity,
+				unit_price: unitPrice,
+				amount: quantity * unitPrice
+			});
+		}
+
+		const subtotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
+		const taxAmount = subtotal * (taxRate / 100);
+		const totalAmount = Math.max(0, subtotal + taxAmount - discountAmount);
+
+		const previousInvoice = {
+			invoice_number: invoiceResult.data.invoice_number,
+			client_name: invoiceResult.data.client_name,
+			client_email: invoiceResult.data.client_email,
+			invoice_date: invoiceResult.data.invoice_date,
+			due_date: invoiceResult.data.due_date,
+			status: invoiceResult.data.status,
+			notes: invoiceResult.data.notes,
+			tax_rate: invoiceResult.data.tax_rate,
+			discount_amount: invoiceResult.data.discount_amount,
+			total_amount: invoiceResult.data.total_amount
+		};
+
+		const previousItems = existingItemsResult.data || [];
+
+		const { error: updateError } = await locals.supabase
+			.from('invoices')
+			.update({
+				invoice_number: invoiceNumber,
+				client_name: clientName,
+				client_email: clientEmail,
+				invoice_date: invoiceDate,
+				due_date: dueDate,
+				status,
+				notes,
+				tax_rate: taxRate,
+				discount_amount: discountAmount,
+				total_amount: totalAmount
+			})
+			.eq('id', params.id);
+
+		if (updateError) {
+			return fail(400, { error: updateError.message });
+		}
+
+		const { error: deleteItemsError } = await locals.supabase
+			.from('invoice_items')
+			.delete()
+			.eq('invoice_id', params.id);
+
+		if (deleteItemsError) {
+			await locals.supabase.from('invoices').update(previousInvoice).eq('id', params.id);
+			return fail(400, { error: deleteItemsError.message });
+		}
+
+		const { error: insertItemsError } = await locals.supabase
+			.from('invoice_items')
+			.insert(
+				normalizedItems.map((item) => ({
+					invoice_id: params.id,
+					description: item.description,
+					color: item.color,
+					quantity: item.quantity,
+					unit_price: item.unit_price,
+					amount: item.amount
+				}))
+			);
+
+		if (insertItemsError) {
+			await locals.supabase.from('invoice_items').insert(previousItems);
+			await locals.supabase.from('invoices').update(previousInvoice).eq('id', params.id);
+			return fail(400, { error: insertItemsError.message });
+		}
+
+		throw redirect(303, `/dashboard/invoices/${params.id}`);
+	}
+};

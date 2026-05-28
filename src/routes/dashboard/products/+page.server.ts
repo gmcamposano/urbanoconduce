@@ -7,7 +7,7 @@ async function getUserRole(locals: App.Locals, userId: string) {
 }
 
 function canManageCatalog(role: string | null) {
-	return role === 'admin' || role === 'editor' || role === 'moderator';
+	return role === 'admin' || role === 'editor';
 }
 
 export const load: PageServerLoad = async ({ parent, locals }) => {

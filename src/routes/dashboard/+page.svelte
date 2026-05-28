@@ -14,6 +14,7 @@
 		CheckCircle,
 		Clock,
 		AlertTriangle,
+		Edit3,
 		Trash2,
 		Eye,
 		FileText,
@@ -36,6 +37,7 @@
 	// Delete confirmation modal states
 	let invoiceToDelete = $state<{ id: string; number: string } | null>(null);
 	let deleteLoading = $state(false);
+	let confirmText = $state('');
 
 	const invoices = $derived(data.invoices || []);
 
@@ -303,21 +305,34 @@
 									{inv.profiles?.name || 'Usuario desconocido'}
 								</td>
 								<td class="px-6 py-4 text-right whitespace-nowrap">
-									<div class="flex items-center justify-end gap-1.5">
-										<a href={resolve(`/dashboard/invoices/${inv.id}`)}>
-											<Button
+					<div class="flex items-center justify-end gap-1.5">
+						<a href={resolve(`/dashboard/invoices/${inv.id}`)}>
+							<Button
 												variant="ghost"
 												size="icon"
 												class="h-8 w-8 text-[#707070] hover:text-[#171717]"
 												title="Ver detalles"
 											>
-												<Eye class="h-4 w-4" />
-											</Button>
-										</a>
+								<Eye class="h-4 w-4" />
+							</Button>
+						</a>
 
-										<!-- Deleting option (Admins only) -->
-										{#if isAdmin}
-											<Button
+						{#if isAdmin}
+							<a href={resolve(`/dashboard/invoices/${inv.id}/edit`)}>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+									title="Editar factura"
+								>
+									<Edit3 class="h-4 w-4" />
+								</Button>
+							</a>
+						{/if}
+
+						<!-- Deleting option (Admins only) -->
+						{#if isAdmin}
+							<Button
 												variant="ghost"
 												size="icon"
 												class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
@@ -355,12 +370,25 @@
 					>? Esta acción es permanente y no se puede deshacer.
 				</p>
 
+				<div class="space-y-2">
+					<label for="confirmDelete" class="text-xs font-medium text-[#707070]">
+						Escribe <strong class="text-[#171717]">{invoiceToDelete.number}</strong> para confirmar
+					</label>
+					<input
+						id="confirmDelete"
+						type="text"
+						bind:value={confirmText}
+						placeholder={invoiceToDelete.number}
+						class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#e2005a] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e2005a]/30"
+					/>
+				</div>
+
 				<div class="flex justify-end gap-3 pt-2">
 					<Button
 						variant="outline"
 						size="sm"
 						disabled={deleteLoading}
-						onclick={() => (invoiceToDelete = null)}
+						onclick={() => { invoiceToDelete = null; confirmText = ''; }}
 					>
 						Cancelar
 					</Button>
@@ -373,12 +401,18 @@
 							return async ({ result, update }) => {
 								deleteLoading = false;
 								invoiceToDelete = null;
+								confirmText = '';
 								await update();
 							};
 						}}
 					>
 						<input type="hidden" name="id" value={invoiceToDelete.id} />
-						<Button type="submit" variant="destructive" size="sm" disabled={deleteLoading}>
+						<Button
+							type="submit"
+							variant="destructive"
+							size="sm"
+							disabled={deleteLoading || confirmText !== invoiceToDelete?.number}
+						>
 							{#if deleteLoading}
 								Eliminando...
 							{:else}

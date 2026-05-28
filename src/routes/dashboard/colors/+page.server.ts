@@ -7,7 +7,7 @@ async function getUserRole(locals: App.Locals, userId: string) {
 }
 
 function canManageCatalog(role: string | null) {
-	return role === 'admin' || role === 'editor' || role === 'moderator';
+	return role === 'admin' || role === 'editor';
 }
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
@@ -99,7 +99,10 @@ export const actions: Actions = {
 		}
 
 		try {
-			const { error } = await locals.supabase.from('product_colors').update({ color }).eq('id', colorId);
+			const { error } = await locals.supabase
+				.from('product_colors')
+				.update({ color })
+				.eq('id', colorId);
 
 			if (error) {
 				return fail(400, { error: error.message });

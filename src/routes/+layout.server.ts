@@ -21,7 +21,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 					id: user.id,
 					email: user.email || '',
 					name: user.user_metadata?.name || 'Nuevo usuario',
-					role: (user.user_metadata?.role as 'admin' | 'editor' | 'moderator' | 'viewer') || 'viewer'
+					role: (user.user_metadata?.role as 'admin' | 'editor' | 'viewer') || 'viewer'
 				};
 
 				const { data: upsertedProfile } = await locals.supabase
@@ -38,7 +38,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 				id: user.id,
 				email: user.email || '',
 				name: user.user_metadata?.name || 'Nuevo usuario',
-				role: (user.user_metadata?.role as 'admin' | 'editor' | 'moderator' | 'viewer') || 'viewer'
+				role: (user.user_metadata?.role as 'admin' | 'editor' | 'viewer') || 'viewer'
 			};
 		}
 	}

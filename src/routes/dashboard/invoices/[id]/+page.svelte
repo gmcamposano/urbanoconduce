@@ -7,6 +7,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { 
 		ArrowLeft, 
+		Edit3,
 		Printer, 
 		Trash2, 
 		AlertTriangle, 
@@ -22,7 +23,6 @@
 	const items = $derived(data.items || []);
 	
 	const profile = $derived(data.profile);
-	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const isAdmin = $derived(profile?.role === 'admin');
 
 	let selectedStatus = $state('');
@@ -31,6 +31,7 @@
 	let statusUpdating = $state(false);
 	let showDeleteModal = $state(false);
 	let deleteLoading = $state(false);
+	let confirmText = $state('');
 
 	// Pricing helper calculations (explicit type annotations to prevent implicit any errors)
 	const subtotal = $derived(
@@ -87,8 +88,8 @@
 					Imprimir / guardar PDF
 				</Button>
 
-				<!-- Update Status Form (Admins & Editors) -->
-				{#if canManage}
+				<!-- Update Status Form (Admins only) -->
+				{#if isAdmin}
 					<form 
 						action="?/updateStatus" 
 						method="POST" 
@@ -131,8 +132,14 @@
 					</form>
 				{/if}
 
-				<!-- Delete Button (Admins only) -->
 				{#if isAdmin}
+					<a href={resolve(`/dashboard/invoices/${invoice.id}/edit`)}>
+						<Button variant="outline" size="sm" class="flex items-center gap-1.5">
+							<Edit3 class="h-4 w-4" />
+							Editar factura
+						</Button>
+					</a>
+
 					<Button 
 						variant="destructive" 
 						size="sm" 
@@ -151,7 +158,7 @@
 			<div class="bg-[#e2005a]/10 border border-[#e2005a]/20 p-4 rounded-xl text-sm text-[#e2005a] flex items-start gap-2.5 shadow-sm no-print">
 				<AlertTriangle class="h-5 w-5 flex-shrink-0 mt-0.5" />
 				<div>
-					<p class="font-bold">No se pudo actualizar la factura</p>
+					<p class="font-bold">No se pudo procesar la factura</p>
 					<p class="text-xs text-[#707070] mt-0.5">{form.error}</p>
 				</div>
 			</div>
@@ -322,43 +329,57 @@
 					<AlertTriangle class="h-6 w-6" />
 					<h3 class="font-medium text-lg">Confirmar eliminación</h3>
 				</div>
-				
+
 				<p class="text-sm text-[#707070] leading-relaxed">
 					¿Seguro que deseas eliminar la factura <strong class="text-[#171717]">{invoice?.invoice_number}</strong>? Esto borrará el registro y todos los conceptos asociados de forma permanente.
 				</p>
-				
+
+				<div class="space-y-2">
+					<label for="confirmDelete" class="text-xs font-medium text-[#707070]">
+						Escribe <strong class="text-[#171717]">{invoice?.invoice_number}</strong> para confirmar
+					</label>
+					<input
+						id="confirmDelete"
+						type="text"
+						bind:value={confirmText}
+						placeholder={invoice?.invoice_number}
+						class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#e2005a] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e2005a]/30"
+					/>
+				</div>
+
 				<div class="flex justify-end gap-3 pt-2">
-					<Button 
-						variant="outline" 
-						size="sm" 
+					<Button
+						variant="outline"
+						size="sm"
 						disabled={deleteLoading}
-						onclick={() => (showDeleteModal = false)}
+						onclick={() => { showDeleteModal = false; confirmText = ''; }}
 					>
 						Cancelar
 					</Button>
-					
-					<form 
-						action="?/deleteInvoice" 
-						method="POST" 
+
+					<form
+						action="?/deleteInvoice"
+						method="POST"
 						use:enhance={() => {
 							deleteLoading = true;
 							return async ({ result, update }) => {
 								deleteLoading = false;
 								showDeleteModal = false;
+								confirmText = '';
 								await update();
 							};
 						}}
 					>
-						<Button 
-							type="submit" 
-							variant="destructive" 
+						<Button
+							type="submit"
+							variant="destructive"
 							size="sm"
-							disabled={deleteLoading}
+							disabled={deleteLoading || confirmText !== invoice?.invoice_number}
 						>
 							{#if deleteLoading}
-							Eliminando...
+								Eliminando...
 							{:else}
-							Eliminar
+								Eliminar
 							{/if}
 						</Button>
 					</form>

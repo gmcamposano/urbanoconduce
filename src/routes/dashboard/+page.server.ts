@@ -1,4 +1,5 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
+import { getUserRole } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -25,6 +26,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	deleteInvoice: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		const role = await getUserRole(locals, user.id);
+		if (role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede eliminar facturas.' });
+		}
+
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 

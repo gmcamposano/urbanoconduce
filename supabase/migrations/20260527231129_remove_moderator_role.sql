@@ -1,12 +1,12 @@
+update public.profiles
+set role = 'editor'
+where role not in ('admin', 'editor', 'viewer');
+
 alter table public.profiles
 	drop constraint if exists profiles_role_check;
 
 alter table public.profiles
 	add constraint profiles_role_check check (role in ('admin', 'editor', 'viewer'));
-
-update public.profiles
-set role = 'editor'
-where role not in ('admin', 'editor', 'viewer');
 
 create or replace function private.handle_new_user()
 returns trigger
@@ -18,14 +18,14 @@ begin
 	insert into public.profiles (id, email, name, role)
 	values (
 		new.id,
-			new.email,
-			coalesce(new.raw_user_meta_data->>'name', 'New User'),
-			case new.raw_user_meta_data->>'role'
-				when 'admin' then 'admin'
-				when 'editor' then 'editor'
-				else 'viewer'
-			end
-		)
+		new.email,
+		coalesce(new.raw_user_meta_data->>'name', 'New User'),
+		case new.raw_user_meta_data->>'role'
+			when 'admin' then 'admin'
+			when 'editor' then 'editor'
+			else 'viewer'
+		end
+	)
 	on conflict (id) do update set
 		email = excluded.email,
 		name = excluded.name,

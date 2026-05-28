@@ -1,6 +1,13 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+function generateInvoiceNumber() {
+	const year = new Date().getUTCFullYear();
+	const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+
+	return `INV-${year}-${randomSuffix}`;
+}
+
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
@@ -8,8 +15,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		throw redirect(303, '/dashboard');
 	}
 
-	const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-	const invoiceNumberPreview = `INV-2026-${randomSuffix}`;
+	const invoiceNumberPreview = generateInvoiceNumber();
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
@@ -44,19 +50,20 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const invoiceNumber = formData.get('invoice_number') as string;
-		const clientName = formData.get('client_name') as string;
-		const clientEmail = formData.get('client_email') as string;
-		const invoiceDate = formData.get('invoice_date') as string;
-		const dueDate = formData.get('due_date') as string;
-		const status = formData.get('status') as string;
-		const notes = formData.get('notes') as string;
+		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
+		const invoiceNumber = invoiceNumberInput || generateInvoiceNumber();
+		const clientName = String(formData.get('client_name') ?? '').trim();
+		const clientEmail = String(formData.get('client_email') ?? '').trim();
+		const invoiceDate = String(formData.get('invoice_date') ?? '').trim();
+		const dueDate = String(formData.get('due_date') ?? '').trim();
+		const status = String(formData.get('status') ?? '').trim();
+		const notes = String(formData.get('notes') ?? '').trim();
 		const includeTax = formData.get('include_tax') === 'true';
 		const taxRate = includeTax ? 18 : 0;
 		const discountAmount = Number(formData.get('discount_amount') || 0);
 		const itemsJson = formData.get('items') as string;
 
-		if (!invoiceNumber || !clientName || !clientEmail || !invoiceDate || !dueDate || !status) {
+		if (!clientName || !invoiceDate || !dueDate || !status) {
 			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
 		}
 
@@ -76,7 +83,9 @@ export const actions: Actions = {
 			return fail(400, { error: 'Debes seleccionar al menos un producto válido.' });
 		}
 
-		const selectedColors = [...new Set(items.map((item) => (item.color || '').trim().toLowerCase()).filter(Boolean))];
+		const selectedColors = [
+			...new Set(items.map((item) => (item.color || '').trim().toLowerCase()).filter(Boolean))
+		];
 		if (selectedColors.length === 0) {
 			const { data: existingColors, error: existingColorsError } = await locals.supabase
 				.from('product_colors')
@@ -118,7 +127,13 @@ export const actions: Actions = {
 		}
 
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
-		const normalizedItems: Array<{ description: string; color: string | null; quantity: number; unit_price: number; amount: number }> = [];
+		const normalizedItems: Array<{
+			description: string;
+			color: string | null;
+			quantity: number;
+			unit_price: number;
+			amount: number;
+		}> = [];
 
 		for (const item of items) {
 			const quantity = Number(item.quantity);
@@ -126,7 +141,9 @@ export const actions: Actions = {
 			const color = (item.color || '').trim().toLowerCase();
 
 			if (!product || quantity <= 0) {
-				return fail(400, { error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.' });
+				return fail(400, {
+					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
+				});
 			}
 
 			if (selectedColors.length > 0 && !color) {
@@ -179,7 +196,9 @@ export const actions: Actions = {
 				amount: item.amount
 			}));
 
-			const { error: itemsError } = await locals.supabase.from('invoice_items').insert(invoiceItemsData);
+			const { error: itemsError } = await locals.supabase
+				.from('invoice_items')
+				.insert(invoiceItemsData);
 
 			if (itemsError) {
 				await locals.supabase.from('invoices').delete().eq('id', invoice.id);
