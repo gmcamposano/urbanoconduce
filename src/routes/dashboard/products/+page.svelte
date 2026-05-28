@@ -147,6 +147,22 @@
 						disabled={loading}
 					/>
 
+					<SearchableSelect
+						label="Modelo"
+						options={models.map((m) => ({ value: m.id, label: m.model }))}
+						bind:value={selectedModel}
+						placeholder="Selecciona un modelo"
+						disabled={loading || !models.length}
+					/>
+
+					{#if !models.length}
+						<p class="-mt-2 text-[11px] text-[#707070]">
+							No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+						</p>
+					{/if}
+
+					<input type="hidden" name="model" value={selectedModel} />
+
 					<div class="flex w-full flex-col gap-1.5">
 						<label
 							for="description"
@@ -175,22 +191,6 @@
 						required
 						disabled={loading}
 					/>
-
-					<SearchableSelect
-						label="Modelo"
-						options={models.map((m) => ({ value: m.id, label: m.model }))}
-						bind:value={selectedModel}
-						placeholder="Selecciona un modelo"
-						disabled={loading || !models.length}
-					/>
-
-					{#if !models.length}
-						<p class="-mt-2 text-[11px] text-[#707070]">
-							No hay modelos disponibles. Crea al menos uno en la sección Modelos.
-						</p>
-					{/if}
-
-					<input type="hidden" name="model" value={selectedModel} />
 
 					<div class="flex gap-3">
 						<Button type="submit" class="flex-1" disabled={loading}>Guardar producto</Button>
@@ -309,6 +309,22 @@
 				disabled={editLoading}
 			/>
 
+			<SearchableSelect
+				label="Modelo"
+				options={models.map((m) => ({ value: m.id, label: m.model }))}
+				bind:value={editModel}
+				placeholder="Selecciona un modelo"
+				disabled={editLoading || !models.length}
+			/>
+
+			{#if !models.length}
+				<p class="-mt-2 text-[11px] text-[#707070]">
+					No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+				</p>
+			{/if}
+
+			<input type="hidden" name="model" value={editModel} />
+
 			<div class="flex w-full flex-col gap-1.5">
 				<label
 					for="edit-description"
@@ -337,22 +353,6 @@
 				required
 				disabled={editLoading}
 			/>
-
-			<SearchableSelect
-				label="Modelo"
-				options={models.map((m) => ({ value: m.id, label: m.model }))}
-				bind:value={editModel}
-				placeholder="Selecciona un modelo"
-				disabled={editLoading || !models.length}
-			/>
-
-			{#if !models.length}
-				<p class="-mt-2 text-[11px] text-[#707070]">
-					No hay modelos disponibles. Crea al menos uno en la sección Modelos.
-				</p>
-			{/if}
-
-			<input type="hidden" name="model" value={editModel} />
 		</form>
 
 		{#snippet footer()}
