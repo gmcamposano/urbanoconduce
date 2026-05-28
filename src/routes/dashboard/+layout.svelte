@@ -12,7 +12,8 @@
 		FileText,
 		User,
 		Package,
-		Palette
+		Palette,
+		Boxes
 	} from '@lucide/svelte';
 
 	let { data, children } = $props();
@@ -121,6 +122,19 @@
 				>
 					<Palette class="h-4.5 w-4.5" />
 					Colores
+				</a>
+
+				<a
+					href={resolve('/dashboard/models')}
+					class="flex items-center gap-3 rounded-[6px] px-3 py-2.5 text-sm font-medium transition-colors duration-200 {isActive(
+						'/dashboard/models'
+					)
+						? 'bg-[#3ecf8e] text-[#171717] shadow-sm shadow-black/5'
+						: 'text-[#707070] hover:bg-[#fafafa] hover:text-[#171717]'}"
+					onclick={() => (mobileMenuOpen = false)}
+				>
+					<Boxes class="h-4.5 w-4.5" />
+					Modelos
 				</a>
 
 				{#if profile?.role === 'admin'}
