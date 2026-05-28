@@ -1,5 +1,4 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { getUserRole } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
@@ -84,8 +83,7 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		const role = await getUserRole(locals, user.id);
-		if (role !== 'admin') {
+		if (locals.role !== 'admin') {
 			return fail(403, { error: 'Solo un administrador puede editar facturas.' });
 		}
 

@@ -3,12 +3,11 @@ import type { Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Guard against unconfigured environment variables to prevent immediate app crashes
-	const supabaseUrl = env.PUBLIC_SUPABASE_URL && env.PUBLIC_SUPABASE_URL.startsWith('http') 
-		? env.PUBLIC_SUPABASE_URL 
+	const supabaseUrl = env.PUBLIC_SUPABASE_URL && env.PUBLIC_SUPABASE_URL.startsWith('http')
+		? env.PUBLIC_SUPABASE_URL
 		: 'https://placeholder-project.supabase.co';
 	const supabaseKey = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY && env.PUBLIC_SUPABASE_PUBLISHABLE_KEY.length > 20
-		? env.PUBLIC_SUPABASE_PUBLISHABLE_KEY 
+		? env.PUBLIC_SUPABASE_PUBLISHABLE_KEY
 		: 'placeholder-anon-key-structure-value';
 
 	event.locals.supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -24,9 +23,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	// Safe user retriever: validates identity with Supabase Auth to prevent JWT spoofing
 	event.locals.safeGetUser = async () => {
-		// If using placeholder credentials, return null immediately
 		if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
 			return { user: null };
 		}
@@ -36,9 +33,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 				data: { user },
 				error
 			} = await event.locals.supabase.auth.getUser();
-			
+
 			if (error) {
 				return { user: null };
+			}
+
+			if (user && !event.locals.role) {
+				const { data } = await event.locals.supabase
+					.from('profiles')
+					.select('role')
+					.eq('id', user.id)
+					.maybeSingle();
+				event.locals.role = data?.role ?? null;
 			}
 
 			return { user };

@@ -31,7 +31,7 @@
 	let clientEmail = $state('');
 	let invoiceDate = $state(formattedToday);
 	let dueDate = $state(formattedDue);
-	let status = $state<'draft' | 'pending'>('pending');
+	
 	let notes = $state('');
 	let includeTax = $state(false);
 	let discountAmount = $state<number>(0);
@@ -171,10 +171,7 @@
 					disabled={loading}
 				/>
 
-				<Select label="Estado" name="status" bind:value={status} required disabled={loading}>
-					<option value="pending">Pendiente de aprobación</option>
-					<option value="draft">Borrador (sin enviar)</option>
-				</Select>
+				<input type="hidden" name="status" value="pending" />
 
 				<Input
 					label="Nombre del cliente"

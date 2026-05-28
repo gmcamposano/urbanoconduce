@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
@@ -61,7 +62,9 @@
 		Object.assign(editor, initial);
 	}
 
-	seedEditor();
+	onMount(() => {
+		seedEditor();
+	});
 	let loading = $state(false);
 
 	const subtotal = $derived(

@@ -56,18 +56,24 @@
 </svelte:head>
 
 {#if invoice}
-	<div class="space-y-6 max-w-4xl mx-auto flex-1 flex flex-col justify-start text-[#171717]">
+	<div class="space-y-6 flex-1 flex flex-col justify-start text-[#171717] px-4 sm:px-6">
 		<!-- Actions Top Panel (no-print) -->
-		<div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4 border border-[#dfdfdf] rounded-lg no-print">
-			<div class="flex items-center gap-3">
-			<a href={resolve('/dashboard')} class="text-[#707070] hover:text-[#171717]" aria-label="Volver">
-					<ArrowLeft class="h-5 w-5" />
-				</a>
-				<div>
-				<h1 class="text-base font-medium text-[#171717]">{invoice.invoice_number}</h1>
-				<p class="text-[10px] text-[#707070]">Creada por {invoice.profiles?.name || 'Desconocido'}</p>
+		<div class="bg-white p-4 sm:p-5 border border-[#dfdfdf] rounded-lg no-print">
+			<!-- Top Row: Back + Invoice Info + Badge -->
+			<div class="flex items-center justify-between gap-4 mb-4">
+				<div class="flex items-center gap-4">
+					<a 
+						href={resolve('/dashboard')} 
+						class="flex items-center justify-center h-9 w-9 rounded-[6px] border border-[#dfdfdf] text-[#707070] hover:text-[#171717] hover:bg-[#fafafa] transition-colors"
+						aria-label="Volver"
+					>
+						<ArrowLeft class="h-4 w-4" />
+					</a>
+					<div>
+						<h1 class="text-base font-medium text-[#171717]">{invoice.invoice_number}</h1>
+						<p class="text-[10px] text-[#707070]">Creada por {invoice.profiles?.name || 'Desconocido'}</p>
+					</div>
 				</div>
-				
 				<!-- Current Status Badge -->
 				{#if invoice.status === 'paid'}
 					<Badge variant="success">Pagada</Badge>
@@ -80,12 +86,16 @@
 				{/if}
 			</div>
 
-			<!-- Management Options -->
-			<div class="flex flex-wrap items-center gap-3">
+			<!-- Divider -->
+			<div class="border-t border-[#ededed] mb-4"></div>
+
+			<!-- Bottom Row: Actions -->
+			<div class="flex flex-wrap items-center gap-2 sm:gap-3">
 				<!-- Print Button -->
 				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
 					<Printer class="h-4 w-4" />
-					Imprimir / guardar PDF
+					<span class="hidden sm:inline">Imprimir / guardar PDF</span>
+					<span class="sm:hidden">Imprimir</span>
 				</Button>
 
 				<!-- Update Status Form (Admins only) -->
@@ -93,7 +103,7 @@
 					<form 
 						action="?/updateStatus" 
 						method="POST" 
-						class="flex items-center gap-1.5"
+						class="flex items-center gap-2"
 						use:enhance={() => {
 							statusUpdating = true;
 							return async ({ update }) => {
@@ -109,7 +119,7 @@
 								selectedStatus = event.currentTarget.value;
 							}}
 							disabled={statusUpdating}
-							class="flex h-8 rounded-[6px] border border-[#dfdfdf] bg-white px-2 text-xs text-[#171717] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e] cursor-pointer"
+							class="h-8 min-w-[120px] rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-xs text-[#171717] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3ecf8e] cursor-pointer"
 						>
 						<option value="draft">Borrador</option>
 						<option value="pending">Pendiente</option>
@@ -124,9 +134,9 @@
 							disabled={selectedStatus === invoice.status || statusUpdating}
 						>
 							{#if statusUpdating}
-							Guardando...
+								Guardando...
 							{:else}
-							Actualizar estado
+								Actualizar
 							{/if}
 						</Button>
 					</form>
@@ -136,7 +146,8 @@
 					<a href={resolve(`/dashboard/invoices/${invoice.id}/edit`)}>
 						<Button variant="outline" size="sm" class="flex items-center gap-1.5">
 							<Edit3 class="h-4 w-4" />
-							Editar factura
+							<span class="hidden sm:inline">Editar factura</span>
+							<span class="sm:hidden">Editar</span>
 						</Button>
 					</a>
 
@@ -147,7 +158,7 @@
 						onclick={() => (showDeleteModal = true)}
 					>
 						<Trash2 class="h-4 w-4" />
-						Eliminar
+						<span class="hidden sm:inline">Eliminar</span>
 					</Button>
 				{/if}
 			</div>

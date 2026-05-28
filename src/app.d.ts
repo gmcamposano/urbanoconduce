@@ -6,6 +6,7 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient;
 			safeGetUser(): Promise<{ user: User | null }>;
+			role: 'admin' | 'editor' | 'viewer' | null;
 		}
 		interface PageData {
 			user: User | null;

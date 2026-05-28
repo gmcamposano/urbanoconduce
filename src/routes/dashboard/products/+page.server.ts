@@ -1,11 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-async function getUserRole(locals: App.Locals, userId: string) {
-	const { data } = await locals.supabase.from('profiles').select('role').eq('id', userId).single();
-	return data?.role ?? null;
-}
-
 function canManageCatalog(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
@@ -48,8 +43,7 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		const role = await getUserRole(locals, user.id);
-		if (!canManageCatalog(role)) {
+		if (!canManageCatalog(locals.role)) {
 			return fail(403, { error: 'No tienes permisos para crear productos.' });
 		}
 
@@ -89,8 +83,7 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		const role = await getUserRole(locals, user.id);
-		if (!canManageCatalog(role)) {
+		if (!canManageCatalog(locals.role)) {
 			return fail(403, { error: 'No tienes permisos para editar productos.' });
 		}
 
@@ -137,8 +130,7 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		const role = await getUserRole(locals, user.id);
-		if (!canManageCatalog(role)) {
+		if (!canManageCatalog(locals.role)) {
 			return fail(403, { error: 'No tienes permisos para borrar productos.' });
 		}
 
