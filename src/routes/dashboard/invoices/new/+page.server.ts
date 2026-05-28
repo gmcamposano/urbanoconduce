@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
-		.select('id, title, price_without_taxes')
+		.select('id, title, price_without_taxes, model')
 		.order('title', { ascending: true });
 
 	const { data: colors, error: colorsError } = await locals.supabase
@@ -162,7 +162,6 @@ export const actions: Actions = {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
-			const model = (item.model || '').trim() || null;
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
@@ -175,6 +174,7 @@ export const actions: Actions = {
 			}
 
 			const unitPrice = Number(product.price_without_taxes);
+			const model = (item.model || '').trim() || null;
 			normalizedItems.push({
 				description: product.title,
 				color: color || null,

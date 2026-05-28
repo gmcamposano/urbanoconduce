@@ -30,9 +30,34 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			console.error('Error fetching invoice items:', itemsError.message);
 		}
 
+		// 3. Fetch Products (for model info)
+		const { data: products, error: productsError } = await locals.supabase
+			.from('products')
+			.select('id, title, model')
+			.order('title', { ascending: true });
+
+		if (productsError) {
+			console.error('Error fetching products:', productsError.message);
+		}
+
+		// 4. Fetch Models
+		const { data: models, error: modelsError } = await locals.supabase
+			.from('product_models')
+			.select('id, model')
+			.order('model', { ascending: true });
+
+		if (modelsError) {
+			console.error('Error fetching models:', modelsError.message);
+		}
+
+		console.log('DEBUG models count:', models?.length);
+		console.log('DEBUG items model field:', items?.map(i => ({ id: i.id, model: i.model })));
+
 		return {
 			invoice,
-			items: items || []
+			items: items || [],
+			products: products || [],
+			models: models || []
 		};
 	} catch (e) {
 		console.error('Invoice details load exception:', e);

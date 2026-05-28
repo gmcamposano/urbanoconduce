@@ -17,8 +17,25 @@
 	const products = $derived(data.products || []);
 	const colors = $derived(data.colors || []);
 	const models = $derived(data.models || []);
-	const defaultColor = $derived(colors[0]?.color ?? '');
-	const defaultModel = $derived(models[0]?.id ?? '');
+
+	function getModelName(modelId: string | null): string {
+		if (!modelId) return '-';
+		const found = models.find((m) => m.id === modelId);
+		return found?.model ?? '-';
+	}
+
+	function getAvailableColors(itemId: string): typeof colors {
+		const usedColors = items
+			.filter((i) => i.id !== itemId && i.color)
+			.map((i) => i.color);
+		return colors.filter((c) => !usedColors.includes(c.color));
+	}
+
+	function getModelId(productId: string | null): string | null {
+		if (!productId) return null;
+		const found = products.find((p) => p.id === productId);
+		return found?.model ?? null;
+	}
 
 	// Set up date defaults
 	const today = new SvelteDate();
@@ -54,15 +71,22 @@
 		return {
 			id: crypto.randomUUID(),
 			product_id: '',
-			color: defaultColor,
-			model: defaultModel,
+			color: '',
+			model: null as string | null,
 			quantity: 1,
 			unit_price: 0
 		};
 	}
 
 	let items = $state<
-		Array<{ id: string; product_id: string; color: string; model: string; quantity: number; unit_price: number }>
+		Array<{
+			id: string;
+			product_id: string;
+			color: string;
+			model: string | null;
+			quantity: number;
+			unit_price: number;
+		}>
 	>([createItem()]);
 
 	let loading = $state(false);
@@ -104,10 +128,14 @@
 		}
 	}
 
-	function applyProductToItem(item: { product_id: string; unit_price: number }, productId: string) {
+	function applyProductToItem(
+		item: { product_id: string; model: string | null; unit_price: number },
+		productId: string
+	) {
 		item.product_id = productId;
 		const product = products.find((entry) => entry.id === productId);
 		item.unit_price = Number(product?.price_without_taxes || 0);
+		item.model = product?.model ?? null;
 	}
 
 	// Formatter helper
@@ -275,86 +303,69 @@
 			</CardHeader>
 			<CardContent class="p-0">
 				{#if !products.length}
-					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+					<div class="border-b border-[#ededed] bg-[#fafafa] px-3 py-3 text-xs text-[#707070]">
 						No hay productos disponibles. Crea al menos uno en la sección Productos.
 					</div>
 				{/if}
 				{#if !colors.length}
-					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
+					<div class="border-b border-[#ededed] bg-[#fafafa] px-3 py-3 text-xs text-[#707070]">
 						No hay colores disponibles. Crea al menos uno en la sección Colores.
 					</div>
 				{/if}
-				{#if !models.length}
-					<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-4 text-xs text-[#707070]">
-						No hay modelos disponibles. Crea al menos uno en la sección Modelos.
-					</div>
-				{/if}
 				<div class="w-full overflow-x-auto">
-					<table class="w-full text-left text-sm text-[#171717]">
+					<table class="w-full table-fixed text-left text-xs text-[#171717]">
 						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+							class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-								<th class="w-1/4 px-6 py-3 font-semibold">Producto</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Color</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Modelo</th>
-								<th class="w-1/12 px-6 py-3 font-semibold">Cant.</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Precio unitario</th>
-								<th class="w-1/6 px-6 py-3 font-semibold">Total</th>
-								<th class="w-10 px-6 py-3 text-right font-semibold"></th>
+								<th class="w-1/4 px-3 py-2.5 font-semibold">Producto</th>
+								<th class="w-1/4 px-3 py-2.5 font-semibold">Modelo</th>
+								<th class="w-1/5 px-3 py-2.5 font-semibold">Color</th>
+								<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
+								<th class="w-32 px-3 py-2.5 text-right font-semibold">Precio unit.</th>
+								<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
+								<th class="w-8 px-3 py-2.5"></th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
 								<tr class="hover:bg-[#fafafa]">
-									<td class="px-6 py-3">
+									<td class="px-3 py-2">
 										<SearchableSelect
 											options={products.map((p) => ({ value: p.id, label: p.title }))}
 											bind:value={item.product_id}
-											placeholder="Selecciona un producto"
+											placeholder="Selecciona"
 											disabled={loading || !products.length}
 											onchange={(value) => applyProductToItem(item, value)}
 										/>
 									</td>
-									<td class="px-6 py-3">
+									<td class="px-3 py-2">
+										<input
+											type="text"
+											readonly
+											value={item.product_id ? getModelName(item.model) : '-'}
+											class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-[#fafafa] px-3 py-2 text-xs text-[#707070] capitalize read-only:cursor-not-allowed"
+										/>
+									</td>
+									<td class="px-3 py-2">
 										<Select
 											label=""
 											name="color"
 											bind:value={item.color}
-											disabled={loading || !colors.length}
-											required={colors.length > 0}
+											disabled={loading || getAvailableColors(item.id).length === 0}
+											required={getAvailableColors(item.id).length > 0}
 											class="text-xs capitalize"
 										>
-											<option value=""
-												>{colors.length
-													? 'Selecciona un color'
-													: 'No hay colores disponibles'}</option
-											>
-											{#each colors as color (color.id)}
+											<option value="">Color</option>
+											{#if getAvailableColors(item.id).length === 0}
+												<option value="" disabled>No hay colores</option>
+											{/if}
+											{#each getAvailableColors(item.id) as color (color.id)}
 												<option value={color.color}>{color.color}</option>
 											{/each}
 										</Select>
 									</td>
-									<td class="px-6 py-3">
-										<Select
-											label=""
-											name="model"
-											bind:value={item.model}
-											disabled={loading || !models.length}
-											required={models.length > 0}
-											class="text-xs capitalize"
-										>
-											<option value=""
-												>{models.length
-													? 'Selecciona un modelo'
-													: 'No hay modelos disponibles'}</option
-											>
-											{#each models as model (model.id)}
-												<option value={model.id}>{model.model}</option>
-											{/each}
-										</Select>
-									</td>
-									<td class="px-6 py-3">
+									<td class="px-3 py-2">
 										<input
 											type="number"
 											required
@@ -362,35 +373,49 @@
 											step="any"
 											bind:value={item.quantity}
 											disabled={loading}
-											class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-center font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+											class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-center font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 										/>
 									</td>
-									<td class="px-6 py-3">
-										<input
-											type="number"
-											required
-											min="0"
-											step="any"
-											bind:value={item.unit_price}
-											readonly
-											disabled={loading}
-											class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-right font-mono text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
-										/>
+									<td class="px-3 py-2">
+										<div class="relative">
+											<span
+												class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-mono text-sm text-[#707070]"
+												>RD$</span
+											>
+											<input
+												type="number"
+												required
+												min="0"
+												step="any"
+												bind:value={item.unit_price}
+												readonly
+												disabled={loading}
+												class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-right font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+											/>
+										</div>
 									</td>
-									<td class="px-6 py-3 text-right font-mono text-xs text-[#707070]">
-										{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
+									<td class="px-3 py-2">
+										<div class="flex h-9 items-center justify-end px-3">
+											<span class="font-mono text-sm text-[#707070]">
+												{formatCurrency(
+													(Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
+												)}
+											</span>
+										</div>
 									</td>
-									<td class="px-6 py-3 text-right">
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon"
-											class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
-											disabled={items.length <= 1 || loading}
-											onclick={() => removeItem(item.id)}
-										>
-											<Trash2 class="h-3.5 w-3.5" />
-										</Button>
+									<td class="px-3 py-2">
+										<div class="flex h-9 items-center justify-end">
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												class="h-9 w-9 text-[#707070] hover:text-[#e2005a]"
+												disabled={items.length <= 1 || loading}
+												onclick={() => removeItem(item.id)}
+											>
+												<Trash2 class="h-4 w-4" />
+											</Button>
+										</div>
 									</td>
 								</tr>
 							{/each}

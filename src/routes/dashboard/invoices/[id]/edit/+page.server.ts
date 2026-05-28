@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		throw redirect(303, '/dashboard');
 	}
 
-	const [invoiceResult, itemsResult, productsResult, colorsResult] = await Promise.all([
+	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult] = await Promise.all([
 		locals.supabase
 			.from('invoices')
 			.select('*, profiles:created_by(name, email)')
@@ -27,12 +27,16 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			.order('created_at', { ascending: true }),
 		locals.supabase
 			.from('products')
-			.select('id, title, price_without_taxes')
+			.select('id, title, price_without_taxes, model')
 			.order('title', { ascending: true }),
 		locals.supabase
 			.from('product_colors')
 			.select('id, color')
-			.order('color', { ascending: true })
+			.order('color', { ascending: true }),
+		locals.supabase
+			.from('product_models')
+			.select('id, model')
+			.order('model', { ascending: true })
 	]);
 
 	if (invoiceResult.error || !invoiceResult.data) {
@@ -52,9 +56,13 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		console.error('Error fetching colors for edit:', colorsResult.error.message);
 	}
 
+	if (modelsResult.error) {
+		console.error('Error fetching models for edit:', modelsResult.error.message);
+	}
+
 	const products = productsResult.data || [];
 	const colors = colorsResult.data || [];
-	const defaultColor = colors[0]?.color ?? '';
+	const models = modelsResult.data || [];
 
 	return {
 		invoice: invoiceResult.data,
@@ -66,13 +74,15 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 					id: item.id,
 					description: item.description,
 					product_id: product?.id ?? '',
-					color: item.color || defaultColor,
+					color: item.color || '',
+					model: product?.model ?? null,
 					quantity: Number(item.quantity),
 					unit_price: Number(item.unit_price)
 				};
 			}) || [],
 		products,
-		colors
+		colors,
+		models
 	};
 };
 
@@ -111,7 +121,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Los datos principales de la factura son obligatorios.' });
 		}
 
-		let items: Array<{ product_id: string; color: string; quantity: number }> = [];
+		let items: Array<{ product_id: string; color: string; model: string | null; quantity: number }> = [];
 		try {
 			items = JSON.parse(itemsJson);
 		} catch {
@@ -185,6 +195,7 @@ export const actions: Actions = {
 		const normalizedItems: Array<{
 			description: string;
 			color: string | null;
+			model: string | null;
 			quantity: number;
 			unit_price: number;
 			amount: number;
@@ -194,6 +205,7 @@ export const actions: Actions = {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
+			const model = (item.model || '').trim() || null;
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
@@ -209,6 +221,7 @@ export const actions: Actions = {
 			normalizedItems.push({
 				description: product.title,
 				color: color || null,
+				model,
 				quantity,
 				unit_price: unitPrice,
 				amount: quantity * unitPrice
@@ -271,6 +284,7 @@ export const actions: Actions = {
 					invoice_id: params.id,
 					description: item.description,
 					color: item.color,
+					model: item.model,
 					quantity: item.quantity,
 					unit_price: item.unit_price,
 					amount: item.amount

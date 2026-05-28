@@ -16,6 +16,7 @@ export type InvoiceEditorData = {
 		description: string;
 		product_id: string;
 		color: string;
+		model: string | null;
 		quantity: number | string;
 		unit_price: number | string;
 	}>;
@@ -23,10 +24,15 @@ export type InvoiceEditorData = {
 		id: string;
 		title: string;
 		price_without_taxes: number | string;
+		model: string | null;
 	}>;
 	colors: Array<{
 		id: string;
 		color: string;
+	}>;
+	models: Array<{
+		id: string;
+		model: string;
 	}>;
 };
 
@@ -44,13 +50,13 @@ export type InvoiceEditorState = {
 		id: string;
 		product_id: string;
 		color: string;
+		model: string | null;
 		quantity: number;
 		unit_price: number;
 	}>;
 };
 
 export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorState {
-	const defaultColor = data.colors[0]?.color ?? '';
 	const products = new Map(data.products.map((product) => [product.id, product]));
 
 	const items = data.items.length
@@ -60,7 +66,8 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 			return {
 				id: item.id,
 				product_id: product?.id ?? item.product_id ?? '',
-				color: item.color || defaultColor,
+				color: item.color || '',
+				model: product?.model ?? null,
 				quantity: Number(item.quantity),
 				unit_price: Number(item.unit_price)
 			};
@@ -69,7 +76,8 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 			{
 				id: crypto.randomUUID(),
 				product_id: '',
-				color: defaultColor,
+				color: '',
+				model: null,
 				quantity: 1,
 				unit_price: 0
 			}

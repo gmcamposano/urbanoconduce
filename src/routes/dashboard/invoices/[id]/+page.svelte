@@ -21,9 +21,23 @@
 
 	const invoice = $derived(data.invoice);
 	const items = $derived(data.items || []);
+	const products = $derived(data.products || []);
+	const models = $derived(data.models || []);
 
 	const profile = $derived(data.profile);
 	const isAdmin = $derived(profile?.role === 'admin');
+
+	function getModelName(modelId: string | null): string {
+		if (!modelId) return '-';
+		const found = models.find((m) => m.id === modelId);
+		return found?.model ?? '-';
+	}
+
+	function getProductModel(productId: string | null): string | null {
+		if (!productId) return null;
+		const found = products.find((p) => p.id === productId);
+		return found?.model ?? null;
+	}
 
 	let selectedStatus = $state('');
 	const currentStatus = $derived(selectedStatus || invoice?.status || '');
@@ -307,6 +321,8 @@
 									class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
 								>
 									<th class="py-3 font-semibold">Descripción</th>
+									<th class="py-3 font-semibold">Modelo</th>
+									<th class="py-3 font-semibold">Color</th>
 									<th class="w-20 py-3 text-center font-semibold">Cant.</th>
 									<th class="w-32 py-3 text-right font-semibold">Precio unitario</th>
 									<th class="w-32 py-3 text-right font-semibold">Total</th>
@@ -314,20 +330,26 @@
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each items as item (item.id ?? item.description)}
+									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
 										<td class="py-4">
-											<div class="space-y-1">
-												<p class="font-medium text-[#171717]">{item.description}</p>
-												{#if item.color}
-													<Badge variant="outline" class="capitalize">{item.color}</Badge>
-												{/if}
-											</div>
+											<p class="font-medium text-[#171717]">{item.description}</p>
+										</td>
+										<td class="py-4 capitalize text-[#707070]">
+											{productModel}
+										</td>
+										<td class="py-4">
+											{#if item.color}
+												<Badge variant="outline" class="capitalize">{item.color}</Badge>
+											{:else}
+												<span class="text-[#9a9a9a]">-</span>
+											{/if}
 										</td>
 										<td class="py-4 text-center font-mono text-[#707070]"
 											>{Number(item.quantity)}</td
 										>
 										<td class="py-4 text-right font-mono text-[#707070]"
-											>{formatCurrency(Number(item.unit_price))}</td
+											>RD$ {formatCurrency(Number(item.unit_price))}</td
 										>
 										<td class="py-4 text-right font-mono font-medium text-[#171717]"
 											>{formatCurrency(Number(item.amount))}</td

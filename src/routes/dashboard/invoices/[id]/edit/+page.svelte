@@ -15,7 +15,8 @@
 		invoice: data.invoice,
 		items: data.items,
 		products: data.products,
-		colors: data.colors
+		colors: data.colors,
+		models: data.models || []
 	})}
-	<InvoiceEditor invoice={data.invoice} products={data.products} colors={data.colors} {initial} {form} />
+	<InvoiceEditor invoice={data.invoice} products={data.products} colors={data.colors} models={data.models || []} {initial} {form} />
 {/key}
