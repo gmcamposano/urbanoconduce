@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
-		.select('id, title, price_without_taxes, model')
+		.select('id, title, price_without_taxes, model, client_id')
 		.order('title', { ascending: true });
 
 	const { data: colors, error: colorsError } = await locals.supabase
@@ -125,7 +125,7 @@ export const actions: Actions = {
 
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')
-			.select('id, title, price_without_taxes')
+			.select('id, title, price_without_taxes, client_id')
 			.in('id', productIds);
 
 		if (productsError) {
@@ -150,6 +150,7 @@ export const actions: Actions = {
 
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
 		const normalizedItems: Array<{
+			product_id: string;
 			description: string;
 			color: string | null;
 			model: string | null;
@@ -169,6 +170,12 @@ export const actions: Actions = {
 				});
 			}
 
+			if (product.client_id !== clientId) {
+				return fail(400, {
+					error: `El producto "${product.title}" no pertenece al cliente seleccionado.`
+				});
+			}
+
 			if (selectedColors.length > 0 && !color) {
 				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
 			}
@@ -176,6 +183,7 @@ export const actions: Actions = {
 			const unitPrice = Number(product.price_without_taxes);
 			const model = (item.model || '').trim() || null;
 			normalizedItems.push({
+				product_id: item.product_id,
 				description: product.title,
 				color: color || null,
 				model,
@@ -194,6 +202,7 @@ export const actions: Actions = {
 				.from('invoices')
 				.insert({
 					invoice_number: invoiceNumber,
+					client_id: clientId,
 					client_name: clientName,
 					client_email: clientEmail,
 					invoice_date: invoiceDate,
@@ -214,6 +223,7 @@ export const actions: Actions = {
 
 			const invoiceItemsData = normalizedItems.map((item) => ({
 				invoice_id: invoice.id,
+				product_id: item.product_id,
 				description: item.description,
 				color: item.color,
 				model: item.model,

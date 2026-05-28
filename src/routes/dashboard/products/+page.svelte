@@ -16,29 +16,69 @@
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const products = $derived(data.products || []);
 	const models = $derived(data.models || []);
+	const clients = $derived(data.clients || []);
+	let selectedClientFilter = $state('');
+
+	const filteredProducts = $derived(
+		selectedClientFilter ? products.filter((p) => p.client_id === selectedClientFilter) : products
+	);
+
+	function getClientName(clientId: string | null): string {
+		if (!clientId) return '—';
+		const found = clients.find((c) => c.id === clientId);
+		if (!found) return '—';
+		return found.client_type === 'company'
+			? found.company_name || found.alias || 'Empresa sin nombre'
+			: found.full_name || 'Sin nombre';
+	}
 
 	let loading = $state(false);
 	let editingProduct = $state<{
 		id: string;
+		client_id: string;
 		title: string;
 		description: string | null;
 		price_without_taxes: number;
 		model: string | null;
 	} | null>(null);
 	let editLoading = $state(false);
+	let editClient = $state('');
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editPriceWithoutTaxes = $state('');
 	let editModel = $state('');
 	let productToDelete = $state<{ id: string; title: string } | null>(null);
 	let deleteLoading = $state(false);
+	let selectedClient = $state('');
 	let title = $state('');
 	let description = $state('');
 	let priceWithoutTaxes = $state('');
 	let selectedModel = $state('');
 
+	const isProductFormValid = $derived(
+		selectedClient.trim() !== '' &&
+			title.trim() !== '' &&
+			selectedModel.trim() !== '' &&
+			priceWithoutTaxes !== '' &&
+			Number(priceWithoutTaxes) >= 0
+	);
+
+	const availableModels = $derived(
+		models.filter((m) => !products.some((p) => p.client_id === selectedClient && p.model === m.id))
+	);
+
+	const availableModelsEdit = $derived(
+		models.filter(
+			(m) =>
+				!products.some(
+					(p) => p.client_id === editClient && p.model === m.id && p.id !== editingProduct?.id
+				)
+		)
+	);
+
 	function startEditing(product: (typeof products)[number]) {
 		editingProduct = { ...product };
+		editClient = product.client_id || '';
 		editTitle = product.title;
 		editDescription = product.description || '';
 		editPriceWithoutTaxes = String(product.price_without_taxes ?? '');
@@ -47,6 +87,7 @@
 
 	function closeEditDialog() {
 		editingProduct = null;
+		editClient = '';
 		editTitle = '';
 		editDescription = '';
 		editPriceWithoutTaxes = '';
@@ -67,6 +108,7 @@
 	}
 
 	function resetForm() {
+		selectedClient = '';
 		title = '';
 		description = '';
 		priceWithoutTaxes = '';
@@ -97,7 +139,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
-			<Tags class="mt-0.5 h-5 w-5 flex-shrink-0" />
+			<Tags class="mt-0.5 h-5 w-5 shrink-0" />
 			<div>
 				<p class="font-medium">No se pudo guardar el producto</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
@@ -109,7 +151,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm"
 		>
-			<Tags class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
+			<Tags class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]" />
 			<div>
 				<p class="font-medium">{form.message || 'Producto guardado'}</p>
 				<p class="mt-0.5 text-xs text-[#707070]">Ya está disponible para facturar.</p>
@@ -138,26 +180,46 @@
 						};
 					}}
 				>
+					<SearchableSelect
+						label="Cliente"
+						options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
+						bind:value={selectedClient}
+						placeholder="Selecciona un cliente"
+						disabled={loading || !clients.length}
+					/>
+
+					<input type="hidden" name="client_id" value={selectedClient} />
+
+					{#if !clients.length}
+						<p class="-mt-2 text-[11px] text-[#707070]">
+							No hay clientes registrados. Crea al menos uno en la sección Clientes.
+						</p>
+					{/if}
+
 					<Input
 						bind:value={title}
 						label="Título"
 						name="title"
-						placeholder="Consultoría SEO"
+						placeholder="Cover Elite Colors"
 						required
 						disabled={loading}
 					/>
 
 					<SearchableSelect
 						label="Modelo"
-						options={models.map((m) => ({ value: m.id, label: m.model }))}
+						options={availableModels.map((m) => ({ value: m.id, label: m.model }))}
 						bind:value={selectedModel}
 						placeholder="Selecciona un modelo"
-						disabled={loading || !models.length}
+						disabled={loading || availableModels.length === 0}
 					/>
 
 					{#if !models.length}
 						<p class="-mt-2 text-[11px] text-[#707070]">
 							No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+						</p>
+					{:else if availableModels.length === 0}
+						<p class="-mt-2 text-[11px] font-medium text-red-600">
+							Ya has escogido todos los modelos para este cliente.
 						</p>
 					{/if}
 
@@ -176,7 +238,7 @@
 							rows="4"
 							placeholder="Detalle breve del producto o servicio"
 							disabled={loading}
-							class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							class="w-full resize-none rounded-md border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						></textarea>
 					</div>
 
@@ -193,7 +255,9 @@
 					/>
 
 					<div class="flex gap-3">
-						<Button type="submit" class="flex-1" disabled={loading}>Guardar producto</Button>
+						<Button type="submit" class="flex-1" disabled={loading || !isProductFormValid}
+							>Guardar producto</Button
+						>
 					</div>
 				</form>
 			</CardContent>
@@ -204,12 +268,21 @@
 				<CardTitle>Catálogo de productos</CardTitle>
 			</CardHeader>
 			<CardContent class="p-0">
+				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
+					<SearchableSelect
+						label="Filtrar por cliente"
+						options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
+						bind:value={selectedClientFilter}
+						placeholder="Todos los clientes"
+					/>
+				</div>
 				<div class="w-full overflow-x-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
 							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
+								<th class="px-6 py-4 font-bold">Cliente</th>
 								<th class="px-6 py-4 font-bold">Título</th>
 								<th class="px-6 py-4 font-bold">Modelo</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
@@ -220,20 +293,27 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
-							{#if products.length === 0}
+							{#if filteredProducts.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 5 : 4}
+										colspan={canManage ? 6 : 5}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
-										>Aún no hay productos registrados.</td
+										>{selectedClientFilter
+											? 'Este cliente no tiene productos.'
+											: 'Aún no hay productos registrados.'}</td
 									>
 								</tr>
 							{:else}
-								{#each products as product (product.id)}
+								{#each filteredProducts as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
+										<td class="px-6 py-4 text-xs text-[#707070]">
+											{getClientName(product.client_id)}
+										</td>
 										<td class="px-6 py-4 font-medium text-[#171717]">{product.title}</td>
-										<td class="px-6 py-4 text-xs capitalize text-[#707070]">
-											{product.model ? models.find((m) => m.id === product.model)?.model || '—' : '—'}
+										<td class="px-6 py-4 text-xs text-[#707070] capitalize">
+											{product.model
+												? models.find((m) => m.id === product.model)?.model || '—'
+												: '—'}
 										</td>
 										<td class="px-6 py-4 text-xs text-[#707070]">{product.description || '—'}</td>
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
@@ -300,6 +380,22 @@
 		>
 			<input type="hidden" name="id" value={editingProduct.id} />
 
+			<SearchableSelect
+				label="Cliente"
+				options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
+				bind:value={editClient}
+				placeholder="Selecciona un cliente"
+				disabled={editLoading || !clients.length}
+			/>
+
+			<input type="hidden" name="client_id" value={editClient} />
+
+			{#if !clients.length}
+				<p class="-mt-2 text-[11px] text-[#707070]">
+					No hay clientes. Crea al menos uno en la sección Clientes.
+				</p>
+			{/if}
+
 			<Input
 				bind:value={editTitle}
 				label="Título"
@@ -311,15 +407,19 @@
 
 			<SearchableSelect
 				label="Modelo"
-				options={models.map((m) => ({ value: m.id, label: m.model }))}
+				options={availableModelsEdit.map((m) => ({ value: m.id, label: m.model }))}
 				bind:value={editModel}
 				placeholder="Selecciona un modelo"
-				disabled={editLoading || !models.length}
+				disabled={editLoading || availableModelsEdit.length === 0}
 			/>
 
 			{#if !models.length}
 				<p class="-mt-2 text-[11px] text-[#707070]">
 					No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+				</p>
+			{:else if availableModelsEdit.length === 0}
+				<p class="-mt-2 text-[11px] font-medium text-red-600">
+					Ya has escogido todos los modelos para este cliente.
 				</p>
 			{/if}
 
@@ -338,7 +438,7 @@
 					rows="4"
 					placeholder="Detalle breve del producto o servicio"
 					disabled={editLoading}
-					class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					class="w-full resize-none rounded-md border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				></textarea>
 			</div>
 

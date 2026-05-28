@@ -17,10 +17,11 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	}
 
 	try {
-		const [{ data: products, error: productsError }, { data: models, error: modelsError }] =
+		const [{ data: products, error: productsError }, { data: models, error: modelsError }, { data: clients, error: clientsError }] =
 			await Promise.all([
-				locals.supabase.from('products').select('*').order('title', { ascending: true }),
-				locals.supabase.from('product_models').select('*').order('model', { ascending: true })
+				locals.supabase.from('products').select('*, clients(client_type, full_name, company_name, alias)').order('title', { ascending: true }),
+				locals.supabase.from('product_models').select('*').order('model', { ascending: true }),
+				locals.supabase.from('clients').select('id, client_type, full_name, company_name, alias').order('company_name', { ascending: true }).order('full_name', { ascending: true })
 			]);
 
 		if (productsError) {
@@ -31,13 +32,18 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			console.error('Supabase query error in models load:', modelsError.message);
 		}
 
+		if (clientsError) {
+			console.error('Supabase query error in clients load:', clientsError.message);
+		}
+
 		return {
 			products: products || [],
-			models: models || []
+			models: models || [],
+			clients: clients || []
 		};
 	} catch (e) {
 		console.error('Unexpected exception in products load:', e);
-		return { products: [], models: [] };
+		return { products: [], models: [], clients: [] };
 	}
 };
 
@@ -53,13 +59,22 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
+		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
 		const title = (formData.get('title') as string)?.trim() ?? '';
 		const description = (formData.get('description') as string)?.trim() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
 		const modelId = (formData.get('model') as string)?.trim() || null;
 
+		if (!clientId) {
+			return fail(400, { error: 'El cliente es obligatorio.' });
+		}
+
 		if (!title) {
 			return fail(400, { error: 'El título del producto es obligatorio.' });
+		}
+
+		if (!modelId) {
+			return fail(400, { error: 'El modelo es obligatorio.' });
 		}
 
 		if (Number.isNaN(priceWithoutTaxes) || priceWithoutTaxes < 0) {
@@ -68,6 +83,7 @@ export const actions: Actions = {
 
 		try {
 			const { error } = await locals.supabase.from('products').insert({
+				client_id: clientId,
 				title,
 				description: description || null,
 				price_without_taxes: priceWithoutTaxes,
@@ -96,6 +112,7 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const productId = (formData.get('id') as string)?.trim() ?? '';
+		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
 		const title = (formData.get('title') as string)?.trim() ?? '';
 		const description = (formData.get('description') as string)?.trim() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
@@ -105,8 +122,16 @@ export const actions: Actions = {
 			return fail(400, { error: 'El ID del producto es obligatorio.' });
 		}
 
+		if (!clientId) {
+			return fail(400, { error: 'El cliente es obligatorio.' });
+		}
+
 		if (!title) {
 			return fail(400, { error: 'El título del producto es obligatorio.' });
+		}
+
+		if (!modelId) {
+			return fail(400, { error: 'El modelo es obligatorio.' });
 		}
 
 		if (Number.isNaN(priceWithoutTaxes) || priceWithoutTaxes < 0) {
@@ -117,6 +142,7 @@ export const actions: Actions = {
 			const { error } = await locals.supabase
 				.from('products')
 				.update({
+					client_id: clientId,
 					title,
 					description: description || null,
 					price_without_taxes: priceWithoutTaxes,

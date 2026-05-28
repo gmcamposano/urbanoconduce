@@ -25,15 +25,13 @@
 	}
 
 	function getAvailableColors(itemId: string): typeof colors {
-		const usedColors = items
-			.filter((i) => i.id !== itemId && i.color)
-			.map((i) => i.color);
+		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
 	}
 
 	function getModelId(productId: string | null): string | null {
 		if (!productId) return null;
-		const found = products.find((p) => p.id === productId);
+		const found = clientProducts.find((p) => p.id === productId);
 		return found?.model ?? null;
 	}
 
@@ -46,8 +44,15 @@
 	const formattedDue = thirtyDaysLater.toISOString().split('T')[0];
 
 	// Form field reactive states
-	let invoiceNumber = $state('');
+	let invoiceNumber = $state(data.invoiceNumberPreview || '');
 	let selectedClientId = $state('');
+
+	const clientProducts = $derived(
+		selectedClientId
+			? products.filter((p) => p.client_id === selectedClientId)
+			: []
+	);
+
 	let clientEmail = $state('');
 	let invoiceDate = $state(formattedToday);
 	let dueDate = $state(formattedDue);
@@ -59,6 +64,18 @@
 	$effect(() => {
 		if (selectedClient) {
 			clientEmail = selectedClient.email || '';
+		} else {
+			clientEmail = '';
+		}
+		if (selectedClientId) {
+			items = items.map((item) => {
+				if (item.product_id && !clientProducts.find((p) => p.id === item.product_id)) {
+					return { ...item, product_id: '', model: null, unit_price: 0 };
+				}
+				return item;
+			});
+		} else {
+			items = items.map((item) => ({ ...item, product_id: '', model: null, unit_price: 0 }));
 		}
 	});
 
@@ -92,6 +109,13 @@
 	let loading = $state(false);
 
 	const canAddItem = $derived(!!items[items.length - 1]?.product_id);
+
+	const isFormValid = $derived(
+		selectedClientId.trim() !== '' &&
+		invoiceNumber.trim() !== '' &&
+		items.length > 0 &&
+		items.every((item) => item.product_id && item.unit_price > 0)
+	);
 
 	$effect(() => {
 		if (items.length > 1) {
@@ -133,7 +157,7 @@
 		productId: string
 	) {
 		item.product_id = productId;
-		const product = products.find((entry) => entry.id === productId);
+		const product = clientProducts.find((entry) => entry.id === productId);
 		item.unit_price = Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
 	}
@@ -178,7 +202,7 @@
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
 			<svg
-				class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+				class="mt-0.5 h-5 w-5 shrink-0 text-[#e2005a]"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -302,9 +326,13 @@
 				</Button>
 			</CardHeader>
 			<CardContent class="p-0">
-				{#if !products.length}
+				{#if !selectedClientId}
 					<div class="border-b border-[#ededed] bg-[#fafafa] px-3 py-3 text-xs text-[#707070]">
-						No hay productos disponibles. Crea al menos uno en la sección Productos.
+						Selecciona un cliente primero para ver sus productos.
+					</div>
+				{:else if !clientProducts.length}
+					<div class="border-b border-[#ededed] bg-[#fafafa] px-3 py-3 text-xs text-[#707070]">
+						Este cliente no tiene productos. Crea al menos uno en la sección Productos.
 					</div>
 				{/if}
 				{#if !colors.length}
@@ -332,10 +360,10 @@
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-3 py-2">
 										<SearchableSelect
-											options={products.map((p) => ({ value: p.id, label: p.title }))}
+											options={clientProducts.map((p) => ({ value: p.id, label: p.title }))}
 											bind:value={item.product_id}
-											placeholder="Selecciona"
-											disabled={loading || !products.length}
+											placeholder={selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
+											disabled={loading || !selectedClientId || !clientProducts.length}
 											onchange={(value) => applyProductToItem(item, value)}
 										/>
 									</td>
@@ -344,7 +372,7 @@
 											type="text"
 											readonly
 											value={item.product_id ? getModelName(item.model) : '-'}
-											class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-[#fafafa] px-3 py-2 text-xs text-[#707070] capitalize read-only:cursor-not-allowed"
+											class="h-9 w-full rounded-md border border-[#dfdfdf] bg-[#fafafa] px-3 py-2 text-xs text-[#707070] capitalize read-only:cursor-not-allowed"
 										/>
 									</td>
 									<td class="px-3 py-2">
@@ -373,7 +401,7 @@
 											step="any"
 											bind:value={item.quantity}
 											disabled={loading}
-											class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-center font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+											class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-center font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 										/>
 									</td>
 									<td class="px-3 py-2">
@@ -390,7 +418,7 @@
 												bind:value={item.unit_price}
 												readonly
 												disabled={loading}
-												class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-right font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+												class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-right font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 											/>
 										</div>
 									</td>
@@ -446,7 +474,7 @@
 							bind:value={notes}
 							placeholder="Gracias por su preferencia. El pago vence en 30 días mediante transferencia bancaria."
 							disabled={loading}
-							class="w-full resize-none rounded-[6px] border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+							class="w-full resize-none rounded-md border border-[#dfdfdf] bg-white p-3 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 						></textarea>
 					</div>
 				</CardContent>
@@ -467,7 +495,7 @@
 					<!-- Tax & Discount inputs -->
 					<div class="grid grid-cols-1 gap-4 border-b border-[#ededed] pb-4 md:grid-cols-2">
 						<label
-							class="flex items-center gap-3 rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717]"
+							class="flex items-center gap-3 rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717]"
 						>
 							<input
 								type="checkbox"
@@ -526,7 +554,7 @@
 				<Button variant="outline" disabled={loading}>Cancelar</Button>
 			</a>
 
-			<Button type="submit" disabled={loading} class="flex items-center gap-1.5">
+			<Button type="submit" disabled={loading || !isFormValid} class="flex items-center gap-1.5">
 				{#if loading}
 					<div
 						class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"
