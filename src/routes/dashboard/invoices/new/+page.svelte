@@ -44,7 +44,7 @@
 	const formattedDue = thirtyDaysLater.toISOString().split('T')[0];
 
 	// Form field reactive states
-	let invoiceNumber = $state(data.invoiceNumberPreview || '');
+	let invoiceNumber = $state('');
 	let selectedClientId = $state('');
 
 	const clientProducts = $derived(
