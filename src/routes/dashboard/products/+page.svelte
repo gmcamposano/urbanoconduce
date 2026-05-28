@@ -7,6 +7,7 @@
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
+	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { Edit3, Package, Tags, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
@@ -14,6 +15,7 @@
 	const profile = $derived(data.profile);
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const products = $derived(data.products || []);
+	const models = $derived(data.models || []);
 
 	let loading = $state(false);
 	let editingProduct = $state<{
@@ -21,22 +23,26 @@
 		title: string;
 		description: string | null;
 		price_without_taxes: number;
+		model: string | null;
 	} | null>(null);
 	let editLoading = $state(false);
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editPriceWithoutTaxes = $state('');
+	let editModel = $state('');
 	let productToDelete = $state<{ id: string; title: string } | null>(null);
 	let deleteLoading = $state(false);
 	let title = $state('');
 	let description = $state('');
 	let priceWithoutTaxes = $state('');
+	let selectedModel = $state('');
 
 	function startEditing(product: (typeof products)[number]) {
 		editingProduct = { ...product };
 		editTitle = product.title;
 		editDescription = product.description || '';
 		editPriceWithoutTaxes = String(product.price_without_taxes ?? '');
+		editModel = product.model || '';
 	}
 
 	function closeEditDialog() {
@@ -44,6 +50,7 @@
 		editTitle = '';
 		editDescription = '';
 		editPriceWithoutTaxes = '';
+		editModel = '';
 		editLoading = false;
 	}
 
@@ -63,6 +70,7 @@
 		title = '';
 		description = '';
 		priceWithoutTaxes = '';
+		selectedModel = '';
 	}
 
 	function formatCurrency(val: number) {
@@ -168,6 +176,22 @@
 						disabled={loading}
 					/>
 
+					<SearchableSelect
+						label="Modelo"
+						options={models.map((m) => ({ value: m.id, label: m.model }))}
+						bind:value={selectedModel}
+						placeholder="Selecciona un modelo"
+						disabled={loading || !models.length}
+					/>
+
+					{#if !models.length}
+						<p class="-mt-2 text-[11px] text-[#707070]">
+							No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+						</p>
+					{/if}
+
+					<input type="hidden" name="model" value={selectedModel} />
+
 					<div class="flex gap-3">
 						<Button type="submit" class="flex-1" disabled={loading}>Guardar producto</Button>
 					</div>
@@ -187,6 +211,7 @@
 						>
 							<tr>
 								<th class="px-6 py-4 font-bold">Título</th>
+								<th class="px-6 py-4 font-bold">Modelo</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
 								<th class="px-6 py-4 text-right font-bold">Precio</th>
 								{#if canManage}
@@ -198,7 +223,7 @@
 							{#if products.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 4 : 3}
+										colspan={canManage ? 5 : 4}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay productos registrados.</td
 									>
@@ -207,6 +232,9 @@
 								{#each products as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 										<td class="px-6 py-4 font-medium text-[#171717]">{product.title}</td>
+										<td class="px-6 py-4 text-xs capitalize text-[#707070]">
+											{product.model ? models.find((m) => m.id === product.model)?.model || '—' : '—'}
+										</td>
 										<td class="px-6 py-4 text-xs text-[#707070]">{product.description || '—'}</td>
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
 											>{formatCurrency(Number(product.price_without_taxes))}</td
@@ -309,6 +337,22 @@
 				required
 				disabled={editLoading}
 			/>
+
+			<SearchableSelect
+				label="Modelo"
+				options={models.map((m) => ({ value: m.id, label: m.model }))}
+				bind:value={editModel}
+				placeholder="Selecciona un modelo"
+				disabled={editLoading || !models.length}
+			/>
+
+			{#if !models.length}
+				<p class="-mt-2 text-[11px] text-[#707070]">
+					No hay modelos disponibles. Crea al menos uno en la sección Modelos.
+				</p>
+			{/if}
+
+			<input type="hidden" name="model" value={editModel} />
 		</form>
 
 		{#snippet footer()}

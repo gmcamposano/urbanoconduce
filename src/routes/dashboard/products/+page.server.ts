@@ -17,22 +17,27 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	}
 
 	try {
-		const { data: products, error } = await locals.supabase
-			.from('products')
-			.select('*')
-			.order('title', { ascending: true });
+		const [{ data: products, error: productsError }, { data: models, error: modelsError }] =
+			await Promise.all([
+				locals.supabase.from('products').select('*').order('title', { ascending: true }),
+				locals.supabase.from('product_models').select('*').order('model', { ascending: true })
+			]);
 
-		if (error) {
-			console.error('Supabase query error in products load:', error.message);
-			return { products: [] };
+		if (productsError) {
+			console.error('Supabase query error in products load:', productsError.message);
+		}
+
+		if (modelsError) {
+			console.error('Supabase query error in models load:', modelsError.message);
 		}
 
 		return {
-			products: products || []
+			products: products || [],
+			models: models || []
 		};
 	} catch (e) {
 		console.error('Unexpected exception in products load:', e);
-		return { products: [] };
+		return { products: [], models: [] };
 	}
 };
 
@@ -51,6 +56,7 @@ export const actions: Actions = {
 		const title = (formData.get('title') as string)?.trim() ?? '';
 		const description = (formData.get('description') as string)?.trim() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
+		const modelId = (formData.get('model') as string)?.trim() || null;
 
 		if (!title) {
 			return fail(400, { error: 'El título del producto es obligatorio.' });
@@ -65,6 +71,7 @@ export const actions: Actions = {
 				title,
 				description: description || null,
 				price_without_taxes: priceWithoutTaxes,
+				model: modelId,
 				created_by: user.id
 			});
 
@@ -92,6 +99,7 @@ export const actions: Actions = {
 		const title = (formData.get('title') as string)?.trim() ?? '';
 		const description = (formData.get('description') as string)?.trim() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
+		const modelId = (formData.get('model') as string)?.trim() || null;
 
 		if (!productId) {
 			return fail(400, { error: 'El ID del producto es obligatorio.' });
@@ -111,7 +119,8 @@ export const actions: Actions = {
 				.update({
 					title,
 					description: description || null,
-					price_without_taxes: priceWithoutTaxes
+					price_without_taxes: priceWithoutTaxes,
+					model: modelId || null
 				})
 				.eq('id', productId);
 
