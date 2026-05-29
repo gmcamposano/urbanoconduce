@@ -8,7 +8,7 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { Edit3, Package, Tags, Trash2 } from '@lucide/svelte';
+	import { Copy, Edit3, Package, Tags, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -49,6 +49,70 @@
 	let editModel = $state('');
 	let productToDelete = $state<{ id: string; title: string } | null>(null);
 	let deleteLoading = $state(false);
+	let duplicateModalOpen = $state(false);
+	let selectedProductsForDuplicate = $state<string[]>([]);
+	let sourceClientForDuplicate = $state('');
+	let destinationClientForDuplicate = $state('');
+	let duplicateLoading = $state(false);
+	let duplicateError = $state('');
+
+	const productsFromSourceClient = $derived(
+		sourceClientForDuplicate ? products.filter((p) => p.client_id === sourceClientForDuplicate) : []
+	);
+
+	const availableProductsToDuplicate = $derived(() => {
+		if (!destinationClientForDuplicate || !sourceClientForDuplicate)
+			return productsFromSourceClient;
+		return productsFromSourceClient.filter(
+			(p) =>
+				!products.some(
+					(existing) =>
+						existing.client_id === destinationClientForDuplicate && existing.title === p.title
+				)
+		);
+	});
+
+	const productsWithDuplicateStatus = $derived(() => {
+		return productsFromSourceClient.map((p) => ({
+			...p,
+			isDuplicate: destinationClientForDuplicate
+				? products.some(
+						(existing) =>
+							existing.client_id === destinationClientForDuplicate && existing.title === p.title
+					)
+				: false
+		}));
+	});
+
+	const canDuplicate = $derived(
+		selectedProductsForDuplicate.length > 0 &&
+			sourceClientForDuplicate.trim() !== '' &&
+			destinationClientForDuplicate.trim() !== '' &&
+			sourceClientForDuplicate !== destinationClientForDuplicate
+	);
+
+	$effect(() => {
+		if (sourceClientForDuplicate) {
+			selectedProductsForDuplicate = [];
+		}
+	});
+
+	function toggleProductForDuplicate(productId: string) {
+		if (selectedProductsForDuplicate.includes(productId)) {
+			selectedProductsForDuplicate = selectedProductsForDuplicate.filter((id) => id !== productId);
+		} else {
+			selectedProductsForDuplicate = [...selectedProductsForDuplicate, productId];
+		}
+	}
+
+	function toggleAllProductsForDuplicate() {
+		const allProducts = productsWithDuplicateStatus();
+		if (selectedProductsForDuplicate.length === allProducts.length) {
+			selectedProductsForDuplicate = [];
+		} else {
+			selectedProductsForDuplicate = allProducts.map((p) => p.id);
+		}
+	}
 	let selectedClient = $state('');
 	let title = $state('');
 	let description = $state('');
@@ -83,6 +147,7 @@
 		editDescription = product.description || '';
 		editPriceWithoutTaxes = String(product.price_without_taxes ?? '');
 		editModel = product.model || '';
+		document.body.style.overflow = 'hidden';
 	}
 
 	function closeEditDialog() {
@@ -93,6 +158,7 @@
 		editPriceWithoutTaxes = '';
 		editModel = '';
 		editLoading = false;
+		document.body.style.overflow = '';
 	}
 
 	function openDeleteDialog(product: (typeof products)[number]) {
@@ -100,11 +166,32 @@
 			id: product.id,
 			title: product.title
 		};
+		document.body.style.overflow = 'hidden';
 	}
 
 	function closeDeleteDialog() {
 		productToDelete = null;
 		deleteLoading = false;
+		document.body.style.overflow = '';
+	}
+
+	function openDuplicateModal() {
+		selectedProductsForDuplicate = [];
+		sourceClientForDuplicate = '';
+		destinationClientForDuplicate = '';
+		duplicateError = '';
+		duplicateModalOpen = true;
+		document.body.style.overflow = 'hidden';
+	}
+
+	function closeDuplicateModal() {
+		duplicateModalOpen = false;
+		selectedProductsForDuplicate = [];
+		sourceClientForDuplicate = '';
+		destinationClientForDuplicate = '';
+		duplicateLoading = false;
+		duplicateError = '';
+		document.body.style.overflow = '';
 	}
 
 	function resetForm() {
@@ -264,8 +351,14 @@
 		</Card>
 
 		<Card class="xl:col-span-2">
-			<CardHeader>
+			<CardHeader class="flex flex-row items-center justify-between">
 				<CardTitle>Catálogo de productos</CardTitle>
+				{#if canManage && filteredProducts.length > 0}
+					<Button variant="outline" size="sm" onclick={openDuplicateModal}>
+						<Copy class="mr-1.5 h-4 w-4" />
+						Duplicar
+					</Button>
+				{/if}
 			</CardHeader>
 			<CardContent class="p-0">
 				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
@@ -518,6 +611,177 @@
 					Eliminando...
 				{:else}
 					Eliminar
+				{/if}
+			</Button>
+		{/snippet}
+	</Dialog>
+{/if}
+
+{#if duplicateModalOpen}
+	<Dialog
+		open
+		title="Duplicar productos"
+		description="Selecciona el cliente de origen, elige los productos y el cliente destino."
+		class="max-w-2xl"
+		onClose={closeDuplicateModal}
+	>
+		<div class="space-y-4">
+			<SearchableSelect
+				label="Cliente de origen"
+				options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
+				bind:value={sourceClientForDuplicate}
+				placeholder="Selecciona el cliente de origen"
+				disabled={duplicateLoading || clients.length === 0}
+			/>
+
+			{#if clients.length === 0}
+				<p class="-mt-2 text-[11px] text-[#707070]">No hay clientes disponibles.</p>
+			{/if}
+
+			{#if sourceClientForDuplicate}
+				{@const productsWithStatus = productsWithDuplicateStatus()}
+				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
+					<table class="w-full text-left text-sm text-[#171717]">
+						<thead
+							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+						>
+							<tr>
+								<th class="w-10 px-4 py-3 font-bold">
+									<input
+										type="checkbox"
+										checked={selectedProductsForDuplicate.length === productsWithStatus.length &&
+											productsWithStatus.length > 0}
+										onchange={toggleAllProductsForDuplicate}
+										class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
+									/>
+								</th>
+								<th class="px-4 py-3 font-bold">Producto</th>
+								<th class="px-4 py-3 font-bold">Modelo</th>
+								<th class="px-4 py-3 text-right font-bold">Precio</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[#ededed]">
+							{#each productsWithStatus as productWithStatus (productWithStatus.id)}
+								<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
+									<td class="px-4 py-3">
+										<input
+											type="checkbox"
+											checked={selectedProductsForDuplicate.includes(productWithStatus.id)}
+											onchange={() => toggleProductForDuplicate(productWithStatus.id)}
+											disabled={productWithStatus.isDuplicate}
+											class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e] disabled:opacity-50"
+										/>
+									</td>
+									<td class="px-4 py-3">
+										<div class="font-medium text-[#171717]">{productWithStatus.title}</div>
+										{#if productWithStatus.isDuplicate}
+											<div class="text-xs text-red-600">Ya existe en el cliente destino</div>
+										{/if}
+									</td>
+									<td class="px-4 py-3 text-xs text-[#707070] capitalize">
+										{productWithStatus.model
+											? models.find((m) => m.id === productWithStatus.model)?.model || '—'
+											: '—'}
+									</td>
+									<td class="px-4 py-3 text-right font-mono text-[#171717]">
+										{formatCurrency(Number(productWithStatus.price_without_taxes))}
+									</td>
+								</tr>
+							{:else}
+								<tr>
+									<td colspan="4" class="px-4 py-8 text-center text-xs text-[#707070]">
+										Este cliente no tiene productos.
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				<div class="flex items-center justify-between text-sm text-[#707070]">
+					<span
+						>{selectedProductsForDuplicate.length} de {productsWithStatus.length} productos seleccionados</span
+					>
+				</div>
+			{/if}
+
+			{#if selectedProductsForDuplicate.length > 0}
+				<SearchableSelect
+					label="Cliente destino"
+					options={clients
+						.filter((c) => c.id !== sourceClientForDuplicate)
+						.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
+					bind:value={destinationClientForDuplicate}
+					placeholder="Selecciona el cliente destino"
+					disabled={duplicateLoading || clients.length === 0}
+				/>
+
+				{#if sourceClientForDuplicate && destinationClientForDuplicate && sourceClientForDuplicate === destinationClientForDuplicate}
+					<p class="-mt-2 text-[11px] text-red-600">
+						El cliente destino no puede ser el mismo que el de origen.
+					</p>
+				{/if}
+			{/if}
+
+			{#if duplicateError}
+				<div
+					class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+				>
+					<Tags class="mt-0.5 h-5 w-5 shrink-0" />
+					<div>
+						<p class="font-medium">No se pudo duplicar el producto</p>
+						<p class="mt-0.5 text-xs text-[#707070]">{duplicateError}</p>
+					</div>
+				</div>
+			{/if}
+
+			<form
+				id="duplicate-products-form"
+				action="?/duplicateProducts"
+				method="POST"
+				use:enhance={() => {
+					duplicateLoading = true;
+					duplicateError = '';
+					return async ({ result, update }) => {
+						duplicateLoading = false;
+						if (result.type === 'success') {
+							closeDuplicateModal();
+						} else if (result.type === 'failure') {
+							const data = result.data as { error?: string } | undefined;
+							duplicateError = data?.error || 'Ocurrió un error.';
+						} else if (result.type === 'error') {
+							duplicateError = result.error?.message || 'Ocurrió un error.';
+						}
+						await update();
+					};
+				}}
+			>
+				<input
+					type="hidden"
+					name="product_ids"
+					value={JSON.stringify(selectedProductsForDuplicate)}
+				/>
+				<input type="hidden" name="destination_client_id" value={destinationClientForDuplicate} />
+			</form>
+		</div>
+
+		{#snippet footer()}
+			<Button
+				type="button"
+				variant="outline"
+				disabled={duplicateLoading}
+				onclick={closeDuplicateModal}>Cancelar</Button
+			>
+			<Button
+				type="submit"
+				form="duplicate-products-form"
+				disabled={duplicateLoading || !canDuplicate}
+			>
+				{#if duplicateLoading}
+					Duplicando...
+				{:else}
+					Duplicar {selectedProductsForDuplicate.length}
+					producto{selectedProductsForDuplicate.length !== 1 ? 's' : ''}
 				{/if}
 			</Button>
 		{/snippet}

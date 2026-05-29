@@ -17,12 +17,22 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	}
 
 	try {
-		const [{ data: products, error: productsError }, { data: models, error: modelsError }, { data: clients, error: clientsError }] =
-			await Promise.all([
-				locals.supabase.from('products').select('*, clients(client_type, full_name, company_name, alias)').order('title', { ascending: true }),
-				locals.supabase.from('product_models').select('*').order('model', { ascending: true }),
-				locals.supabase.from('clients').select('id, client_type, full_name, company_name, alias').order('company_name', { ascending: true }).order('full_name', { ascending: true })
-			]);
+		const [
+			{ data: products, error: productsError },
+			{ data: models, error: modelsError },
+			{ data: clients, error: clientsError }
+		] = await Promise.all([
+			locals.supabase
+				.from('products')
+				.select('*, clients(client_type, full_name, company_name, alias)')
+				.order('title', { ascending: true }),
+			locals.supabase.from('product_models').select('*').order('model', { ascending: true }),
+			locals.supabase
+				.from('clients')
+				.select('id, client_type, full_name, company_name, alias')
+				.order('company_name', { ascending: true })
+				.order('full_name', { ascending: true })
+		]);
 
 		if (productsError) {
 			console.error('Supabase query error in products load:', productsError.message);
@@ -187,5 +197,76 @@ export const actions: Actions = {
 		}
 
 		return { success: true, message: 'Producto borrado.' };
+	},
+	duplicateProducts: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (!canManageCatalog(locals.role)) {
+			return fail(403, { error: 'No tienes permisos para duplicar productos.' });
+		}
+
+		const formData = await request.formData();
+		const productIdsRaw = (formData.get('product_ids') as string)?.trim() ?? '';
+		const destinationClientId = (formData.get('destination_client_id') as string)?.trim() ?? '';
+
+		if (!productIdsRaw) {
+			return fail(400, { error: 'No se seleccionaron productos.' });
+		}
+
+		if (!destinationClientId) {
+			return fail(400, { error: 'El cliente destino es obligatorio.' });
+		}
+
+		let productIds: string[];
+		try {
+			productIds = JSON.parse(productIdsRaw);
+			if (!Array.isArray(productIds) || productIds.length === 0) {
+				return fail(400, { error: 'No se seleccionaron productos.' });
+			}
+		} catch {
+			return fail(400, { error: 'Formato de productos inválido.' });
+		}
+
+		try {
+			const { data: productsToDuplicate, error: fetchError } = await locals.supabase
+				.from('products')
+				.select('*')
+				.in('id', productIds);
+
+			if (fetchError) {
+				return fail(400, { error: fetchError.message });
+			}
+
+			if (!productsToDuplicate || productsToDuplicate.length === 0) {
+				return fail(400, { error: 'No se encontraron los productos seleccionados.' });
+			}
+
+			const productsToInsert = productsToDuplicate.map((p) => ({
+				client_id: destinationClientId,
+				title: p.title,
+				description: p.description,
+				price_without_taxes: p.price_without_taxes,
+				model: p.model,
+				created_by: user.id
+			}));
+
+			const { error: insertError } = await locals.supabase
+				.from('products')
+				.insert(productsToInsert);
+
+			if (insertError) {
+				if (insertError.code === '23505') {
+					return fail(400, { error: 'Algunos productos ya existen para el cliente destino.' });
+				}
+				return fail(400, { error: insertError.message });
+			}
+
+			return { success: true, message: `${productsToInsert.length} producto(s) duplicado(s).` };
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
 	}
 };
