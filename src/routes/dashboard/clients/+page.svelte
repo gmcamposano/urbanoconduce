@@ -36,6 +36,39 @@
 	let clientToDelete = $state<{ id: string; name: string } | null>(null);
 	let deleteLoading = $state(false);
 
+	function trimCompanyFormData(formData: FormData) {
+		const v = formData.get('alias');
+		if (typeof v === 'string') formData.set('alias', v.trim());
+		const r = formData.get('rnc');
+		if (typeof r === 'string') formData.set('rnc', r.trim());
+		const c = formData.get('company_name');
+		if (typeof c === 'string') formData.set('company_name', c.trim());
+	}
+
+	function handleCreateSubmit({ formData }: { formData: FormData }) {
+		trimCompanyFormData(formData);
+		loading = true;
+		return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+			loading = false;
+			if (result.type === 'success') {
+				resetForm();
+			}
+			await update();
+		};
+	}
+
+	function handleEditSubmit({ formData }: { formData: FormData }) {
+		trimCompanyFormData(formData);
+		editLoading = true;
+		return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+			editLoading = false;
+			if (result.type === 'success') {
+				closeEditDialog();
+			}
+			await update();
+		};
+	}
+
 	function startEditing(client: (typeof clients)[number]) {
 		editingClient = { ...client };
 		clientType = client.client_type;
@@ -128,16 +161,7 @@
 					action="?/createClient"
 					method="POST"
 					class="space-y-4"
-					use:enhance={() => {
-						loading = true;
-						return async ({ result, update }) => {
-							loading = false;
-							if (result.type === 'success') {
-								resetForm();
-							}
-							await update();
-						};
-					}}
+					use:enhance={handleCreateSubmit}
 				>
 					<Select
 						label="Tipo de cliente"
@@ -311,16 +335,7 @@
 			action="?/updateClient"
 			method="POST"
 			class="space-y-4"
-			use:enhance={() => {
-				editLoading = true;
-				return async ({ result, update }) => {
-					editLoading = false;
-					if (result.type === 'success') {
-						closeEditDialog();
-					}
-					await update();
-				};
-			}}
+			use:enhance={handleEditSubmit}
 		>
 			<input type="hidden" name="id" value={editingClient.id} />
 
@@ -423,16 +438,7 @@
 				id="delete-client-form"
 				action="?/deleteClient"
 				method="POST"
-				use:enhance={() => {
-					deleteLoading = true;
-					return async ({ result, update }) => {
-						deleteLoading = false;
-						if (result.type === 'success') {
-							closeDeleteDialog();
-						}
-						await update();
-					};
-				}}
+use:enhance={handleEditSubmit}
 			>
 				<input type="hidden" name="id" value={clientToDelete.id} />
 			</form>

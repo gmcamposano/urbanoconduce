@@ -46,9 +46,9 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const clientType = formData.get('client_type') as 'person' | 'company';
 		const fullName = (formData.get('full_name') as string)?.trim() ?? '';
-		const alias = (formData.get('alias') as string)?.trim() ?? '';
+		const alias = (formData.get('alias') as string)?.trim().toLowerCase() ?? '';
 		const rnc = (formData.get('rnc') as string)?.trim() ?? '';
-		const companyName = (formData.get('company_name') as string)?.trim() ?? '';
+		const companyName = (formData.get('company_name') as string)?.trim().toLowerCase() ?? '';
 
 		if (!['person', 'company'].includes(clientType)) {
 			return fail(400, { error: 'Debes seleccionar si el cliente es una persona o una empresa.' });
@@ -96,9 +96,9 @@ export const actions: Actions = {
 		const clientId = (formData.get('id') as string)?.trim() ?? '';
 		const clientType = formData.get('client_type') as 'person' | 'company';
 		const fullName = (formData.get('full_name') as string)?.trim() ?? '';
-		const alias = (formData.get('alias') as string)?.trim() ?? '';
+		const alias = (formData.get('alias') as string)?.trim().toLowerCase() ?? '';
 		const rnc = (formData.get('rnc') as string)?.trim() ?? '';
-		const companyName = (formData.get('company_name') as string)?.trim() ?? '';
+		const companyName = (formData.get('company_name') as string)?.trim().toLowerCase() ?? '';
 
 		if (!clientId) {
 			return fail(400, { error: 'El ID del cliente es obligatorio.' });
