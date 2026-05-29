@@ -5,6 +5,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
+	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from '@lucide/svelte';
 
@@ -18,6 +19,9 @@
 	let deleteLoadingId = $state<string | null>(null);
 	let editingModel = $state<{ id: string; model: string } | null>(null);
 	let model = $state('');
+	let showEditDialog = $state(false);
+	let showDeleteDialog = $state(false);
+	let modelToDelete = $state<{ id: string; model: string } | null>(null);
 
 	const sort = $derived(data.sort ?? 'model');
 	const order = $derived(data.order ?? 'asc');
@@ -25,6 +29,23 @@
 	function startEditing(item: (typeof models)[number]) {
 		editingModel = item;
 		model = item.model;
+		showEditDialog = true;
+	}
+
+	function closeEditDialog() {
+		showEditDialog = false;
+		editingModel = null;
+		model = '';
+	}
+
+	function startDelete(item: (typeof models)[number]) {
+		modelToDelete = item;
+		showDeleteDialog = true;
+	}
+
+	function closeDeleteDialog() {
+		showDeleteDialog = false;
+		modelToDelete = null;
 	}
 
 	function resetForm() {
@@ -86,28 +107,24 @@
 	<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 		<Card class="xl:col-span-1">
 			<CardHeader>
-				<CardTitle>{editingModel ? 'Editar modelo' : 'Nuevo modelo'}</CardTitle>
+				<CardTitle>Nuevo modelo</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form
-					action={editingModel ? '?/updateModel' : '?/createModel'}
+					action="?/createModel"
 					method="POST"
 					class="space-y-4"
 					use:enhance={() => {
 						loading = true;
-						return async ({ result, update }) => {
+						return async ({ result, invalidate }) => {
 							loading = false;
 							if (result.type === 'success') {
-								resetForm();
+								model = '';
+								await invalidate('url');
 							}
-							await update();
 						};
 					}}
 				>
-					{#if editingModel}
-						<input type="hidden" name="id" value={editingModel.id} />
-					{/if}
-
 					<Input
 						label="Modelo"
 						name="model"
@@ -129,16 +146,9 @@
 						<p>Escribe el nombre del modelo manualmente, por ejemplo clásico o sport.</p>
 					</div>
 
-					<div class="flex gap-3">
-						<Button type="submit" class="flex-1" disabled={loading}>
-							{editingModel ? 'Actualizar modelo' : 'Guardar modelo'}
-						</Button>
-						{#if editingModel}
-							<Button type="button" variant="outline" disabled={loading} onclick={resetForm}
-								>Cancelar</Button
-							>
-						{/if}
-					</div>
+					<Button type="submit" class="w-full" disabled={loading}>
+						Guardar modelo
+					</Button>
 				</form>
 			</CardContent>
 		</Card>
@@ -213,35 +223,16 @@
 													>
 														<Edit3 class="h-4 w-4" />
 													</Button>
-													<form
-														action="?/deleteModel"
-														method="POST"
-														class="contents"
-														use:enhance={() => {
-															deleteLoadingId = item.id;
-															return async ({ update }) => {
-																deleteLoadingId = null;
-																await update();
-															};
-														}}
-													>
-														<input type="hidden" name="id" value={item.id} />
-														<Button
-															type="submit"
+													<Button
+															type="button"
 															variant="ghost"
 															size="icon"
 															class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
 															title="Borrar modelo"
-															disabled={deleteLoadingId === item.id}
-															onclick={(event) => {
-																if (!confirm(`¿Eliminar el modelo ${item.model}?`)) {
-																	event.preventDefault();
-																}
-															}}
+															onclick={() => startDelete(item)}
 														>
 															<Trash2 class="h-4 w-4" />
 														</Button>
-													</form>
 												</div>
 											</td>
 										{/if}
@@ -254,4 +245,78 @@
 			</CardContent>
 		</Card>
 	</div>
+
+	<Dialog
+		open={showEditDialog}
+		title="Editar modelo"
+		description="Actualiza el nombre del modelo."
+		onClose={closeEditDialog}
+	>
+		<form
+			action="?/updateModel"
+			method="POST"
+			class="space-y-4"
+			use:enhance={() => {
+				loading = true;
+				return async ({ result, update }) => {
+					loading = false;
+					if (result.type === 'success') {
+						closeEditDialog();
+					}
+					await update();
+				};
+			}}
+		>
+			<input type="hidden" name="id" value={editingModel?.id ?? ''} />
+			<Input
+				label="Modelo"
+				name="model"
+				type="text"
+				placeholder="Clásico, Sport, Premium"
+				bind:value={model}
+				class="capitalize"
+				required
+				disabled={loading}
+			/>
+			<div class="flex gap-3">
+				<Button type="submit" class="flex-1" disabled={loading}>
+					Actualizar modelo
+				</Button>
+				<Button type="button" variant="outline" disabled={loading} onclick={closeEditDialog}>
+					Cancelar
+				</Button>
+			</div>
+		</form>
+	</Dialog>
+
+	<Dialog
+		open={showDeleteDialog}
+		title="Eliminar modelo"
+		description={`¿Estás seguro de que deseas eliminar el modelo "${modelToDelete?.model}"? Esta acción no se puede deshacer.`}
+		onClose={closeDeleteDialog}
+	>
+		<form
+			action="?/deleteModel"
+			method="POST"
+			class="space-y-4"
+			use:enhance={() => {
+				if (modelToDelete) deleteLoadingId = modelToDelete.id;
+				return async ({ update }) => {
+					deleteLoadingId = null;
+					closeDeleteDialog();
+					await update();
+				};
+			}}
+		>
+			<input type="hidden" name="id" value={modelToDelete?.id ?? ''} />
+			<div class="flex gap-3">
+				<Button type="submit" variant="destructive" class="flex-1" disabled={deleteLoadingId !== null}>
+					Eliminar modelo
+				</Button>
+				<Button type="button" variant="outline" disabled={deleteLoadingId !== null} onclick={closeDeleteDialog}>
+					Cancelar
+				</Button>
+			</div>
+		</form>
+	</Dialog>
 </div>

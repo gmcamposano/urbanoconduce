@@ -69,6 +69,9 @@ export const actions: Actions = {
 			});
 
 			if (error) {
+				if (error.code === '23505') {
+					return fail(400, { error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.' });
+				}
 				return fail(400, { error: error.message });
 			}
 		} catch (e: any) {
@@ -106,6 +109,9 @@ export const actions: Actions = {
 				.eq('id', modelId);
 
 			if (error) {
+				if (error.code === '23505') {
+					return fail(400, { error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.' });
+				}
 				return fail(400, { error: error.message });
 			}
 		} catch (e: any) {
