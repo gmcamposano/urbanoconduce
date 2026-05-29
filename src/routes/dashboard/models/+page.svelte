@@ -6,7 +6,7 @@
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import { Boxes, Droplets, Edit3, Trash2 } from '@lucide/svelte';
+	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -19,6 +19,9 @@
 	let editingModel = $state<{ id: string; model: string } | null>(null);
 	let model = $state('');
 
+	const sort = $derived(data.sort ?? 'model');
+	const order = $derived(data.order ?? 'asc');
+
 	function startEditing(item: (typeof models)[number]) {
 		editingModel = item;
 		model = item.model;
@@ -27,6 +30,17 @@
 	function resetForm() {
 		editingModel = null;
 		model = '';
+	}
+
+	function toggleSort(column: 'model' | 'created_at') {
+		const newOrder = sort === column ? (order === 'asc' ? 'desc' : 'asc') : 'asc';
+		const search = `sort=${column}&order=${newOrder}`;
+		window.location.href = `${window.location.pathname}?${search}`;
+	}
+
+	function getSortIcon(column: 'model' | 'created_at') {
+		if (sort !== column) return ArrowUpDown;
+		return order === 'asc' ? ArrowUp : ArrowDown;
 	}
 </script>
 
@@ -141,7 +155,26 @@
 						>
 							<tr>
 								<th class="w-16 px-6 py-4 font-bold">#</th>
-								<th class="px-6 py-4 font-bold">Modelo</th>
+								<th class="px-6 py-4 font-bold cursor-pointer select-none hover:text-[#171717]" onclick={() => toggleSort('model')}>
+									<div class="flex items-center gap-1.5">
+										Modelo
+										{#if sort === 'model'}
+											<svelte:component this={getSortIcon('model')} class="h-3.5 w-3.5" />
+										{:else}
+											<ArrowUpDown class="h-3.5 w-3.5 opacity-40" />
+										{/if}
+									</div>
+								</th>
+								<th class="px-6 py-4 font-bold cursor-pointer select-none hover:text-[#171717]" onclick={() => toggleSort('created_at')}>
+									<div class="flex items-center gap-1.5">
+										Fecha ingreso
+										{#if sort === 'created_at'}
+											<svelte:component this={getSortIcon('created_at')} class="h-3.5 w-3.5" />
+										{:else}
+											<ArrowUpDown class="h-3.5 w-3.5 opacity-40" />
+										{/if}
+									</div>
+								</th>
 								{#if canManage}
 									<th class="px-6 py-4 text-right font-bold">Acciones</th>
 								{/if}
@@ -151,7 +184,7 @@
 							{#if models.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 3 : 2}
+										colspan={canManage ? 4 : 3}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay modelos registrados.</td
 									>
@@ -161,6 +194,13 @@
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 										<td class="px-6 py-4 font-mono text-xs text-[#707070]">{index + 1}</td>
 										<td class="px-6 py-4 text-xs text-[#171717] capitalize">{item.model}</td>
+										<td class="px-6 py-4 text-xs text-[#707070]">
+											{new Date(item.created_at).toLocaleDateString('es-DO', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric'
+											})}
+										</td>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
 												<div class="flex items-center justify-end gap-1.5">

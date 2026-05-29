@@ -5,7 +5,7 @@ function canManageCatalog(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
+export const load: PageServerLoad = async ({ parent, locals, url }) => {
 	const { profile } = await parent();
 
 	if (!profile) {
@@ -16,23 +16,31 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		throw redirect(303, '/dashboard');
 	}
 
+	const sort = url.searchParams.get('sort') ?? 'model';
+	const order = url.searchParams.get('order') ?? 'asc';
+
+	const sortColumn = sort === 'model' ? 'model' : 'created_at';
+	const ascending = order === 'asc';
+
 	try {
 		const { data: models, error } = await locals.supabase
 			.from('product_models')
 			.select('*')
-			.order('created_at', { ascending: false });
+			.order(sortColumn, { ascending });
 
 		if (error) {
 			console.error('Supabase query error in models load:', error.message);
-			return { models: [] };
+			return { models: [], sort, order };
 		}
 
 		return {
-			models: models || []
+			models: models || [],
+			sort,
+			order
 		};
 	} catch (e) {
 		console.error('Unexpected exception in models load:', e);
-		return { models: [] };
+		return { models: [], sort, order };
 	}
 };
 
