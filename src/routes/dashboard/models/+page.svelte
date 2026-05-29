@@ -7,7 +7,8 @@
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from '@lucide/svelte';
+	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from '@lucide/svelte';
+	import { goto, invalidate } from '$app/navigation';
 
 	let { data, form } = $props();
 
@@ -22,9 +23,29 @@
 	let showEditDialog = $state(false);
 	let showDeleteDialog = $state(false);
 	let modelToDelete = $state<{ id: string; model: string } | null>(null);
+	let search = $state('');
 
 	const sort = $derived(data.sort ?? 'model');
 	const order = $derived(data.order ?? 'asc');
+
+const filteredModels = $derived(
+		search.trim()
+			? models.filter(m => m.model.toLowerCase().includes(search.toLowerCase()))
+			: models
+	);
+
+	function toggleSort(column: 'model' | 'created_at') {
+		const newOrder = sort === column ? (order === 'asc' ? 'desc' : 'asc') : 'asc';
+		const params = new URLSearchParams(window.location.search);
+		params.set('sort', column);
+		params.set('order', newOrder);
+		goto(`${window.location.pathname}?${params.toString()}`, { keepFocus: true });
+	}
+
+	function getSortIcon(column: 'model' | 'created_at') {
+		if (sort !== column) return ArrowUpDown;
+		return order === 'asc' ? ArrowUp : ArrowDown;
+	}
 
 	function startEditing(item: (typeof models)[number]) {
 		editingModel = item;
@@ -51,17 +72,6 @@
 	function resetForm() {
 		editingModel = null;
 		model = '';
-	}
-
-	function toggleSort(column: 'model' | 'created_at') {
-		const newOrder = sort === column ? (order === 'asc' ? 'desc' : 'asc') : 'asc';
-		const search = `sort=${column}&order=${newOrder}`;
-		window.location.href = `${window.location.pathname}?${search}`;
-	}
-
-	function getSortIcon(column: 'model' | 'created_at') {
-		if (sort !== column) return ArrowUpDown;
-		return order === 'asc' ? ArrowUp : ArrowDown;
 	}
 </script>
 
@@ -116,7 +126,7 @@
 					class="space-y-4"
 					use:enhance={() => {
 						loading = true;
-						return async ({ result, invalidate }) => {
+						return async ({ result }) => {
 							loading = false;
 							if (result.type === 'success') {
 								model = '';
@@ -155,7 +165,27 @@
 
 		<Card class="xl:col-span-2">
 			<CardHeader>
-				<CardTitle>Modelos disponibles</CardTitle>
+				<div class="flex items-center justify-between gap-4">
+					<CardTitle>Modelos disponibles</CardTitle>
+					<div class="relative">
+						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#707070]" />
+						<input
+							type="text"
+							placeholder="Buscar modelo..."
+							bind:value={search}
+							class="h-9 w-64 rounded-[6px] border border-[#dfdfdf] bg-white pl-9 pr-8 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e]"
+						/>
+						{#if search}
+							<button
+								type="button"
+								onclick={() => search = ''}
+								class="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070] hover:text-[#171717]"
+							>
+								<X class="h-4 w-4" />
+							</button>
+						{/if}
+					</div>
+				</div>
 			</CardHeader>
 			<CardContent class="p-0">
 				<div class="w-full overflow-x-auto">
@@ -191,16 +221,16 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
-							{#if models.length === 0}
+							{#if filteredModels.length === 0}
 								<tr>
 									<td
 										colspan={canManage ? 4 : 3}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
-										>Aún no hay modelos registrados.</td
+									>{search ? `No se encontraron modelos para "${search}"` : 'Aún no hay modelos registrados.'}</td
 									>
 								</tr>
 							{:else}
-								{#each models as item, index (item.id)}
+								{#each filteredModels as item, index (item.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 										<td class="px-6 py-4 font-mono text-xs text-[#707070]">{index + 1}</td>
 										<td class="px-6 py-4 text-xs text-[#171717] capitalize">{item.model}</td>

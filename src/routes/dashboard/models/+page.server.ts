@@ -18,29 +18,37 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 
 	const sort = url.searchParams.get('sort') ?? 'model';
 	const order = url.searchParams.get('order') ?? 'asc';
+	const search = url.searchParams.get('search') ?? '';
 
 	const sortColumn = sort === 'model' ? 'model' : 'created_at';
 	const ascending = order === 'asc';
 
 	try {
-		const { data: models, error } = await locals.supabase
+		let query = locals.supabase
 			.from('product_models')
 			.select('*')
 			.order(sortColumn, { ascending });
 
+		if (search) {
+			query = query.ilike('model', `%${search}%`);
+		}
+
+		const { data: models, error } = await query;
+
 		if (error) {
 			console.error('Supabase query error in models load:', error.message);
-			return { models: [], sort, order };
+			return { models: [], sort, order, search };
 		}
 
 		return {
 			models: models || [],
 			sort,
-			order
+			order,
+			search
 		};
 	} catch (e) {
 		console.error('Unexpected exception in models load:', e);
-		return { models: [], sort, order };
+		return { models: [], sort, order, search };
 	}
 };
 
