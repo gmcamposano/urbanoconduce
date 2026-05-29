@@ -24,7 +24,7 @@
 </script>
 
 <svelte:head>
-	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - FacturaFlow</title>
+	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - magikalInvoice</title>
 </svelte:head>
 
 <div

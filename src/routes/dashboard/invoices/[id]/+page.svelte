@@ -64,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>{invoice?.invoice_number || 'Factura'} - magikalConduce</title>
+	<title>{invoice?.invoice_number || 'Factura'} - magikalConduce | magikalInvoice</title>
 </svelte:head>
 
 {#if invoice}

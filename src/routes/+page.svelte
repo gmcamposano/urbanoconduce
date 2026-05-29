@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - magikalConduce</title>
+	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - magikalConduce | magikalInvoice</title>
 </svelte:head>
 
 <div

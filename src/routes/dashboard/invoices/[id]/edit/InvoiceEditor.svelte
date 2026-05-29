@@ -119,7 +119,7 @@
 </script>
 
 <svelte:head>
-	<title>Editar factura - FacturaFlow</title>
+	<title>Editar factura - magikalInvoice</title>
 </svelte:head>
 
 {#if invoice}

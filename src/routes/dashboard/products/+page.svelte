@@ -208,7 +208,7 @@
 </script>
 
 <svelte:head>
-	<title>Productos - FacturaFlow</title>
+	<title>Productos - magikalInvoice</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">

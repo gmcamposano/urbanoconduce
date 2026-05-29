@@ -80,7 +80,7 @@
 </script>
 
 <svelte:head>
-	<title>Clientes - magikalConduce</title>
+	<title>Clientes - magikalConduce | magikalInvoice</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">
