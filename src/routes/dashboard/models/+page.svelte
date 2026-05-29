@@ -8,7 +8,7 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from '@lucide/svelte';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
 	let { data, form } = $props();
 
@@ -126,12 +126,12 @@ const filteredModels = $derived(
 					class="space-y-4"
 					use:enhance={() => {
 						loading = true;
-						return async ({ result }) => {
+						return async ({ result, update }) => {
 							loading = false;
 							if (result.type === 'success') {
 								model = '';
-								await invalidate('url');
 							}
+							await update();
 						};
 					}}
 				>

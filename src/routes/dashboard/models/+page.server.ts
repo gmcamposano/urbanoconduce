@@ -73,7 +73,8 @@ export const actions: Actions = {
 		try {
 			const { error } = await locals.supabase.from('product_models').insert({
 				model,
-				created_by: user.id
+				created_by: user.id,
+				created_at: new Date().toISOString()
 			});
 
 			if (error) {
