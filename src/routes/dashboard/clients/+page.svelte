@@ -103,6 +103,17 @@
 		deleteLoading = false;
 	}
 
+	function handleDeleteSubmit() {
+		deleteLoading = true;
+		return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+			deleteLoading = false;
+			if (result.type === 'success') {
+				closeDeleteDialog();
+			}
+			await update();
+		};
+	}
+
 	function resetForm() {
 		clientType = 'person';
 		fullName = '';
@@ -434,11 +445,11 @@
 				>? El registro desaparecerá del listado.
 			</p>
 
-			<form
+<form
 				id="delete-client-form"
 				action="?/deleteClient"
 				method="POST"
-use:enhance={handleEditSubmit}
+				use:enhance={handleDeleteSubmit}
 			>
 				<input type="hidden" name="id" value={clientToDelete.id} />
 			</form>
