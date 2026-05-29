@@ -285,7 +285,7 @@
 										</td>
 										<td class="px-6 py-4">
 											<div class="space-y-0.5">
-												<p class="font-medium text-[#171717]">
+												<p class="font-medium capitalize text-[#171717]">
 													{client.client_type === 'company'
 														? client.company_name
 														: client.full_name}
@@ -296,7 +296,7 @@
 											</div>
 										</td>
 										<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
-											{client.client_type === 'company' ? `${client.alias} / ${client.rnc}` : '—'}
+											{client.client_type === 'company' ? `${client.alias?.toUpperCase()} / ${client.rnc}` : '—'}
 										</td>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
@@ -440,7 +440,7 @@
 	>
 		<div class="space-y-3">
 			<p class="text-sm leading-relaxed text-[#707070]">
-				¿Seguro que deseas eliminar el cliente <strong class="text-[#171717]"
+				¿Seguro que deseas eliminar el cliente <strong class="capitalize text-[#171717]"
 					>{clientToDelete.name}</strong
 				>? El registro desaparecerá del listado.
 			</p>

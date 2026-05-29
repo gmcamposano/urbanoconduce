@@ -27,9 +27,10 @@
 		if (!clientId) return '—';
 		const found = clients.find((c) => c.id === clientId);
 		if (!found) return '—';
-		return found.client_type === 'company'
+		const name = found.client_type === 'company'
 			? found.company_name || found.alias || 'Empresa sin nombre'
 			: found.full_name || 'Sin nombre';
+		return capitalize(name);
 	}
 
 	let loading = $state(false);
@@ -205,6 +206,15 @@
 	function formatCurrency(val: number) {
 		return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(val);
 	}
+
+	function capitalize(str: string): string {
+		return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+	}
+
+	function sentenceCase(str: string): string {
+		if (!str) return str;
+		return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+	}
 </script>
 
 <svelte:head>
@@ -285,7 +295,7 @@
 
 					<Input
 						bind:value={title}
-						label="Título"
+						label="Producto"
 						name="title"
 						placeholder="Cover Elite Colors"
 						required
@@ -294,7 +304,7 @@
 
 					<SearchableSelect
 						label="Modelo"
-						options={availableModels.map((m) => ({ value: m.id, label: m.model }))}
+						options={availableModels.map((m) => ({ value: m.id, label: capitalize(m.model) }))}
 						bind:value={selectedModel}
 						placeholder="Selecciona un modelo"
 						disabled={loading || availableModels.length === 0}
@@ -376,7 +386,7 @@
 						>
 							<tr>
 								<th class="px-6 py-4 font-bold">Cliente</th>
-								<th class="px-6 py-4 font-bold">Título</th>
+								<th class="px-6 py-4 font-bold">Producto</th>
 								<th class="px-6 py-4 font-bold">Modelo</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
 								<th class="px-6 py-4 text-right font-bold">Precio</th>
@@ -402,13 +412,13 @@
 										<td class="px-6 py-4 text-xs text-[#707070]">
 											{getClientName(product.client_id)}
 										</td>
-										<td class="px-6 py-4 font-medium text-[#171717]">{product.title}</td>
+										<td class="px-6 py-4 font-medium text-[#171717]">{capitalize(product.title)}</td>
 										<td class="px-6 py-4 text-xs text-[#707070] capitalize">
 											{product.model
 												? models.find((m) => m.id === product.model)?.model || '—'
 												: '—'}
 										</td>
-										<td class="px-6 py-4 text-xs text-[#707070]">{product.description || '—'}</td>
+										<td class="px-6 py-4 text-xs text-[#707070]">{product.description ? sentenceCase(product.description) : '—'}</td>
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
 											>{formatCurrency(Number(product.price_without_taxes))}</td
 										>
@@ -500,7 +510,7 @@
 
 			<SearchableSelect
 				label="Modelo"
-				options={availableModelsEdit.map((m) => ({ value: m.id, label: m.model }))}
+				options={availableModelsEdit.map((m) => ({ value: m.id, label: capitalize(m.model) }))}
 				bind:value={editModel}
 				placeholder="Selecciona un modelo"
 				disabled={editLoading || availableModelsEdit.length === 0}
@@ -574,7 +584,7 @@
 		<div class="space-y-3">
 			<p class="text-sm leading-relaxed text-[#707070]">
 				¿Seguro que deseas eliminar el producto <strong class="text-[#171717]"
-					>{productToDelete.title}</strong
+					>{capitalize(productToDelete.title)}</strong
 				>? El registro desaparecerá del catálogo.
 			</p>
 
@@ -673,7 +683,7 @@
 										/>
 									</td>
 									<td class="px-4 py-3">
-										<div class="font-medium text-[#171717]">{productWithStatus.title}</div>
+										<div class="font-medium text-[#171717]">{capitalize(productWithStatus.title)}</div>
 										{#if productWithStatus.isDuplicate}
 											<div class="text-xs text-red-600">Ya existe en el cliente destino</div>
 										{/if}
