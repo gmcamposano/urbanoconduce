@@ -268,5 +268,80 @@ export const actions: Actions = {
 		} catch (e: any) {
 			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
+	},
+	duplicateProductForModels: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (!canManageCatalog(locals.role)) {
+			return fail(403, { error: 'No tienes permisos para duplicar productos.' });
+		}
+
+		const formData = await request.formData();
+		const productId = (formData.get('product_id') as string)?.trim() ?? '';
+		const modelIdsRaw = (formData.get('model_ids') as string)?.trim() ?? '';
+
+		if (!productId) {
+			return fail(400, { error: 'El producto es obligatorio.' });
+		}
+
+		if (!modelIdsRaw) {
+			return fail(400, { error: 'No se seleccionaron modelos.' });
+		}
+
+		let modelIds: string[];
+		try {
+			modelIds = JSON.parse(modelIdsRaw);
+			if (!Array.isArray(modelIds) || modelIds.length === 0) {
+				return fail(400, { error: 'No se seleccionaron modelos.' });
+			}
+		} catch {
+			return fail(400, { error: 'Formato de modelos inválido.' });
+		}
+
+		try {
+			const { data: sourceProduct, error: fetchError } = await locals.supabase
+				.from('products')
+				.select('*')
+				.eq('id', productId)
+				.single();
+
+			if (fetchError) {
+				return fail(400, { error: fetchError.message });
+			}
+
+			if (!sourceProduct) {
+				return fail(400, { error: 'No se encontró el producto.' });
+			}
+
+			const productsToInsert = modelIds.map((modelId) => ({
+				client_id: sourceProduct.client_id,
+				title: sourceProduct.title,
+				description: sourceProduct.description,
+				price_without_taxes: sourceProduct.price_without_taxes,
+				model: modelId,
+				created_by: user.id
+			}));
+
+			const { error: insertError } = await locals.supabase
+				.from('products')
+				.insert(productsToInsert);
+
+			if (insertError) {
+				if (insertError.code === '23505') {
+					return fail(400, {
+						error:
+							'Ya existe un producto con el mismo nombre y modelo para este cliente. Elige un modelo diferente o cambia el nombre del producto.'
+					});
+				}
+				return fail(400, { error: insertError.message });
+			}
+
+			return { success: true, message: `${productsToInsert.length} producto(s) creado(s).` };
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
 	}
 };

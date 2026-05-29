@@ -27,9 +27,10 @@
 		if (!clientId) return '—';
 		const found = clients.find((c) => c.id === clientId);
 		if (!found) return '—';
-		const name = found.client_type === 'company'
-			? found.company_name || found.alias || 'Empresa sin nombre'
-			: found.full_name || 'Sin nombre';
+		const name =
+			found.client_type === 'company'
+				? found.company_name || found.alias || 'Empresa sin nombre'
+				: found.full_name || 'Sin nombre';
 		return capitalize(name);
 	}
 
@@ -56,6 +57,40 @@
 	let destinationClientForDuplicate = $state('');
 	let duplicateLoading = $state(false);
 	let duplicateError = $state('');
+	let singleDuplicateModalOpen = $state(false);
+	let productToDuplicateForModels = $state<{
+		id: string;
+		client_id: string;
+		title: string;
+		description: string | null;
+		price_without_taxes: number;
+		model: string | null;
+	} | null>(null);
+	let selectedModelsForDuplicate = $state<string[]>([]);
+	let singleDuplicateLoading = $state(false);
+	let singleDuplicateError = $state('');
+
+	const availableModelsForSingleDuplicate = $derived(() => {
+		if (!productToDuplicateForModels) return [];
+		const clientId = productToDuplicateForModels.client_id;
+		const productTitle = productToDuplicateForModels.title;
+		const currentModelId = productToDuplicateForModels.model;
+		return models.filter((m) => {
+			if (m.id === currentModelId) return false;
+			const alreadyExistsWithThisModel = products.some(
+				(p) =>
+					p.client_id === clientId &&
+					p.title === productTitle &&
+					p.model === m.id &&
+					p.id !== productToDuplicateForModels?.id
+			);
+			return !alreadyExistsWithThisModel;
+		});
+	});
+
+	const canSingleDuplicate = $derived(
+		selectedModelsForDuplicate.length > 0 && productToDuplicateForModels !== null
+	);
 
 	const productsFromSourceClient = $derived(
 		sourceClientForDuplicate ? products.filter((p) => p.client_id === sourceClientForDuplicate) : []
@@ -183,6 +218,40 @@
 		duplicateError = '';
 		duplicateModalOpen = true;
 		document.body.style.overflow = 'hidden';
+	}
+
+	function openSingleDuplicateModal(product: (typeof products)[number]) {
+		productToDuplicateForModels = { ...product };
+		selectedModelsForDuplicate = [];
+		singleDuplicateError = '';
+		singleDuplicateModalOpen = true;
+		document.body.style.overflow = 'hidden';
+	}
+
+	function closeSingleDuplicateModal() {
+		singleDuplicateModalOpen = false;
+		productToDuplicateForModels = null;
+		selectedModelsForDuplicate = [];
+		singleDuplicateLoading = false;
+		singleDuplicateError = '';
+		document.body.style.overflow = '';
+	}
+
+	function toggleModelForDuplicate(modelId: string) {
+		if (selectedModelsForDuplicate.includes(modelId)) {
+			selectedModelsForDuplicate = selectedModelsForDuplicate.filter((id) => id !== modelId);
+		} else {
+			selectedModelsForDuplicate = [...selectedModelsForDuplicate, modelId];
+		}
+	}
+
+	function toggleAllModelsForDuplicate() {
+		const available = availableModelsForSingleDuplicate();
+		if (selectedModelsForDuplicate.length === available.length) {
+			selectedModelsForDuplicate = [];
+		} else {
+			selectedModelsForDuplicate = available.map((m) => m.id);
+		}
 	}
 
 	function closeDuplicateModal() {
@@ -412,19 +481,31 @@
 										<td class="px-6 py-4 text-xs text-[#707070]">
 											{getClientName(product.client_id)}
 										</td>
-										<td class="px-6 py-4 font-medium text-[#171717]">{capitalize(product.title)}</td>
+										<td class="px-6 py-4 font-medium text-[#171717]">{capitalize(product.title)}</td
+										>
 										<td class="px-6 py-4 text-xs text-[#707070] capitalize">
 											{product.model
 												? models.find((m) => m.id === product.model)?.model || '—'
 												: '—'}
 										</td>
-										<td class="px-6 py-4 text-xs text-[#707070]">{product.description ? sentenceCase(product.description) : '—'}</td>
+										<td class="px-6 py-4 text-xs text-[#707070]"
+											>{product.description ? sentenceCase(product.description) : '—'}</td
+										>
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
 											>{formatCurrency(Number(product.price_without_taxes))}</td
 										>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
 												<div class="flex items-center justify-end gap-1.5">
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+														title="Duplicar para otro modelo"
+														onclick={() => openSingleDuplicateModal(product)}
+													>
+														<Copy class="h-4 w-4" />
+													</Button>
 													<Button
 														variant="ghost"
 														size="icon"
@@ -683,7 +764,9 @@
 										/>
 									</td>
 									<td class="px-4 py-3">
-										<div class="font-medium text-[#171717]">{capitalize(productWithStatus.title)}</div>
+										<div class="font-medium text-[#171717]">
+											{capitalize(productWithStatus.title)}
+										</div>
 										{#if productWithStatus.isDuplicate}
 											<div class="text-xs text-red-600">Ya existe en el cliente destino</div>
 										{/if}
@@ -792,6 +875,151 @@
 				{:else}
 					Duplicar {selectedProductsForDuplicate.length}
 					producto{selectedProductsForDuplicate.length !== 1 ? 's' : ''}
+				{/if}
+			</Button>
+		{/snippet}
+	</Dialog>
+{/if}
+
+{#if singleDuplicateModalOpen && productToDuplicateForModels}
+	<Dialog
+		open
+		title="Duplicar producto"
+		description="Selecciona los modelos para crear copias de este producto."
+		class="max-w-xl"
+		onClose={closeSingleDuplicateModal}
+	>
+		<div class="space-y-4">
+			<div class="rounded-md border border-[#dfdfdf] bg-[#fafafa] p-4">
+				<div class="text-sm">
+					<p class="font-medium text-[#171717]">
+						{capitalize(productToDuplicateForModels.title)}
+					</p>
+					<p class="text-xs text-[#707070]">
+						Cliente: {getClientName(productToDuplicateForModels.client_id)}
+					</p>
+					<p class="text-xs text-[#707070]">
+						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))}
+					</p>
+					{#if productToDuplicateForModels.description}
+						<p class="mt-1 text-xs text-[#707070]">
+							Descripción: {sentenceCase(productToDuplicateForModels.description)}
+						</p>
+					{/if}
+				</div>
+			</div>
+
+			{#if availableModelsForSingleDuplicate().length > 0}
+				{@const allModels = availableModelsForSingleDuplicate()}
+				{@const allSelected =
+					selectedModelsForDuplicate.length === allModels.length && allModels.length > 0}
+				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
+					<table class="w-full text-left text-sm text-[#171717]">
+						<thead
+							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+						>
+							<tr>
+								<th class="w-10 px-4 py-3 font-bold">
+									<input
+										type="checkbox"
+										checked={allSelected}
+										onchange={toggleAllModelsForDuplicate}
+										class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
+									/>
+								</th>
+								<th class="px-4 py-3 font-bold">Modelo</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[#ededed]">
+							{#each allModels as model (model.id)}
+								<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
+									<td class="px-4 py-3">
+										<input
+											type="checkbox"
+											checked={selectedModelsForDuplicate.includes(model.id)}
+											onchange={() => toggleModelForDuplicate(model.id)}
+											class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
+										/>
+									</td>
+									<td class="px-4 py-3">
+										<div class="text-[#171717]">{capitalize(model.model)}</div>
+									</td>
+								</tr>
+							{:else}
+								<tr>
+									<td colspan="2" class="px-4 py-8 text-center text-xs text-[#707070]">
+										No hay modelos disponibles.
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				<div class="flex items-center justify-between text-sm text-[#707070]">
+					<span
+						>{selectedModelsForDuplicate.length} de {allModels.length} modelos seleccionados</span
+					>
+				</div>
+			{:else}
+				<p class="text-sm text-[#707070]">No hay modelos disponibles para duplicar.</p>
+			{/if}
+
+			{#if singleDuplicateError}
+				<div
+					class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+				>
+					<Tags class="mt-0.5 h-5 w-5 shrink-0" />
+					<div>
+						<p class="font-medium">No se pudo duplicar el producto</p>
+						<p class="mt-0.5 text-xs text-[#707070]">{singleDuplicateError}</p>
+					</div>
+				</div>
+			{/if}
+
+			<form
+				id="single-duplicate-form"
+				action="?/duplicateProductForModels"
+				method="POST"
+				use:enhance={() => {
+					singleDuplicateLoading = true;
+					singleDuplicateError = '';
+					return async ({ result, update }) => {
+						singleDuplicateLoading = false;
+						if (result.type === 'success') {
+							closeSingleDuplicateModal();
+						} else if (result.type === 'failure') {
+							const data = result.data as { error?: string } | undefined;
+							singleDuplicateError = data?.error || 'Ocurrió un error.';
+						} else if (result.type === 'error') {
+							singleDuplicateError = result.error?.message || 'Ocurrió un error.';
+						}
+						await update();
+					};
+				}}
+			>
+				<input type="hidden" name="product_id" value={productToDuplicateForModels.id} />
+				<input type="hidden" name="model_ids" value={JSON.stringify(selectedModelsForDuplicate)} />
+			</form>
+		</div>
+
+		{#snippet footer()}
+			<Button
+				type="button"
+				variant="outline"
+				disabled={singleDuplicateLoading}
+				onclick={closeSingleDuplicateModal}>Cancelar</Button
+			>
+			<Button
+				type="submit"
+				form="single-duplicate-form"
+				disabled={singleDuplicateLoading || !canSingleDuplicate}
+			>
+				{#if singleDuplicateLoading}
+					Creando...
+				{:else}
+					Crear {selectedModelsForDuplicate.length}
+					producto{selectedModelsForDuplicate.length !== 1 ? 's' : ''}
 				{/if}
 			</Button>
 		{/snippet}
