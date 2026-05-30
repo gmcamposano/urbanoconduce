@@ -267,8 +267,8 @@
 					{#each clients as client (client.id)}
 						<option value={client.id}>
 							{client.client_type === 'company'
-								? client.company_name || client.alias || 'Empresa sin nombre'
-								: client.full_name || 'Cliente sin nombre'}
+								? (client.company_name || client.alias || 'Empresa sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+								: (client.full_name || 'Cliente sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
 						</option>
 					{/each}
 				</Select>
