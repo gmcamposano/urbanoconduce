@@ -108,12 +108,14 @@
 	let selectedModelsForDuplicate = $state<string[]>([]);
 	let singleDuplicateLoading = $state(false);
 	let singleDuplicateError = $state('');
+	let singleDuplicateModelSearch = $state('');
 
 	const availableModelsForSingleDuplicate = $derived.by(() => {
 		if (!productToDuplicateForModels) return [];
 		const clientId = productToDuplicateForModels.client_id;
 		const productTitle = productToDuplicateForModels.title;
 		const currentModelId = productToDuplicateForModels.model;
+		const search = singleDuplicateModelSearch.toLowerCase().trim();
 		const filtered = models.filter((m) => {
 			if (m.id === currentModelId) return false;
 			const alreadyExistsWithThisModel = products.some(
@@ -125,7 +127,9 @@
 			);
 			return !alreadyExistsWithThisModel;
 		});
-		return filtered.sort((a, b) => a.model.toLowerCase().localeCompare(b.model.toLowerCase()));
+		const sorted = filtered.sort((a, b) => a.model.toLowerCase().localeCompare(b.model.toLowerCase()));
+		if (!search) return sorted;
+		return sorted.filter((m) => m.model.toLowerCase().includes(search));
 	});
 
 	const canSingleDuplicate = $derived(
@@ -287,6 +291,7 @@
 		selectedModelsForDuplicate = [];
 		singleDuplicateLoading = false;
 		singleDuplicateError = '';
+		singleDuplicateModelSearch = '';
 		document.body.style.overflow = '';
 	}
 
@@ -1046,6 +1051,14 @@
 				{@const allModels = availableModelsForSingleDuplicate}
 				{@const allSelected =
 					selectedModelsForDuplicate.length === allModels.length && allModels.length > 0}
+				<div class="mb-3">
+					<input
+						type="text"
+						placeholder="Buscar modelo..."
+						bind:value={singleDuplicateModelSearch}
+						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus:border-[#24b47e] focus:outline-none focus:ring-2 focus:ring-[#3ecf8e]/35"
+					/>
+				</div>
 				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
