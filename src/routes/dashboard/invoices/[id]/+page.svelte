@@ -269,7 +269,7 @@
 								Facturar a:
 							</h3>
 							<div class="space-y-1 text-sm text-[#171717]">
-								<p class="text-base font-medium text-[#171717]">{invoice.client_name}</p>
+								<p class="text-base font-medium capitalize text-[#171717]">{invoice.client_name}</p>
 								<p class="flex items-center gap-1.5 text-xs text-[#707070]">
 									<Mail class="h-3.5 w-3.5 text-[#9a9a9a]" />
 									{invoice.client_email}
@@ -333,7 +333,7 @@
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
 										<td class="py-4">
-											<p class="font-medium text-[#171717]">{item.description}</p>
+											<p class="font-medium capitalize text-[#171717]">{item.description}</p>
 										</td>
 										<td class="py-4 capitalize text-[#707070]">
 											{productModel}
