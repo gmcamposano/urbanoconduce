@@ -268,8 +268,7 @@
 						name="client_id"
 						bind:value={editor.selectedClientId}
 						disabled={loading}
-						required
-						onchange={() => handleClientChange(editor.selectedClientId)}
+						readonly
 					>
 						<option value="">Selecciona un cliente</option>
 						{#each clients as client (client.id)}
