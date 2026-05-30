@@ -197,14 +197,26 @@
 	);
 
 	const availableModels = $derived(
-		models.filter((m) => !products.some((p) => p.client_id === selectedClient && p.model === m.id))
+		models.filter(
+			(m) =>
+				!products.some(
+					(p) =>
+						p.client_id === selectedClient &&
+						p.title.toLowerCase() === title.toLowerCase() &&
+						p.model === m.id
+				)
+		)
 	);
 
 	const availableModelsEdit = $derived(
 		models.filter(
 			(m) =>
 				!products.some(
-					(p) => p.client_id === editClient && p.model === m.id && p.id !== editingProduct?.id
+					(p) =>
+						p.client_id === editClient &&
+						p.title.toLowerCase() === editTitle.toLowerCase() &&
+						p.model === m.id &&
+						p.id !== editingProduct?.id
 				)
 		)
 	);
@@ -424,9 +436,13 @@
 						<p class="-mt-2 text-[11px] text-[#707070]">
 							No hay modelos disponibles. Crea al menos uno en la sección Modelos.
 						</p>
-					{:else if availableModels.length === 0}
+					{:else if availableModels.length === 0 && title.trim() !== ''}
 						<p class="-mt-2 text-[11px] font-medium text-red-600">
-							Ya has escogido todos los modelos para este cliente.
+							Ya existe un producto con este nombre y modelo para este cliente.
+						</p>
+					{:else if availableModels.length === 0}
+						<p class="-mt-2 text-[11px] text-[#707070]">
+							Escribe el nombre del producto para ver los modelos disponibles.
 						</p>
 					{/if}
 
@@ -712,9 +728,13 @@
 				<p class="-mt-2 text-[11px] text-[#707070]">
 					No hay modelos disponibles. Crea al menos uno en la sección Modelos.
 				</p>
-			{:else if availableModelsEdit.length === 0}
+			{:else if availableModelsEdit.length === 0 && editTitle.trim() !== ''}
 				<p class="-mt-2 text-[11px] font-medium text-red-600">
-					Ya has escogido todos los modelos para este cliente.
+					Ya existe un producto con este nombre y modelo para este cliente.
+				</p>
+			{:else if availableModelsEdit.length === 0}
+				<p class="-mt-2 text-[11px] text-[#707070]">
+					Escribe el nombre del producto para ver los modelos disponibles.
 				</p>
 			{/if}
 

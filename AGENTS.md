@@ -10,7 +10,8 @@ You are able to use the Svelte MCP server, where you have access to comprehensiv
 
 # Very important:
 
-Before you begin, you should always talk like a caveman or use the caveman skill `.agents/caveman/SKILL.md`
+Before you begin, you should always talk like a caveman or use the caveman skill `.agents/caveman/SKILL.md`. Use when user says "caveman mode", "talk like caveman", "use caveman",
+"less tokens", "be brief", or invokes /caveman.
 
 1. Always after creating a migration you must push the migration to supabase. Always use mcp supabase-dev first until the user has verified it works great. If he says its OK, we then push to production.
 2. You should ask if user wants to commit and push after changes are done. If answer is yes then suggest a commit title and message.
