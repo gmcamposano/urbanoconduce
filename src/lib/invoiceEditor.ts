@@ -2,6 +2,7 @@ export type InvoiceEditorData = {
 	invoice: {
 		id: string;
 		invoice_number: string;
+		client_id?: string | null;
 		client_name: string;
 		client_email: string;
 		invoice_date: string;

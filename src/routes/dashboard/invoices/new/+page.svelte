@@ -12,11 +12,35 @@
 	import { SvelteDate } from 'svelte/reactivity';
 	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign } from '@lucide/svelte';
 
+	type ProductOption = {
+		id: string;
+		title: string;
+		price_without_taxes: number | string;
+		model: string | null;
+		client_id: string;
+	};
+
+	type ClientOption = {
+		id: string;
+		client_type: string;
+		full_name: string | null;
+		company_name: string | null;
+		alias: string | null;
+		email: string | null;
+	};
+
 	let { data, form } = $props();
 
 	const products = $derived(data.products || []);
 	const colors = $derived(data.colors || []);
 	const models = $derived(data.models || []);
+
+	function toTitleCase(str: string): string {
+		return str
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+			.join(' ');
+	}
 
 	function getModelName(modelId: string | null): string {
 		if (!modelId) return '-';
@@ -24,23 +48,21 @@
 		return found?.model ?? '-';
 	}
 
-	function getProductLabel(product: typeof clientProducts[number]): string {
+	function getProductLabel(product: ProductOption): string {
 		const modelName = getModelName(product.model);
-		const titleCase = (str: string) =>
-			str.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-		const formattedTitle = titleCase(product.title);
-		return modelName === '-' ? formattedTitle : `${formattedTitle} - ${titleCase(modelName)}`;
+		const formattedTitle = toTitleCase(product.title);
+		return modelName === '-' ? formattedTitle : `${formattedTitle} - ${toTitleCase(modelName)}`;
+	}
+
+	function getClientName(client: ClientOption): string {
+		return client.client_type === 'company'
+			? toTitleCase(client.company_name || client.alias || 'Empresa sin nombre')
+			: toTitleCase(client.full_name || 'Cliente sin nombre');
 	}
 
 	function getAvailableColors(itemId: string): typeof colors {
 		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
-	}
-
-	function getModelId(productId: string | null): string | null {
-		if (!productId) return null;
-		const found = clientProducts.find((p) => p.id === productId);
-		return found?.model ?? null;
 	}
 
 	// Set up date defaults
@@ -55,27 +77,23 @@
 	let invoiceNumber = $state('');
 	let selectedClientId = $state('');
 
-	const clientProducts = $derived(
-		selectedClientId
-			? [...products.filter((p) => p.client_id === selectedClientId)].sort((a, b) =>
-					a.title.toLowerCase().localeCompare(b.title.toLowerCase())
-			  )
-			: []
-	);
+	const clientProducts = $derived.by((): ProductOption[] => {
+		if (!selectedClientId) return [];
 
-	let clientEmail = $state('');
+		return [...products.filter((product: ProductOption) => product.client_id === selectedClientId)].sort(
+			(a, b) => getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
+		);
+	});
+
 	let invoiceDate = $state(formattedToday);
 	let dueDate = $state(formattedDue);
 
-	const clients = $derived(data.clients || []);
+	const clients = $derived((data.clients || []) as ClientOption[]);
 
 	const selectedClient = $derived(clients.find((c) => c.id === selectedClientId) || null);
+	const clientEmail = $derived(selectedClient?.email || '');
 
-	$effect(() => {
-		clientEmail = selectedClient?.email || '';
-	});
-
-	function handleClientChange(newClientId: string) {
+	function handleClientChange() {
 		const validProductIds = new Set(clientProducts.map((p) => p.id));
 		items = items.map((item) => {
 			if (item.product_id && !validProductIds.has(item.product_id)) {
@@ -266,14 +284,12 @@
 					bind:value={selectedClientId}
 					disabled={loading}
 					required
-					onchange={() => handleClientChange(selectedClientId)}
+					onchange={handleClientChange}
 				>
 					<option value="">Selecciona un cliente</option>
 					{#each clients as client (client.id)}
 						<option value={client.id}>
-							{client.client_type === 'company'
-								? (client.company_name || client.alias || 'Empresa sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-								: (client.full_name || 'Cliente sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+							{getClientName(client)}
 						</option>
 					{/each}
 				</Select>
@@ -292,7 +308,7 @@
 					label="Correo del cliente"
 					name="client_email"
 					type="email"
-					bind:value={clientEmail}
+					value={clientEmail}
 					placeholder="Se autocompleta al seleccionar cliente"
 					readonly
 					disabled={loading}

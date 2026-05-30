@@ -37,17 +37,49 @@
 		items: InvoiceFormItem[];
 	};
 
-	let { invoice, products, colors, models, clients, initial, form: actionForm }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & { clients: Array<{ id: string; client_type: string; full_name: string | null; company_name: string | null; alias: string | null; email: string | null }>; initial: EditorState; form: ActionData } = $props();
+	type ProductOption = InvoiceEditorData['products'][number];
+	type ClientOption = {
+		id: string;
+		client_type: string;
+		full_name: string | null;
+		company_name: string | null;
+		alias: string | null;
+		email: string | null;
+	};
 
-	const clientProducts = $derived(
-		editor.selectedClientId
-			? [...products.filter((p) => p.client_id === editor.selectedClientId)].sort((a, b) =>
-					a.title.toLowerCase().localeCompare(b.title.toLowerCase())
-				)
-			: []
-	);
+	let { invoice, products, colors, models, clients, initial, form: actionForm }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & { clients: ClientOption[]; initial: EditorState; form: ActionData } = $props();
+
+	let editor = $state<EditorState>({
+		invoiceNumber: '',
+		selectedClientId: '',
+		clientName: '',
+		clientEmail: '',
+		invoiceDate: '',
+		dueDate: '',
+		status: 'pending',
+		notes: '',
+		includeTax: false,
+		discountAmount: 0,
+		items: []
+	});
+
+	function toTitleCase(str: string): string {
+		return str
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+			.join(' ');
+	}
+
+	const clientProducts = $derived.by((): ProductOption[] => {
+		if (!editor.selectedClientId) return [];
+
+		return [...products.filter((product) => product.client_id === editor.selectedClientId)].sort(
+			(a, b) => getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
+		);
+	});
 
 	const selectedClient = $derived(clients.find((c) => c.id === editor.selectedClientId) || null);
+	const clientEmail = $derived(selectedClient?.email || editor.clientEmail || '');
 
 	const canAddItem = $derived(!!editor.items[editor.items.length - 1]?.product_id);
 
@@ -63,12 +95,22 @@
 		return found?.model ?? '-';
 	}
 
-	function getProductLabel(product: typeof clientProducts[number]): string {
+	function getProductLabel(product: ProductOption): string {
 		const modelName = getModelName(product.model);
-		const titleCase = (str: string) =>
-			str.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-		const formattedTitle = titleCase(product.title);
-		return modelName === '-' ? formattedTitle : `${formattedTitle} - ${titleCase(modelName)}`;
+		const formattedTitle = toTitleCase(product.title);
+		return modelName === '-' ? formattedTitle : `${formattedTitle} - ${toTitleCase(modelName)}`;
+	}
+
+	function getClientName(client: ClientOption): string {
+		return client.client_type === 'company'
+			? toTitleCase(client.company_name || client.alias || 'Empresa sin nombre')
+			: toTitleCase(client.full_name || 'Cliente sin nombre');
+	}
+
+	function getClientLabel(): string {
+		if (!selectedClient) return '';
+
+		return getClientName(selectedClient);
 	}
 
 	function getAvailableColors(itemId: string): typeof colors {
@@ -87,16 +129,6 @@
 		};
 	}
 
-	function handleClientChange(newClientId: string) {
-		const validProductIds = new Set(clientProducts.map((p) => p.id));
-		editor.items = editor.items.map((item) => {
-			if (item.product_id && !validProductIds.has(item.product_id)) {
-				return { ...item, product_id: '', model: null, unit_price: 0 };
-			}
-			return item;
-		});
-	}
-
 	function cleanupItems() {
 		if (editor.items.length > 1) {
 			const filtered = editor.items.filter((item, index) => index === editor.items.length - 1 || item.product_id);
@@ -107,20 +139,6 @@
 			}
 		}
 	}
-
-	let editor = $state<EditorState>({
-		invoiceNumber: '',
-		selectedClientId: '',
-		clientName: '',
-		clientEmail: '',
-		invoiceDate: '',
-		dueDate: '',
-		status: 'pending',
-		notes: '',
-		includeTax: false,
-		discountAmount: 0,
-		items: []
-	});
 
 	function seedEditor() {
 		Object.assign(editor, initial);
@@ -141,12 +159,6 @@
 
 	onMount(() => {
 		seedEditor();
-	});
-
-	$effect(() => {
-		if (selectedClient) {
-			editor.clientEmail = selectedClient.email || '';
-		}
 	});
 
 	let loading = $state(false);
@@ -263,22 +275,15 @@
 
 					<input type="hidden" name="status" value={editor.status} />
 
-					<Select
+					<input type="hidden" name="client_id" value={editor.selectedClientId} />
+
+					<Input
 						label="Cliente"
-						name="client_id"
-						bind:value={editor.selectedClientId}
-						disabled={loading}
+						value={getClientLabel()}
 						readonly
-					>
-						<option value="">Selecciona un cliente</option>
-						{#each clients as client (client.id)}
-							<option value={client.id}>
-								{client.client_type === 'company'
-									? (client.company_name || client.alias || 'Empresa sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-									: (client.full_name || 'Cliente sin nombre').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-							</option>
-						{/each}
-					</Select>
+						disabled={loading}
+						class="bg-[#fafafa] text-[#707070]"
+					/>
 
 					<input
 						type="hidden"
@@ -294,7 +299,7 @@
 						label="Correo del cliente"
 						name="client_email"
 						type="email"
-						bind:value={editor.clientEmail}
+						value={clientEmail}
 						placeholder="Se autocompleta al seleccionar cliente"
 						readonly
 						disabled={loading}
