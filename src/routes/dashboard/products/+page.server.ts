@@ -70,10 +70,10 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
-		const title = (formData.get('title') as string)?.trim() ?? '';
-		const description = (formData.get('description') as string)?.trim() ?? '';
+		const title = (formData.get('title') as string)?.trim()?.toLowerCase() ?? '';
+		const description = (formData.get('description') as string)?.trim()?.toLowerCase() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
-		const modelId = (formData.get('model') as string)?.trim() || null;
+		const modelId = (formData.get('model') as string)?.trim()?.toLowerCase() || null;
 
 		if (!clientId) {
 			return fail(400, { error: 'El cliente es obligatorio.' });
@@ -123,10 +123,10 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const productId = (formData.get('id') as string)?.trim() ?? '';
 		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
-		const title = (formData.get('title') as string)?.trim() ?? '';
-		const description = (formData.get('description') as string)?.trim() ?? '';
+		const title = (formData.get('title') as string)?.trim()?.toLowerCase() ?? '';
+		const description = (formData.get('description') as string)?.trim()?.toLowerCase() ?? '';
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
-		const modelId = (formData.get('model') as string)?.trim() || null;
+		const modelId = (formData.get('model') as string)?.trim()?.toLowerCase() || null;
 
 		if (!productId) {
 			return fail(400, { error: 'El ID del producto es obligatorio.' });
@@ -246,10 +246,10 @@ export const actions: Actions = {
 
 			const productsToInsert = productsToDuplicate.map((p) => ({
 				client_id: destinationClientId,
-				title: p.title,
-				description: p.description,
+				title: p.title.toLowerCase(),
+				description: p.description?.toLowerCase() || null,
 				price_without_taxes: p.price_without_taxes,
-				model: p.model,
+				model: p.model?.toLowerCase() || null,
 				created_by: user.id
 			}));
 
@@ -318,10 +318,10 @@ export const actions: Actions = {
 
 			const productsToInsert = modelIds.map((modelId) => ({
 				client_id: sourceProduct.client_id,
-				title: sourceProduct.title,
-				description: sourceProduct.description,
+				title: sourceProduct.title.toLowerCase(),
+				description: sourceProduct.description?.toLowerCase() || null,
 				price_without_taxes: sourceProduct.price_without_taxes,
-				model: modelId,
+				model: modelId.toLowerCase(),
 				created_by: user.id
 			}));
 
