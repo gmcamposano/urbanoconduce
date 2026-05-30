@@ -26,7 +26,10 @@
 
 	function getProductLabel(product: typeof clientProducts[number]): string {
 		const modelName = getModelName(product.model);
-		return modelName === '-' ? product.title : `${product.title} - ${modelName}`;
+		const titleCase = (str: string) =>
+			str.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+		const formattedTitle = titleCase(product.title);
+		return modelName === '-' ? formattedTitle : `${formattedTitle} - ${titleCase(modelName)}`;
 	}
 
 	function getAvailableColors(itemId: string): typeof colors {
@@ -54,7 +57,9 @@
 
 	const clientProducts = $derived(
 		selectedClientId
-			? products.filter((p) => p.client_id === selectedClientId)
+			? [...products.filter((p) => p.client_id === selectedClientId)].sort((a, b) =>
+					a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+			  )
 			: []
 	);
 

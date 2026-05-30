@@ -199,7 +199,8 @@ const filteredModels = $derived(
 									<div class="flex items-center gap-1.5">
 										Modelo
 										{#if sort === 'model'}
-											<svelte:component this={getSortIcon('model')} class="h-3.5 w-3.5" />
+											{@const Icon = getSortIcon('model')}
+											<Icon class="h-3.5 w-3.5" />
 										{:else}
 											<ArrowUpDown class="h-3.5 w-3.5 opacity-40" />
 										{/if}
@@ -209,7 +210,8 @@ const filteredModels = $derived(
 									<div class="flex items-center gap-1.5">
 										Fecha ingreso
 										{#if sort === 'created_at'}
-											<svelte:component this={getSortIcon('created_at')} class="h-3.5 w-3.5" />
+											{@const Icon = getSortIcon('created_at')}
+											<Icon class="h-3.5 w-3.5" />
 										{:else}
 											<ArrowUpDown class="h-3.5 w-3.5 opacity-40" />
 										{/if}
