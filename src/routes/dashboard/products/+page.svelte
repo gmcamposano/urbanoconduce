@@ -8,7 +8,7 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { Copy, Edit3, Package, Tags, Trash2 } from '@lucide/svelte';
+	import { Copy, Edit3, Package, Tags, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -18,6 +18,45 @@
 	const models = $derived(data.models || []);
 	const clients = $derived(data.clients || []);
 	let selectedClientFilter = $state('');
+
+	let sortBy = $state<string>('title');
+	let sortOrder = $state<'asc' | 'desc'>('asc');
+
+	function toggleSort(column: string) {
+		if (sortBy === column) {
+			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortBy = column;
+			sortOrder = 'asc';
+		}
+	}
+
+	const sortedProducts = $derived.by(() => {
+		const sorted = [...filteredProducts];
+		const dir = sortOrder === 'asc' ? 1 : -1;
+
+		sorted.sort((a, b) => {
+			switch (sortBy) {
+				case 'client': {
+					const clientNameA = getClientName(a.client_id).toLowerCase();
+					const clientNameB = getClientName(b.client_id).toLowerCase();
+					return clientNameA.localeCompare(clientNameB) * dir;
+				}
+				case 'title':
+					return a.title.toLowerCase().localeCompare(b.title.toLowerCase()) * dir;
+				case 'model': {
+					const modelA = models.find((m) => m.id === a.model)?.model?.toLowerCase() || '';
+					const modelB = models.find((m) => m.id === b.model)?.model?.toLowerCase() || '';
+					return modelA.localeCompare(modelB) * dir;
+				}
+				case 'price':
+					return (Number(a.price_without_taxes) - Number(b.price_without_taxes)) * dir;
+				default:
+					return 0;
+			}
+		});
+		return sorted;
+	});
 
 	const filteredProducts = $derived(
 		selectedClientFilter ? products.filter((p) => p.client_id === selectedClientFilter) : products
@@ -80,7 +119,7 @@
 			const alreadyExistsWithThisModel = products.some(
 				(p) =>
 					p.client_id === clientId &&
-					p.title === productTitle &&
+					p.title.toLowerCase() === productTitle.toLowerCase() &&
 					p.model === m.id &&
 					p.id !== productToDuplicateForModels?.id
 			);
@@ -104,7 +143,8 @@
 			(p) =>
 				!products.some(
 					(existing) =>
-						existing.client_id === destinationClientForDuplicate && existing.title === p.title
+						existing.client_id === destinationClientForDuplicate &&
+						existing.title.toLowerCase() === p.title.toLowerCase()
 				)
 		);
 	});
@@ -457,11 +497,71 @@
 							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-								<th class="px-6 py-4 font-bold">Cliente</th>
-								<th class="px-6 py-4 font-bold">Producto</th>
-								<th class="px-6 py-4 font-bold">Modelo</th>
+								<th class="px-6 py-4 font-bold">
+									<button
+										type="button"
+										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										onclick={() => toggleSort('client')}
+									>
+										Cliente
+										{#if sortBy === 'client'}
+											{#if sortOrder === 'asc'}
+												<ArrowUp class="h-3 w-3" />
+											{:else}
+												<ArrowDown class="h-3 w-3" />
+											{/if}
+										{/if}
+									</button>
+								</th>
+								<th class="px-6 py-4 font-bold">
+									<button
+										type="button"
+										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										onclick={() => toggleSort('title')}
+									>
+										Producto
+										{#if sortBy === 'title'}
+											{#if sortOrder === 'asc'}
+												<ArrowUp class="h-3 w-3" />
+											{:else}
+												<ArrowDown class="h-3 w-3" />
+											{/if}
+										{/if}
+									</button>
+								</th>
+								<th class="px-6 py-4 font-bold">
+									<button
+										type="button"
+										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										onclick={() => toggleSort('model')}
+									>
+										Modelo
+										{#if sortBy === 'model'}
+											{#if sortOrder === 'asc'}
+												<ArrowUp class="h-3 w-3" />
+											{:else}
+												<ArrowDown class="h-3 w-3" />
+											{/if}
+										{/if}
+									</button>
+								</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
-								<th class="px-6 py-4 text-right font-bold">Precio</th>
+								<th class="px-6 py-4 text-right font-bold">
+									<button
+										type="button"
+										class="ml-auto flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										onclick={() => toggleSort('price')}
+									>
+										Precio
+										{#if sortBy === 'price'}
+											{#if sortOrder === 'asc'}
+												<ArrowUp class="h-3 w-3" />
+											{:else}
+												<ArrowDown class="h-3 w-3" />
+											{/if}
+										{/if}
+									</button>
+								</th>
 								<th class="px-6 py-4 text-right font-bold">Precio con impuesto</th>
 								{#if canManage}
 									<th class="px-6 py-4 text-right font-bold">Acciones</th>
@@ -469,7 +569,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
-							{#if filteredProducts.length === 0}
+							{#if sortedProducts.length === 0}
 								<tr>
 									<td
 										colspan={canManage ? 7 : 6}
@@ -480,7 +580,7 @@
 									>
 								</tr>
 							{:else}
-								{#each filteredProducts as product (product.id)}
+								{#each sortedProducts as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 										<td class="px-6 py-4 text-xs text-[#707070]">
 											{getClientName(product.client_id)}
