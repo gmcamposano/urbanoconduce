@@ -33,6 +33,16 @@
 		return found?.model ?? '-';
 	}
 
+	const sortedItems = $derived(
+		[...items].sort((a, b) => {
+			const modelA = getModelName(a.model).toLowerCase();
+			const modelB = getModelName(b.model).toLowerCase();
+			if (modelA === '-') return 1;
+			if (modelB === '-') return -1;
+			return modelA.localeCompare(modelB);
+		})
+	);
+
 	function getProductModel(productId: string | null): string | null {
 		if (!productId) return null;
 		const found = products.find((p) => p.id === productId);
@@ -329,7 +339,7 @@
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
-								{#each items as item (item.id ?? item.description)}
+								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
 										<td class="py-4">
