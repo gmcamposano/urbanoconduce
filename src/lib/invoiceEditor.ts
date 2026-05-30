@@ -61,9 +61,22 @@ export type InvoiceEditorState = {
 export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorState {
 	const products = new Map(data.products.map((product) => [product.id, product]));
 
+	const invoiceClientId = typeof data.invoice.client_id === 'string' ? data.invoice.client_id : '';
+
 	const items = data.items.length
 		? data.items.map((item) => {
-			const product = products.get(item.product_id) || data.products.find((entry) => entry.title === item.description);
+			let product = products.get(item.product_id);
+			if (!product && item.product_id) {
+				product = data.products.find((entry) => entry.id === item.product_id);
+			}
+			if (!product && item.description && invoiceClientId) {
+				product = data.products.find(
+					(entry) => entry.title === item.description && entry.client_id === invoiceClientId
+				);
+			}
+			if (!product && item.description) {
+				product = data.products.find((entry) => entry.title === item.description);
+			}
 
 			return {
 				id: item.id,
@@ -85,13 +98,21 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 			}
 		];
 
-	const firstProductWithClient = data.items.length
-		? data.products.find((p) => p.id === data.items[0].product_id || p.title === data.items[0].description)
-		: null;
+	let selectedClientId = invoiceClientId;
+
+	if (!selectedClientId && items.length) {
+		const firstItem = items[0];
+		if (firstItem.product_id) {
+			const product = products.get(firstItem.product_id);
+			if (product) {
+				selectedClientId = product.client_id;
+			}
+		}
+	}
 
 	return {
 		invoiceNumber: data.invoice.invoice_number || '',
-		selectedClientId: firstProductWithClient?.client_id || '',
+		selectedClientId,
 		clientName: data.invoice.client_name || '',
 		clientEmail: data.invoice.client_email || '',
 		invoiceDate: data.invoice.invoice_date || '',

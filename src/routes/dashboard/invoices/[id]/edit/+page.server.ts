@@ -78,12 +78,18 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		invoice: invoiceResult.data,
 		items:
 			itemsResult.data?.map((item) => {
-				const product = products.find((entry) => entry.title === item.description);
+				let product = products.find((entry) => entry.id === item.product_id);
+				if (!product && item.product_id) {
+					product = products.find((entry) => entry.id === item.product_id);
+				}
+				if (!product && item.description) {
+					product = products.find((entry) => entry.title === item.description);
+				}
 
 				return {
 					id: item.id,
 					description: item.description,
-					product_id: product?.id ?? '',
+					product_id: item.product_id || product?.id || '',
 					color: item.color || '',
 					model: product?.model ?? null,
 					quantity: Number(item.quantity),
