@@ -70,7 +70,7 @@
 	let singleDuplicateLoading = $state(false);
 	let singleDuplicateError = $state('');
 
-	const availableModelsForSingleDuplicate = $derived(() => {
+	const availableModelsForSingleDuplicate = $derived.by(() => {
 		if (!productToDuplicateForModels) return [];
 		const clientId = productToDuplicateForModels.client_id;
 		const productTitle = productToDuplicateForModels.title;
@@ -96,28 +96,17 @@
 		sourceClientForDuplicate ? products.filter((p) => p.client_id === sourceClientForDuplicate) : []
 	);
 
-	const availableProductsToDuplicate = $derived(() => {
-		if (!destinationClientForDuplicate || !sourceClientForDuplicate)
-			return productsFromSourceClient;
-		return productsFromSourceClient.filter(
+	const productsWithDuplicateStatus = $derived.by(() => {
+		if (!sourceClientForDuplicate) return [];
+		const sourceProducts = products.filter((p) => p.client_id === sourceClientForDuplicate);
+		if (!destinationClientForDuplicate) return sourceProducts;
+		return sourceProducts.filter(
 			(p) =>
 				!products.some(
 					(existing) =>
 						existing.client_id === destinationClientForDuplicate && existing.title === p.title
 				)
 		);
-	});
-
-	const productsWithDuplicateStatus = $derived(() => {
-		return productsFromSourceClient.map((p) => ({
-			...p,
-			isDuplicate: destinationClientForDuplicate
-				? products.some(
-						(existing) =>
-							existing.client_id === destinationClientForDuplicate && existing.title === p.title
-					)
-				: false
-		}));
 	});
 
 	const canDuplicate = $derived(
@@ -142,7 +131,7 @@
 	}
 
 	function toggleAllProductsForDuplicate() {
-		const allProducts = productsWithDuplicateStatus();
+		const allProducts = productsWithDuplicateStatus;
 		if (selectedProductsForDuplicate.length === allProducts.length) {
 			selectedProductsForDuplicate = [];
 		} else {
@@ -254,7 +243,7 @@
 	}
 
 	function toggleAllModelsForDuplicate() {
-		const available = availableModelsForSingleDuplicate();
+		const available = availableModelsForSingleDuplicate;
 		if (selectedModelsForDuplicate.length === available.length) {
 			selectedModelsForDuplicate = [];
 		} else {
@@ -754,7 +743,7 @@
 			{/if}
 
 			{#if sourceClientForDuplicate}
-				{@const productsWithStatus = productsWithDuplicateStatus()}
+				{@const productsWithStatus = productsWithDuplicateStatus}
 				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
@@ -783,17 +772,13 @@
 											type="checkbox"
 											checked={selectedProductsForDuplicate.includes(productWithStatus.id)}
 											onchange={() => toggleProductForDuplicate(productWithStatus.id)}
-											disabled={productWithStatus.isDuplicate}
-											class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e] disabled:opacity-50"
+											class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
 										/>
 									</td>
 									<td class="px-4 py-3">
 										<div class="font-medium text-[#171717]">
 											{capitalize(productWithStatus.title)}
 										</div>
-										{#if productWithStatus.isDuplicate}
-											<div class="text-xs text-red-600">Ya existe en el cliente destino</div>
-										{/if}
 									</td>
 									<td class="px-4 py-3 text-xs text-[#707070] capitalize">
 										{productWithStatus.model
@@ -933,8 +918,8 @@
 				</div>
 			</div>
 
-			{#if availableModelsForSingleDuplicate().length > 0}
-				{@const allModels = availableModelsForSingleDuplicate()}
+			{#if availableModelsForSingleDuplicate.length > 0}
+				{@const allModels = availableModelsForSingleDuplicate}
 				{@const allSelected =
 					selectedModelsForDuplicate.length === allModels.length && allModels.length > 0}
 				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
