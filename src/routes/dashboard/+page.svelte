@@ -243,11 +243,11 @@
 				>
 					<tr>
 						<th class="px-6 py-4 font-bold">Factura</th>
-						<th class="px-6 py-4 font-bold">Cliente</th>
+						<th class="px-6 py-4 font-bold capitalize">Cliente</th>
 						<th class="px-6 py-4 font-bold">Vence</th>
 						<th class="px-6 py-4 font-bold">Monto</th>
 						<th class="px-6 py-4 font-bold">Estado</th>
-						<th class="px-6 py-4 font-bold">Creado por</th>
+						<th class="px-6 py-4 font-bold capitalize">Creado Por</th>
 						<th class="px-6 py-4 text-right font-bold">Acciones</th>
 					</tr>
 				</thead>

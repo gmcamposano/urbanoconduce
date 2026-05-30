@@ -42,14 +42,17 @@
 	class="no-print hidden flex-col justify-between border-r border-[#dfdfdf] bg-white md:flex md:w-64"
 >
 	<div class="flex flex-col">
-		<div class="hidden items-center gap-2.5 border-b border-[#ededed] px-6 py-8 md:flex">
+		<a
+			href={resolve('/dashboard')}
+			class="hidden items-center gap-2.5 border-b border-[#ededed] px-6 py-8 md:flex md:cursor-pointer"
+		>
 			<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
 				<FileText class="h-6 w-6 text-[#171717]" />
 			</div>
 			<span class="text-lg font-medium tracking-tight text-[#171717]"
 				>magikal<span class="text-[#3ecf8e]">Invoice</span>
 			</span>
-		</div>
+		</a>
 
 		<nav class="space-y-1 p-4">
 			<a

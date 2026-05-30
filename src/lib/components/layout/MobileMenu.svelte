@@ -49,14 +49,14 @@
 	<aside class="relative z-10 flex w-full flex-col justify-between overflow-y-auto bg-white">
 		<div class="flex flex-col">
 			<div class="flex items-center justify-between border-b border-[#ededed] px-6 py-8">
-				<div class="flex items-center gap-2.5">
-					<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
-						<FileText class="h-6 w-6 text-[#171717]" />
-					</div>
-					<span class="text-lg font-medium tracking-tight text-[#171717]"
-						>magikal<span class="text-[#3ecf8e]">Invoice</span></span
-					>
+<a href={resolve('/dashboard')} onclick={onClose} class="flex items-center gap-2.5 cursor-pointer">
+				<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
+					<FileText class="h-6 w-6 text-[#171717]" />
 				</div>
+				<span class="text-lg font-medium tracking-tight text-[#171717]"
+					>magikal<span class="text-[#3ecf8e]">Invoice</span></span
+				>
+			</a>
 				<button
 					class="cursor-pointer p-1 text-[#707070] hover:text-[#171717]"
 					onclick={onClose}
