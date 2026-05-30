@@ -1012,7 +1012,7 @@
 						Cliente: {getClientName(productToDuplicateForModels.client_id)}
 					</p>
 					<p class="text-xs text-[#707070]">
-						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))}
+						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con impuesto: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes) * 1.18)})
 					</p>
 					{#if productToDuplicateForModels.description}
 						<p class="mt-1 text-xs text-[#707070]">
