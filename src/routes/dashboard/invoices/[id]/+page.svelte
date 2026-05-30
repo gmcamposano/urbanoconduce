@@ -9,6 +9,7 @@
 		ArrowLeft,
 		Edit3,
 		Printer,
+		Download,
 		Trash2,
 		AlertTriangle,
 		FileText,
@@ -71,7 +72,23 @@
 	function handlePrint() {
 		window.print();
 	}
+
+	function handleDownloadPdf() {
+		window.print();
+	}
 </script>
+
+<style>
+	@media print {
+		.no-print {
+			display: none !important;
+		}
+		.print-card {
+			box-shadow: none !important;
+			border: none !important;
+		}
+	}
+</style>
 
 <svelte:head>
 	<title>{invoice?.invoice_number || 'Factura'} - magikalConduce | magikalInvoice</title>
@@ -118,8 +135,15 @@
 				<!-- Print Button -->
 				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
 					<Printer class="h-4 w-4" />
-					<span class="hidden sm:inline">Imprimir / guardar PDF</span>
+					<span class="hidden sm:inline">Imprimir</span>
 					<span class="sm:hidden">Imprimir</span>
+				</Button>
+
+				<!-- Download PDF Button -->
+				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handleDownloadPdf}>
+					<Download class="h-4 w-4" />
+					<span class="hidden sm:inline">Descargar PDF</span>
+					<span class="sm:hidden">PDF</span>
 				</Button>
 
 				<!-- Update Status Form (Admins only) -->
