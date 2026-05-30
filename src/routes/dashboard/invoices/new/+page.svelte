@@ -65,6 +65,13 @@
 		return colors.filter((c) => !usedColors.includes(c.color));
 	}
 
+	function getAvailableProducts(itemId: string) {
+		const usedProductIds = items
+			.filter((i) => i.id !== itemId && i.product_id)
+			.map((i) => i.product_id);
+		return clientProducts.filter((p) => !usedProductIds.includes(p.id));
+	}
+
 	// Set up date defaults
 	const today = new SvelteDate();
 	const formattedToday = today.toISOString().split('T')[0];
@@ -385,10 +392,10 @@
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-3 py-2">
 										<SearchableSelect
-											options={clientProducts.map((p) => ({ value: p.id, label: getProductLabel(p) }))}
+											options={getAvailableProducts(item.id).map((p) => ({ value: p.id, label: getProductLabel(p) }))}
 											bind:value={item.product_id}
 											placeholder={selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
-											disabled={loading || !selectedClientId || !clientProducts.length}
+											disabled={loading || !selectedClientId || getAvailableProducts(item.id).length === 0}
 											onchange={(value) => applyProductToItem(item, value)}
 										/>
 									</td>
