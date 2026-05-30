@@ -108,20 +108,6 @@ export const actions: Actions = {
 		const selectedColors = [
 			...new Set(items.map((item) => (item.color || '').trim().toLowerCase()).filter(Boolean))
 		];
-		if (selectedColors.length === 0) {
-			const { data: existingColors, error: existingColorsError } = await locals.supabase
-				.from('product_colors')
-				.select('id')
-				.limit(1);
-
-			if (existingColorsError) {
-				return fail(400, { error: existingColorsError.message });
-			}
-
-			if ((existingColors || []).length > 0) {
-				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
-			}
-		}
 
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')

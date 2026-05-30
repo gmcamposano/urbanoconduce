@@ -24,6 +24,11 @@
 		return found?.model ?? '-';
 	}
 
+	function getProductLabel(product: typeof clientProducts[number]): string {
+		const modelName = getModelName(product.model);
+		return modelName === '-' ? product.title : `${product.title} - ${modelName}`;
+	}
+
 	function getAvailableColors(itemId: string): typeof colors {
 		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
@@ -62,22 +67,18 @@
 	const selectedClient = $derived(clients.find((c) => c.id === selectedClientId) || null);
 
 	$effect(() => {
-		if (selectedClient) {
-			clientEmail = selectedClient.email || '';
-		} else {
-			clientEmail = '';
-		}
-		if (selectedClientId) {
-			items = items.map((item) => {
-				if (item.product_id && !clientProducts.find((p) => p.id === item.product_id)) {
-					return { ...item, product_id: '', model: null, unit_price: 0 };
-				}
-				return item;
-			});
-		} else {
-			items = items.map((item) => ({ ...item, product_id: '', model: null, unit_price: 0 }));
-		}
+		clientEmail = selectedClient?.email || '';
 	});
+
+	function handleClientChange(newClientId: string) {
+		const validProductIds = new Set(clientProducts.map((p) => p.id));
+		items = items.map((item) => {
+			if (item.product_id && !validProductIds.has(item.product_id)) {
+				return { ...item, product_id: '', model: null, unit_price: 0 };
+			}
+			return item;
+		});
+	}
 
 	let notes = $state('');
 	let includeTax = $state(false);
@@ -112,12 +113,11 @@
 
 	const isFormValid = $derived(
 		selectedClientId.trim() !== '' &&
-		invoiceNumber.trim() !== '' &&
 		items.length > 0 &&
 		items.every((item) => item.product_id && item.unit_price > 0)
 	);
 
-	$effect(() => {
+	function cleanupItems() {
 		if (items.length > 1) {
 			const filtered = items.filter((item, index) => index === items.length - 1 || item.product_id);
 			if (filtered.length === 0) {
@@ -126,7 +126,19 @@
 				items = filtered;
 			}
 		}
-	});
+	}
+
+	function addItem() {
+		items.push(createItem());
+		cleanupItems();
+	}
+
+	function removeItem(id: string) {
+		if (items.length > 1) {
+			items = items.filter((item) => item.id !== id);
+			cleanupItems();
+		}
+	}
 
 	// Subtotal calculations (derived)
 	const subtotal = $derived(
@@ -142,15 +154,6 @@
 	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0)));
 
 	// Helpers to add or remove line items
-	function addItem() {
-		items.push(createItem());
-	}
-
-	function removeItem(id: string) {
-		if (items.length > 1) {
-			items = items.filter((item) => item.id !== id);
-		}
-	}
 
 	function applyProductToItem(
 		item: { product_id: string; model: string | null; unit_price: number },
@@ -258,6 +261,7 @@
 					bind:value={selectedClientId}
 					disabled={loading}
 					required
+					onchange={() => handleClientChange(selectedClientId)}
 				>
 					<option value="">Selecciona un cliente</option>
 					{#each clients as client (client.id)}
@@ -360,7 +364,7 @@
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-3 py-2">
 										<SearchableSelect
-											options={clientProducts.map((p) => ({ value: p.id, label: p.title }))}
+											options={clientProducts.map((p) => ({ value: p.id, label: getProductLabel(p) }))}
 											bind:value={item.product_id}
 											placeholder={selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
 											disabled={loading || !selectedClientId || !clientProducts.length}
@@ -381,7 +385,6 @@
 											name="color"
 											bind:value={item.color}
 											disabled={loading || getAvailableColors(item.id).length === 0}
-											required={getAvailableColors(item.id).length > 0}
 											class="text-xs capitalize"
 										>
 											<option value="">Color</option>

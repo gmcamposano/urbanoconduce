@@ -180,10 +180,6 @@ export const actions: Actions = {
 		const products = productsResult.data || [];
 		const colors = colorsResult.data || [];
 
-		if (selectedColors.length === 0 && colors.length > 0) {
-			return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
-		}
-
 		if (selectedColors.length > 0) {
 			const availableColors = new Set(colors.map((entry) => entry.color));
 			if (selectedColors.some((color) => !availableColors.has(color))) {
@@ -211,10 +207,6 @@ export const actions: Actions = {
 				return fail(400, {
 					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
 				});
-			}
-
-			if (selectedColors.length > 0 && !color) {
-				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
 			}
 
 			const unitPrice = Number(product.price_without_taxes);

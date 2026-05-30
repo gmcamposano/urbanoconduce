@@ -35,6 +35,7 @@
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 	let dropdownWidth = $state(0);
+	let dropdownMinWidth = $state(0);
 	let dropdownMaxHeight = $state(240);
 	let removePositionListeners: (() => void) | null = null;
 
@@ -43,9 +44,7 @@
 	const filteredOptions = $derived(
 		searchQuery.trim() === ''
 			? options
-			: options.filter((opt) =>
-					opt.label.toLowerCase().includes(searchQuery.toLowerCase())
-				)
+			: options.filter((opt) => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
 	);
 
 	const selectedOption = $derived(options.find((opt) => opt.value === value) || null);
@@ -79,6 +78,7 @@
 			Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
 		);
 		dropdownWidth = width;
+		dropdownMinWidth = Math.max(width, width + 120);
 		dropdownMaxHeight = Math.max(0, spaceBelow);
 	}
 
@@ -160,14 +160,16 @@
 		teardownPositionListeners();
 		onchange?.('');
 	}
-
 </script>
 
 <svelte:document onclick={isOpen ? handleDocumentClick : undefined} />
 
 <div id={uid} class="flex w-full flex-col gap-1.5">
 	{#if label}
-		<span id="{uid}-label" class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">
+		<span
+			id="{uid}-label"
+			class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
+		>
 			{label}
 		</span>
 	{/if}
@@ -180,8 +182,13 @@
 			aria-expanded={isOpen}
 			aria-controls="{uid}-listbox"
 			onclick={toggleDropdown}
-			onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDropdown(); } }}
-			class="flex h-9 w-full cursor-pointer items-center justify-between rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] transition-colors duration-200 focus-visible:border-[#24b47e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 disabled:cursor-not-allowed disabled:opacity-50"
+			onkeydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					toggleDropdown();
+				}
+			}}
+			class="flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] transition-colors duration-200 focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 			class:bg-[#fafafa]={isOpen}
 		>
 			<span class="truncate" class:text-[#9a9a9a]={!selectedOption}>
@@ -192,8 +199,16 @@
 					<span
 						role="button"
 						tabindex="0"
-						onclick={(e) => { e.stopPropagation(); clearSelection(); }}
-						onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); clearSelection(); } }}
+						onclick={(e) => {
+							e.stopPropagation();
+							clearSelection();
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.stopPropagation();
+								clearSelection();
+							}
+						}}
 						class="flex h-4 w-4 cursor-pointer items-center justify-center rounded-full text-[#707070] hover:bg-[#ededed] hover:text-[#171717]"
 					>
 						<X class="h-3 w-3" />
@@ -208,19 +223,21 @@
 		{#if isOpen}
 			<div
 				id="{uid}-listbox"
-				class="fixed z-[200] flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-[12px] border border-[#dfdfdf] bg-white text-[#171717] shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-				style={`top: ${dropdownTop}px; left: ${dropdownLeft}px; width: ${dropdownWidth}px; max-height: ${dropdownMaxHeight}px;`}
+				class="fixed z-200 flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl border border-[#dfdfdf] bg-white text-[#171717] shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+				style={`top: ${dropdownTop}px; left: ${dropdownLeft}px; width: ${dropdownWidth}px; min-width: ${dropdownMinWidth}px; max-height: ${dropdownMaxHeight}px;`}
 				role="listbox"
 			>
 				{#if searchable}
 					<div class="border-b border-[#ededed] bg-[#fafafa] p-3">
-						<div class="flex h-9 items-center gap-2 rounded-[6px] border border-[#dfdfdf] bg-white px-3 transition-colors duration-200 focus-within:border-[#24b47e] focus-within:ring-2 focus-within:ring-[#3ecf8e]/35">
+						<div
+							class="flex h-9 items-center gap-2 rounded-md border border-[#dfdfdf] bg-white px-3 transition-colors duration-200 focus-within:border-[#24b47e] focus-within:ring-2 focus-within:ring-[#3ecf8e]/35"
+						>
 							<Search class="h-4 w-4 text-[#707070]" />
 							<input
 								type="text"
 								bind:value={searchQuery}
 								placeholder="Buscar..."
-								class="w-full border-0 bg-transparent p-0 text-sm text-[#171717] shadow-none appearance-none placeholder:text-[#9a9a9a] focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+								class="w-full appearance-none border-0 bg-transparent p-0 text-sm text-[#171717] shadow-none placeholder:text-[#9a9a9a] focus:border-0 focus:ring-0 focus:outline-none focus-visible:outline-none"
 								autocomplete="off"
 							/>
 						</div>
@@ -229,15 +246,13 @@
 
 				<div class="min-h-0 flex-1 overflow-y-auto p-1">
 					{#if filteredOptions.length === 0}
-						<div class="px-3 py-3 text-sm text-[#707070]">
-							No se encontraron resultados
-						</div>
+						<div class="px-3 py-3 text-sm text-[#707070]">No se encontraron resultados</div>
 					{:else}
 						{#each filteredOptions as opt (opt.value)}
 							<button
 								type="button"
 								onclick={() => selectOption(opt)}
-								class="flex w-full items-center justify-between rounded-[6px] px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-[#fafafa]"
+								class="flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-[#fafafa]"
 								class:bg-[#fafafa]={opt.value === value}
 								class:font-medium={opt.value === value}
 								role="option"

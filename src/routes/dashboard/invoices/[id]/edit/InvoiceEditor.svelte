@@ -44,6 +44,11 @@
 		return found?.model ?? '-';
 	}
 
+	function getProductLabel(product: typeof products[number]): string {
+		const modelName = getModelName(product.model);
+		return modelName === '-' ? product.title : `${product.title} - ${modelName}`;
+	}
+
 	function getAvailableColors(itemId: string): typeof colors {
 		const usedColors = editor.items
 			.filter((i) => i.id !== itemId && i.color)
@@ -238,7 +243,7 @@
 									<tr class="hover:bg-[#fafafa]">
 										<td class="px-3 py-2">
 											<SearchableSelect
-												options={products.map((p) => ({ value: p.id, label: p.title }))}
+												options={products.map((p) => ({ value: p.id, label: getProductLabel(p) }))}
 												bind:value={item.product_id}
 												placeholder="Selecciona"
 												disabled={loading || !products.length}
@@ -259,7 +264,6 @@
 												name="color"
 												bind:value={item.color}
 												disabled={loading || getAvailableColors(item.id).length === 0}
-												required={getAvailableColors(item.id).length > 0}
 												class="text-xs capitalize"
 											>
 												<option value="">Color</option>
