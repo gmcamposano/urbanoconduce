@@ -25,6 +25,7 @@ export type InvoiceEditorData = {
 		title: string;
 		price_without_taxes: number | string;
 		model: string | null;
+		client_id: string;
 	}>;
 	colors: Array<{
 		id: string;
@@ -38,6 +39,7 @@ export type InvoiceEditorData = {
 
 export type InvoiceEditorState = {
 	invoiceNumber: string;
+	selectedClientId: string;
 	clientName: string;
 	clientEmail: string;
 	invoiceDate: string;
@@ -83,8 +85,13 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 			}
 		];
 
+	const firstProductWithClient = data.items.length
+		? data.products.find((p) => p.id === data.items[0].product_id || p.title === data.items[0].description)
+		: null;
+
 	return {
 		invoiceNumber: data.invoice.invoice_number || '',
+		selectedClientId: firstProductWithClient?.client_id || '',
 		clientName: data.invoice.client_name || '',
 		clientEmail: data.invoice.client_email || '',
 		invoiceDate: data.invoice.invoice_date || '',

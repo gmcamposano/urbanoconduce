@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		throw redirect(303, '/dashboard');
 	}
 
-	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult] = await Promise.all([
+	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] = await Promise.all([
 		locals.supabase
 			.from('invoices')
 			.select('*, profiles:created_by(name, email)')
@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			.order('created_at', { ascending: true }),
 		locals.supabase
 			.from('products')
-			.select('id, title, price_without_taxes, model')
+			.select('id, title, price_without_taxes, model, client_id')
 			.order('title', { ascending: true }),
 		locals.supabase
 			.from('product_colors')
@@ -36,7 +36,12 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		locals.supabase
 			.from('product_models')
 			.select('id, model')
-			.order('model', { ascending: true })
+			.order('model', { ascending: true }),
+		locals.supabase
+			.from('clients')
+			.select('id, client_type, full_name, company_name, alias, email')
+			.order('company_name', { ascending: true })
+			.order('full_name', { ascending: true })
 	]);
 
 	if (invoiceResult.error || !invoiceResult.data) {
@@ -60,9 +65,14 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		console.error('Error fetching models for edit:', modelsResult.error.message);
 	}
 
+	if (clientsResult.error) {
+		console.error('Error fetching clients for edit:', clientsResult.error.message);
+	}
+
 	const products = productsResult.data || [];
 	const colors = colorsResult.data || [];
 	const models = modelsResult.data || [];
+	const clients = clientsResult.data || [];
 
 	return {
 		invoice: invoiceResult.data,
@@ -82,7 +92,8 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			}) || [],
 		products,
 		colors,
-		models
+		models,
+		clients
 	};
 };
 
@@ -99,6 +110,7 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumber = String(formData.get('invoice_number') ?? '').trim();
+		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();
 		const invoiceDate = String(formData.get('invoice_date') ?? '').trim();
@@ -112,6 +124,7 @@ export const actions: Actions = {
 
 		if (
 			!invoiceNumber ||
+			!clientId ||
 			!clientName ||
 			!invoiceDate ||
 			!dueDate ||
@@ -144,7 +157,7 @@ export const actions: Actions = {
 		const [productsResult, colorsResult, invoiceResult, existingItemsResult] = await Promise.all([
 			locals.supabase
 				.from('products')
-				.select('id, title, price_without_taxes')
+				.select('id, title, price_without_taxes, client_id')
 				.in('id', productIds),
 			locals.supabase
 				.from('product_colors')
@@ -189,6 +202,7 @@ export const actions: Actions = {
 
 		const productMap = new Map(products.map((product) => [product.id, product]));
 		const normalizedItems: Array<{
+			product_id: string;
 			description: string;
 			color: string | null;
 			model: string | null;
@@ -209,8 +223,19 @@ export const actions: Actions = {
 				});
 			}
 
+			if (product.client_id !== clientId) {
+				return fail(400, {
+					error: `El producto "${product.title}" no pertenece al cliente seleccionado.`
+				});
+			}
+
+			if (selectedColors.length > 0 && !color) {
+				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
+			}
+
 			const unitPrice = Number(product.price_without_taxes);
 			normalizedItems.push({
+				product_id: item.product_id,
 				description: product.title,
 				color: color || null,
 				model,
@@ -243,6 +268,7 @@ export const actions: Actions = {
 			.from('invoices')
 			.update({
 				invoice_number: invoiceNumber,
+				client_id: clientId,
 				client_name: clientName,
 				client_email: clientEmail,
 				invoice_date: invoiceDate,
@@ -274,6 +300,7 @@ export const actions: Actions = {
 			.insert(
 				normalizedItems.map((item) => ({
 					invoice_id: params.id,
+					product_id: item.product_id,
 					description: item.description,
 					color: item.color,
 					model: item.model,
