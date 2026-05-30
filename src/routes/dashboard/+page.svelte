@@ -25,6 +25,14 @@
 
 	let { data, form } = $props();
 
+	function toTitleCase(str: string): string {
+		if (!str) return '';
+		return str
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+			.join(' ');
+	}
+
 	// Active role state
 	const profile = $derived(data.profile);
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
@@ -272,7 +280,7 @@
 								</td>
 								<td class="px-6 py-4">
 									<div>
-										<p class="font-medium text-[#171717]">{inv.client_name}</p>
+										<p class="font-medium text-[#171717]">{toTitleCase(inv.client_name)}</p>
 										<p class="text-[11px] text-[#707070]">{inv.client_email}</p>
 									</div>
 								</td>
@@ -302,7 +310,7 @@
 									{/if}
 								</td>
 								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
-									{inv.profiles?.name || 'Usuario desconocido'}
+									{toTitleCase(inv.profiles?.name || 'Usuario desconocido')}
 								</td>
 								<td class="px-6 py-4 text-right whitespace-nowrap">
 					<div class="flex items-center justify-end gap-1.5">
