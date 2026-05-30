@@ -176,6 +176,14 @@
 		)
 	);
 
+	const priceWithTax = $derived(
+		priceWithoutTaxes ? Number(priceWithoutTaxes) * 1.18 : 0
+	);
+
+	const editPriceWithTax = $derived(
+		editPriceWithoutTaxes ? Number(editPriceWithoutTaxes) * 1.18 : 0
+	);
+
 	function startEditing(product: (typeof products)[number]) {
 		editingProduct = { ...product };
 		editClient = product.client_id || '';
@@ -420,6 +428,12 @@
 						disabled={loading}
 					/>
 
+					{#if priceWithoutTaxes !== ''}
+						<p class="-mt-1 text-[11px] text-[#707070]">
+							Precio con impuesto (18%): <span class="font-medium">{formatCurrency(priceWithTax)}</span>
+						</p>
+					{/if}
+
 					<div class="flex gap-3">
 						<Button type="submit" class="flex-1" disabled={loading || !isProductFormValid}
 							>Guardar producto</Button
@@ -459,6 +473,7 @@
 								<th class="px-6 py-4 font-bold">Modelo</th>
 								<th class="px-6 py-4 font-bold">Descripción</th>
 								<th class="px-6 py-4 text-right font-bold">Precio</th>
+								<th class="px-6 py-4 text-right font-bold">Precio con impuesto</th>
 								{#if canManage}
 									<th class="px-6 py-4 text-right font-bold">Acciones</th>
 								{/if}
@@ -468,7 +483,7 @@
 							{#if filteredProducts.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 6 : 5}
+										colspan={canManage ? 7 : 6}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>{selectedClientFilter
 											? 'Este cliente no tiene productos.'
@@ -493,6 +508,9 @@
 										>
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
 											>{formatCurrency(Number(product.price_without_taxes))}</td
+										>
+										<td class="px-6 py-4 text-right font-mono text-[#707070] text-xs"
+											>{formatCurrency(Number(product.price_without_taxes) * 1.18)}</td
 										>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
@@ -637,6 +655,12 @@
 				required
 				disabled={editLoading}
 			/>
+
+			{#if editPriceWithoutTaxes !== ''}
+				<p class="-mt-1 text-[11px] text-[#707070]">
+					Precio con impuesto (18%): <span class="font-medium">{formatCurrency(editPriceWithTax)}</span>
+				</p>
+			{/if}
 		</form>
 
 		{#snippet footer()}
