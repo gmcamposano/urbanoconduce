@@ -114,7 +114,7 @@
 		const clientId = productToDuplicateForModels.client_id;
 		const productTitle = productToDuplicateForModels.title;
 		const currentModelId = productToDuplicateForModels.model;
-		return models.filter((m) => {
+		const filtered = models.filter((m) => {
 			if (m.id === currentModelId) return false;
 			const alreadyExistsWithThisModel = products.some(
 				(p) =>
@@ -125,6 +125,7 @@
 			);
 			return !alreadyExistsWithThisModel;
 		});
+		return filtered.sort((a, b) => a.model.toLowerCase().localeCompare(b.model.toLowerCase()));
 	});
 
 	const canSingleDuplicate = $derived(
@@ -138,8 +139,11 @@
 	const productsWithDuplicateStatus = $derived.by(() => {
 		if (!sourceClientForDuplicate) return [];
 		const sourceProducts = products.filter((p) => p.client_id === sourceClientForDuplicate);
-		if (!destinationClientForDuplicate) return sourceProducts;
-		return sourceProducts.filter(
+		const sorted = sourceProducts.sort((a, b) =>
+			a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+		);
+		if (!destinationClientForDuplicate) return sorted;
+		return sorted.filter(
 			(p) =>
 				!products.some(
 					(existing) =>
