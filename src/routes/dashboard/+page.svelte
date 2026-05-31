@@ -5,8 +5,6 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Input from '$lib/components/ui/Input.svelte';
-	import Select from '$lib/components/ui/Select.svelte';
 	import {
 		Search,
 		Plus,
@@ -18,7 +16,6 @@
 		Trash2,
 		Eye,
 		FileText,
-		DollarSign,
 		Filter,
 		Calendar
 	} from '@lucide/svelte';
@@ -88,7 +85,7 @@
 </script>
 
 <svelte:head>
-	<title>Panel - magikalConduce | magikalInvoice</title>
+	<title>Panel - magikalInvoice</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col justify-start space-y-8 text-[#171717]">
@@ -115,7 +112,7 @@
 			</a>
 		{:else}
 			<div
-				class="flex items-center gap-1.5 self-stretch rounded-[6px] border border-[#ededed] bg-[#fafafa] px-3 py-2 text-xs text-[#707070] sm:self-auto"
+				class="flex items-center gap-1.5 self-stretch rounded-md border border-[#ededed] bg-[#fafafa] px-3 py-2 text-xs text-[#707070] sm:self-auto"
 			>
 				<Clock class="h-4 w-4 text-[#707070]" />
 				Modo lector: creación de facturas deshabilitada
@@ -128,7 +125,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
-			<AlertTriangle class="mt-0.5 h-5 w-5 flex-shrink-0" />
+			<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
 			<div>
 				<p class="font-medium">Error de base de datos</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
@@ -149,7 +146,7 @@
 						{formatCurrency(totalInvoiced)}
 					</p>
 				</div>
-				<div class="rounded-[6px] border border-[#ededed] bg-[#fafafa] p-3">
+				<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-3">
 					<TrendingUp class="h-6 w-6 text-[#707070]" />
 				</div>
 			</CardContent>
@@ -164,7 +161,7 @@
 					</p>
 					<p class="font-mono text-2xl font-medium text-[#24b47e]">{formatCurrency(totalPaid)}</p>
 				</div>
-				<div class="rounded-[6px] border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-3">
+				<div class="rounded-md border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-3">
 					<CheckCircle class="h-6 w-6 text-[#24b47e]" />
 				</div>
 			</CardContent>
@@ -179,7 +176,7 @@
 						{formatCurrency(totalPending)}
 					</p>
 				</div>
-				<div class="rounded-[6px] border border-[#ededed] bg-[#fafafa] p-3">
+				<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-3">
 					<Clock class="h-6 w-6 text-[#707070]" />
 				</div>
 			</CardContent>
@@ -196,7 +193,7 @@
 						{formatCurrency(totalOverdue)}
 					</p>
 				</div>
-				<div class="rounded-[6px] border border-[#e2005a]/20 bg-[#e2005a]/10 p-3">
+				<div class="rounded-md border border-[#e2005a]/20 bg-[#e2005a]/10 p-3">
 					<AlertTriangle class="h-6 w-6 text-[#e2005a]" />
 				</div>
 			</CardContent>
@@ -218,7 +215,7 @@
 				type="text"
 				placeholder="Buscar por cliente o factura..."
 				bind:value={searchQuery}
-				class="block w-full rounded-[6px] border border-[#dfdfdf] bg-white py-2 pr-3 pl-9 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+				class="block w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-9 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 			/>
 		</div>
 
@@ -230,7 +227,7 @@
 			</span>
 			{#each ['all', 'draft', 'pending', 'paid', 'overdue'] as item (item)}
 				<button
-					class="cursor-pointer rounded-[6px] px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200 {statusFilter ===
+					class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200 {statusFilter ===
 					item
 						? 'border border-[#24b47e] bg-[#3ecf8e] text-[#171717]'
 						: 'border border-transparent bg-transparent text-[#707070] hover:text-[#171717]'}"
@@ -313,34 +310,34 @@
 									{toTitleCase(inv.profiles?.name || 'Usuario desconocido')}
 								</td>
 								<td class="px-6 py-4 text-right whitespace-nowrap">
-					<div class="flex items-center justify-end gap-1.5">
-						<a href={resolve(`/dashboard/invoices/${inv.id}`)}>
-							<Button
+									<div class="flex items-center justify-end gap-1.5">
+										<a href={resolve(`/dashboard/invoices/${inv.id}`)}>
+											<Button
 												variant="ghost"
 												size="icon"
 												class="h-8 w-8 text-[#707070] hover:text-[#171717]"
 												title="Ver detalles"
 											>
-								<Eye class="h-4 w-4" />
-							</Button>
-						</a>
+												<Eye class="h-4 w-4" />
+											</Button>
+										</a>
 
-						{#if isAdmin}
-							<a href={resolve(`/dashboard/invoices/${inv.id}/edit`)}>
-								<Button
-									variant="ghost"
-									size="icon"
-									class="h-8 w-8 text-[#707070] hover:text-[#171717]"
-									title="Editar factura"
-								>
-									<Edit3 class="h-4 w-4" />
-								</Button>
-							</a>
-						{/if}
+										{#if isAdmin}
+											<a href={resolve(`/dashboard/invoices/${inv.id}/edit`)}>
+												<Button
+													variant="ghost"
+													size="icon"
+													class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+													title="Editar factura"
+												>
+													<Edit3 class="h-4 w-4" />
+												</Button>
+											</a>
+										{/if}
 
-						<!-- Deleting option (Admins only) -->
-						{#if isAdmin}
-							<Button
+										<!-- Deleting option (Admins only) -->
+										{#if isAdmin}
+											<Button
 												variant="ghost"
 												size="icon"
 												class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
@@ -387,7 +384,7 @@
 						type="text"
 						bind:value={confirmText}
 						placeholder={invoiceToDelete.number}
-						class="w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#e2005a] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e2005a]/30"
+						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#e2005a] focus-visible:ring-1 focus-visible:ring-[#e2005a]/30 focus-visible:outline-none"
 					/>
 				</div>
 
@@ -396,7 +393,10 @@
 						variant="outline"
 						size="sm"
 						disabled={deleteLoading}
-						onclick={() => { invoiceToDelete = null; confirmText = ''; }}
+						onclick={() => {
+							invoiceToDelete = null;
+							confirmText = '';
+						}}
 					>
 						Cancelar
 					</Button>

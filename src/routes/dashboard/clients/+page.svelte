@@ -124,7 +124,7 @@
 </script>
 
 <svelte:head>
-	<title>Clientes - magikalConduce | magikalInvoice</title>
+	<title>Clientes - magikalInvoice</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">
@@ -142,7 +142,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
-			<Contact class="mt-0.5 h-5 w-5 flex-shrink-0" />
+			<Contact class="mt-0.5 h-5 w-5 shrink-0" />
 			<div>
 				<p class="font-medium">No se pudo guardar el cliente</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
@@ -154,7 +154,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm"
 		>
-			<Contact class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
+			<Contact class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]" />
 			<div>
 				<p class="font-medium">{form.message || 'Cliente guardado'}</p>
 				<p class="mt-0.5 text-xs text-[#707070]">El registro quedó disponible en el listado.</p>
@@ -230,7 +230,7 @@
 					<div
 						class="flex items-center gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"
 					>
-						<Contact class="h-4 w-4 flex-shrink-0 text-[#3ecf8e]" />
+						<Contact class="h-4 w-4 shrink-0 text-[#3ecf8e]" />
 						<p>
 							{clientType === 'company'
 								? 'La empresa requiere alias, RNC y nombre de empresa.'
@@ -285,7 +285,7 @@
 										</td>
 										<td class="px-6 py-4">
 											<div class="space-y-0.5">
-												<p class="font-medium capitalize text-[#171717]">
+												<p class="font-medium text-[#171717] capitalize">
 													{client.client_type === 'company'
 														? client.company_name
 														: client.full_name}
@@ -296,7 +296,9 @@
 											</div>
 										</td>
 										<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
-											{client.client_type === 'company' ? `${client.alias?.toUpperCase()} / ${client.rnc}` : '—'}
+											{client.client_type === 'company'
+												? `${client.alias?.toUpperCase()} / ${client.rnc}`
+												: '—'}
 										</td>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
@@ -406,7 +408,7 @@
 			<div
 				class="flex items-center gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"
 			>
-				<Contact class="h-4 w-4 flex-shrink-0 text-[#3ecf8e]" />
+				<Contact class="h-4 w-4 shrink-0 text-[#3ecf8e]" />
 				<p>
 					{clientType === 'company'
 						? 'La empresa requiere alias, RNC y nombre de empresa.'
@@ -440,12 +442,12 @@
 	>
 		<div class="space-y-3">
 			<p class="text-sm leading-relaxed text-[#707070]">
-				¿Seguro que deseas eliminar el cliente <strong class="capitalize text-[#171717]"
+				¿Seguro que deseas eliminar el cliente <strong class="text-[#171717] capitalize"
 					>{clientToDelete.name}</strong
 				>? El registro desaparecerá del listado.
 			</p>
 
-<form
+			<form
 				id="delete-client-form"
 				action="?/deleteClient"
 				method="POST"

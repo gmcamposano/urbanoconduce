@@ -22,7 +22,7 @@
 
 	const invoice = $derived(data.invoice);
 	const items = $derived(data.items || []);
-	const products = $derived(data.products || []);
+	// const products = $derived(data.products || []);
 	const models = $derived(data.models || []);
 
 	const profile = $derived(data.profile);
@@ -44,11 +44,11 @@
 		})
 	);
 
-	function getProductModel(productId: string | null): string | null {
-		if (!productId) return null;
-		const found = products.find((p) => p.id === productId);
-		return found?.model ?? null;
-	}
+	// function getProductModel(productId: string | null): string | null {
+	// 	if (!productId) return null;
+	// 	const found = products.find((p) => p.id === productId);
+	// 	return found?.model ?? null;
+	// }
 
 	let selectedStatus = $state('');
 	const currentStatus = $derived(selectedStatus || invoice?.status || '');
@@ -87,18 +87,6 @@
 		html2pdf().set(opt).from(element).save();
 	}
 </script>
-
-<style>
-	@media print {
-		.no-print {
-			display: none !important;
-		}
-		.print-card {
-			box-shadow: none !important;
-			border: none !important;
-		}
-	}
-</style>
 
 <svelte:head>
 	<title>{invoice?.invoice_number || 'Factura'} - magikalInvoice</title>
@@ -150,7 +138,12 @@
 				</Button>
 
 				<!-- Download PDF Button -->
-				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handleDownloadPdf}>
+				<Button
+					variant="outline"
+					size="sm"
+					class="flex items-center gap-1.5"
+					onclick={handleDownloadPdf}
+				>
 					<Download class="h-4 w-4" />
 					<span class="hidden sm:inline">Descargar PDF</span>
 					<span class="sm:hidden">PDF</span>
@@ -257,7 +250,7 @@
 								<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 text-[#171717]">
 									<FileText class="h-5 w-5" />
 								</div>
-								<span class="text-xl font-medium tracking-tight text-[#171717]">MagikalConduce</span
+								<span class="text-xl font-medium tracking-tight text-[#171717]">magikalInvoice</span
 								>
 							</div>
 							<p class="text-xs leading-relaxed font-medium text-[#707070]">
@@ -313,7 +306,7 @@
 								Facturar a:
 							</h3>
 							<div class="space-y-1 text-sm text-[#171717]">
-								<p class="text-base font-medium capitalize text-[#171717]">{invoice.client_name}</p>
+								<p class="text-base font-medium text-[#171717] capitalize">{invoice.client_name}</p>
 								{#if invoice.clients?.client_type === 'company' && invoice.clients?.rnc}
 									<p class="text-xs text-[#707070]">RNC: {invoice.clients.rnc}</p>
 								{/if}
@@ -380,9 +373,9 @@
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
 										<td class="py-4">
-											<p class="font-medium capitalize text-[#171717]">{item.description}</p>
+											<p class="font-medium text-[#171717] capitalize">{item.description}</p>
 										</td>
-										<td class="py-4 capitalize text-[#707070]">
+										<td class="py-4 text-[#707070] capitalize">
 											{productModel}
 										</td>
 										<td class="py-4">
@@ -531,3 +524,15 @@
 		</Card>
 	</div>
 {/if}
+
+<style>
+	@media print {
+		.no-print {
+			display: none !important;
+		}
+		.print-card {
+			box-shadow: none !important;
+			border: none !important;
+		}
+	}
+</style>

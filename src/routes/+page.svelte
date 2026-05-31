@@ -18,14 +18,14 @@
 </script>
 
 <svelte:head>
-	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - magikalConduce | magikalInvoice</title>
+	<title>{activeTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'} - magikalInvoice</title>
 </svelte:head>
 
 <div
 	class="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#fafafa_100%)] px-4 py-16"
 >
 	<div class="relative z-10 mb-10 flex items-center gap-2">
-		<div class="rounded-[6px] border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
+		<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
 			<FileText class="h-6 w-6 text-[#171717]" />
 		</div>
 		<span class="text-xl font-medium tracking-tight text-[#171717]"
@@ -82,7 +82,7 @@
 					class="mb-6 flex items-start gap-2.5 rounded-lg border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717]"
 				>
 					<svg
-						class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]"
+						class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke="currentColor"
@@ -106,7 +106,7 @@
 					class="mb-6 flex items-start gap-2.5 rounded-lg border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a]"
 				>
 					<svg
-						class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+						class="mt-0.5 h-5 w-5 shrink-0 text-[#e2005a]"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke="currentColor"
@@ -245,7 +245,7 @@
 						<div
 							class="flex gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"
 						>
-							<Shield class="h-4 w-4 flex-shrink-0 text-[#3ecf8e]" />
+							<Shield class="h-4 w-4 shrink-0 text-[#3ecf8e]" />
 							<p>
 								La selección de rol al registrarse está habilitada sólo para desarrollo o revisión.
 							</p>

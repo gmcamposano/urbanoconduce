@@ -6,7 +6,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { ShieldAlert, User, AlertTriangle, Shield, Check, Edit3, Mail, Plus, Trash2 } from '@lucide/svelte';
+	import { ShieldAlert, User, AlertTriangle, Check, Mail, Plus, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-	<title>Panel de administración - magikalConduce | magikalInvoice</title>
+	<title>Panel de administración - magikalInvoice</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">
@@ -42,7 +42,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm"
 		>
-			<Check class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
+			<Check class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]" />
 			<div>
 				<p class="font-medium">Rol actualizado</p>
 				<p class="mt-0.5 text-xs text-[#707070]">
@@ -56,7 +56,7 @@
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
-			<AlertTriangle class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]" />
+			<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-[#e2005a]" />
 			<div>
 				<p class="font-medium">La operación falló</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
@@ -119,7 +119,7 @@
 							<td class="px-6 py-4 font-medium whitespace-nowrap text-[#171717]">
 								<div class="flex items-center gap-2.5">
 									<div
-										class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] border border-[#ededed] bg-[#fafafa]"
+										class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#ededed] bg-[#fafafa]"
 									>
 										<User class="h-4 w-4 text-[#707070]" />
 									</div>
@@ -164,7 +164,7 @@
 										<select
 											name="role"
 											disabled={updatingUserId !== null}
-											class="flex h-8 cursor-pointer rounded-[6px] border border-[#dfdfdf] bg-white px-2.5 py-1 text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+											class="flex h-8 cursor-pointer rounded-md border border-[#dfdfdf] bg-white px-2.5 py-1 text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
 										>
 											<option value="viewer" selected={item.role === 'viewer'}
 												>Lector (solo lectura)</option
@@ -219,13 +219,16 @@
 				</Button>
 			</div>
 			<p class="mt-1 text-xs text-[#707070]">
-				Define los dominios o correos que pueden registrarse en el sistema. Si la lista está vacía, cualquier correo es aceptado.
+				Define los dominios o correos que pueden registrarse en el sistema. Si la lista está vacía,
+				cualquier correo es aceptado.
 			</p>
 		</CardHeader>
 
 		{#if emailSuccess}
-			<div class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717]">
-				<Check class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#24b47e]" />
+			<div
+				class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717]"
+			>
+				<Check class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]" />
 				<div>
 					<p class="font-medium">Operación exitosa</p>
 					<p class="mt-0.5 text-xs text-[#707070]">El patrón de correo fue actualizado.</p>
@@ -234,8 +237,10 @@
 		{/if}
 
 		{#if emailForm}
-			<div class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a]">
-				<AlertTriangle class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]" />
+			<div
+				class="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a]"
+			>
+				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-[#e2005a]" />
 				<div>
 					<p class="font-medium">La operación falló</p>
 					<p class="mt-0.5 text-xs text-[#e2005a]">{emailForm}</p>
@@ -265,16 +270,18 @@
 							name="pattern"
 							type="text"
 							placeholder="@empresa.com o usuario@empresa.com"
-							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+							class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
 							required
 						/>
 					</div>
 					<div class="w-full sm:w-40">
-						<label class="mb-1 block text-xs font-medium text-[#707070]" for="pattern_type">Tipo</label>
+						<label class="mb-1 block text-xs font-medium text-[#707070]" for="pattern_type"
+							>Tipo</label
+						>
 						<select
 							id="pattern_type"
 							name="pattern_type"
-							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+							class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
 						>
 							<option value="domain">Solo dominio</option>
 							<option value="full_email">Correo completo</option>
@@ -289,7 +296,7 @@
 							name="description"
 							type="text"
 							placeholder="Ej: empleados de la empresa"
-							class="h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+							class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
 						/>
 					</div>
 					<div class="flex gap-2">
@@ -312,7 +319,9 @@
 			<CardContent class="py-8 text-center">
 				<Mail class="mx-auto h-8 w-8 text-[#b2b2b2]" />
 				<p class="mt-2 text-sm text-[#707070]">No hay patrones de correo autorizados.</p>
-				<p class="text-xs text-[#9a9a9a]">Agrega un dominio para restringir el registro a ciertos correos.</p>
+				<p class="text-xs text-[#9a9a9a]">
+					Agrega un dominio para restringir el registro a ciertos correos.
+				</p>
 			</CardContent>
 		{:else}
 			<div class="w-full overflow-x-auto">
@@ -359,7 +368,7 @@
 										<input type="hidden" name="id" value={item.id} />
 										<Button
 											type="submit"
-variant="destructive"
+											variant="destructive"
 											size="sm"
 											class="h-8 px-2.5"
 											disabled={deletingEmailId !== null}

@@ -24,7 +24,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>magikalConduce | magikalInvoice - Generador profesional de facturas</title>
+	<title>magikalInvoice - Generador profesional de facturas</title>
 </svelte:head>
 
 <div class="relative flex min-h-screen flex-col bg-white text-[#171717]">
