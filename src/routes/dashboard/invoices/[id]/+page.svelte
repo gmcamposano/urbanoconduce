@@ -16,7 +16,6 @@
 		Mail,
 		Check
 	} from '@lucide/svelte';
-	import html2pdf from 'html2pdf.js';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -74,15 +73,16 @@
 		window.print();
 	}
 
-	function handleDownloadPdf() {
+	async function handleDownloadPdf() {
+		const html2pdf = (await import('html2pdf.js')).default;
 		const element = document.getElementById('invoice-printable');
 		if (!element) return;
 		const opt = {
 			margin: 0.5,
 			filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
-			image: { type: 'jpeg', quality: 0.98 },
+			image: { type: 'jpeg' as const, quality: 0.98 },
 			html2canvas: { scale: 2 },
-			jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+			jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
 		};
 		html2pdf().set(opt).from(element).save();
 	}
