@@ -50,9 +50,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			console.error('Error fetching models:', modelsError.message);
 		}
 
-		console.log('DEBUG models count:', models?.length);
-		console.log('DEBUG items model field:', items?.map(i => ({ id: i.id, model: i.model })));
-
 		return {
 			invoice,
 			items: items || [],

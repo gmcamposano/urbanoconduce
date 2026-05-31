@@ -74,17 +74,48 @@
 	}
 
 	async function handleDownloadPdf() {
-		const html2pdf = (await import('html2pdf.js')).default;
-		const element = document.getElementById('invoice-printable');
-		if (!element) return;
-		const opt = {
-			margin: 0.5,
-			filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
-			image: { type: 'jpeg' as const, quality: 0.98 },
-			html2canvas: { scale: 2 },
-			jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
-		};
-		html2pdf().set(opt).from(element).save();
+		try {
+			const html2pdf = (await import('html2pdf.js')).default;
+			const element = document.getElementById('invoice-printable');
+			if (!element) return;
+
+			const opt = {
+				margin: 0.5,
+				filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
+				image: { type: 'jpeg' as const, quality: 0.98 },
+				html2canvas: {
+					scale: 2,
+					useCORS: true,
+					logging: false,
+					onclone: (clonedDoc: Document) => {
+						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
+							const printableCard = card as HTMLElement;
+							printableCard.style.border = 'none';
+							printableCard.style.boxShadow = 'none';
+							printableCard.style.borderRadius = '0';
+						});
+						clonedDoc
+							.querySelectorAll<HTMLElement>('.print-badge-label')
+							.forEach((label: HTMLElement) => {
+								const statusLabel = label as HTMLElement;
+								statusLabel.style.display = 'inline-block';
+								statusLabel.style.lineHeight = '1';
+								statusLabel.style.transform = 'translateY(-4px)';
+							});
+						clonedDoc.querySelectorAll<HTMLElement>('.print-badge span').forEach((badge: HTMLElement) => {
+							const statusBadge = badge as HTMLElement;
+							statusBadge.style.border = 'none';
+							statusBadge.style.boxShadow = 'none';
+						});
+					}
+				},
+				jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
+			};
+			await html2pdf().set(opt).from(element).save();
+		} catch (err) {
+			console.error('PDF generation failed:', err);
+			alert('PDF generation failed. Please use your browser\'s Print > Save as PDF instead.');
+		}
 	}
 </script>
 
@@ -231,9 +262,9 @@
 		<!-- Beautiful Invoice Printable Sheet -->
 		<Card id="invoice-printable" class="print-card relative overflow-hidden p-0">
 			<!-- Watermark glow (no-print) -->
-			<div
+			<!-- <div
 				class="no-print pointer-events-none absolute top-0 left-0 h-40 w-40 rounded-full bg-[#3ecf8e]/10 blur-[55px]"
-			></div>
+			></div> -->
 
 			<!-- Clean layout grid (looks like a paper invoice) -->
 			<div
@@ -311,45 +342,49 @@
 									<p class="text-xs text-[#707070]">RNC: {invoice.clients.rnc}</p>
 								{/if}
 								<p class="flex items-center gap-1.5 text-xs text-[#707070]">
-									<Mail class="h-3.5 w-3.5 text-[#9a9a9a]" />
+									<!-- <Mail class="h-3.5 w-3.5 text-[#9a9a9a]" /> -->
 									{invoice.client_email}
 								</p>
 							</div>
 						</div>
 
 						<!-- Payment Status Indicator -->
-						<div class="space-y-2 sm:text-right">
-							<h3 class="text-xs font-medium tracking-wider text-[#707070] uppercase">
+						<div class="flex flex-col items-end justify-center space-y-2 sm:text-right">
+							<h3 class="text-xs font-medium tracking-wider text-[#707070] uppercase leading-4">
 								Estado del pago:
 							</h3>
-							<div>
-								{#if invoice.status === 'paid'}
-									<span
-										class="inline-flex items-center gap-1.5 rounded border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 px-3 py-1 text-xs font-medium tracking-wider text-[#171717] uppercase"
-									>
-										<Check class="h-3.5 w-3.5" />
-										Pagada completamente
-									</span>
-								{:else if invoice.status === 'pending'}
-									<span
-										class="inline-flex items-center gap-1.5 rounded border border-[#ffdb13]/35 bg-[#ffdb13]/20 px-3 py-1 text-xs font-medium tracking-wider text-[#171717] uppercase"
-									>
-										Pendiente
-									</span>
-								{:else if invoice.status === 'overdue'}
-									<span
-										class="inline-flex items-center gap-1.5 rounded border border-[#e2005a]/20 bg-[#e2005a]/10 px-3 py-1 text-xs font-medium tracking-wider text-[#e2005a] uppercase"
-									>
-										Vencida
-									</span>
-								{:else}
-									<span
-										class="inline-flex items-center gap-1.5 rounded border border-[#dfdfdf] bg-[#fafafa] px-3 py-1 text-xs font-medium tracking-wider text-[#171717] uppercase"
-									>
-										Borrador
-									</span>
-								{/if}
-							</div>
+					<div class="print-badge">
+						{#if invoice.status === 'paid'}
+							<span
+								class="inline-flex h-7 items-center justify-center gap-1.5 rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+								style="background-color: #dcfce7; border: 1px solid #86efac; color: #171717;"
+							>
+								<Check class="h-3.5 w-3.5" />
+								<span class="print-badge-label">Pagada completamente</span>
+							</span>
+						{:else if invoice.status === 'pending'}
+							<span
+								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+								style="background-color: #fef9c3; border: 1px solid #fde047; color: #171717;"
+							>
+								<span class="print-badge-label">Pendiente</span>
+							</span>
+						{:else if invoice.status === 'overdue'}
+							<span
+								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+								style="background-color: #fce7f3; border: 1px solid #f9a8d4; color: #be185d;"
+							>
+								<span class="print-badge-label">Vencida</span>
+							</span>
+						{:else}
+							<span
+								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+								style="background-color: #fafafa; border: 1px solid #e5e5e5; color: #171717;"
+							>
+								<span class="print-badge-label">Borrador</span>
+							</span>
+						{/if}
+					</div>
 						</div>
 					</div>
 
@@ -533,6 +568,10 @@
 		.print-card {
 			box-shadow: none !important;
 			border: none !important;
+		}
+		.print-badge span {
+			 print-color-adjust: exact;
+			-webkit-print-color-adjust: exact;
 		}
 	}
 </style>
