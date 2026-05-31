@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		// 1. Fetch Invoice Details
 		const { data: invoice, error: invoiceError } = await locals.supabase
 			.from('invoices')
-			.select('*, profiles:created_by(name, email)')
+			.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
 			.eq('id', id)
 			.single();
 

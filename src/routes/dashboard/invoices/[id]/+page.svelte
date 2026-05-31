@@ -91,7 +91,7 @@
 </style>
 
 <svelte:head>
-	<title>{invoice?.invoice_number || 'Factura'} - magikalConduce | magikalInvoice</title>
+	<title>{invoice?.invoice_number || 'Factura'} - magikalInvoice</title>
 </svelte:head>
 
 {#if invoice}
@@ -304,6 +304,9 @@
 							</h3>
 							<div class="space-y-1 text-sm text-[#171717]">
 								<p class="text-base font-medium capitalize text-[#171717]">{invoice.client_name}</p>
+								{#if invoice.clients?.client_type === 'company' && invoice.clients?.rnc}
+									<p class="text-xs text-[#707070]">RNC: {invoice.clients.rnc}</p>
+								{/if}
 								<p class="flex items-center gap-1.5 text-xs text-[#707070]">
 									<Mail class="h-3.5 w-3.5 text-[#9a9a9a]" />
 									{invoice.client_email}
