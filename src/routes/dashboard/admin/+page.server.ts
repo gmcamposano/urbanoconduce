@@ -5,7 +5,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
 	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard');
+		throw redirect(303, '/dashboard/proforma');
 	}
 
 	try {
@@ -41,6 +41,10 @@ export const actions: Actions = {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
+		}
+
+		if (locals.role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede gestionar este panel.' });
 		}
 
 		const formData = await request.formData();
@@ -81,6 +85,10 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
+		if (locals.role !== 'admin') {
+			return fail(403, { emailError: 'Solo un administrador puede gestionar este panel.' });
+		}
+
 		const formData = await request.formData();
 		const pattern = (formData.get('pattern') as string)?.trim();
 		const patternType = formData.get('pattern_type') as string;
@@ -118,6 +126,10 @@ export const actions: Actions = {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
+		}
+
+		if (locals.role !== 'admin') {
+			return fail(403, { emailError: 'Solo un administrador puede gestionar este panel.' });
 		}
 
 		const formData = await request.formData();

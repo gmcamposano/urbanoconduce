@@ -3,7 +3,13 @@ import type { Actions, PageServerLoad } from './$types';
 
 const VALID_STATUSES = ['paid'] as const;
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ parent, params, locals }) => {
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
 	const { id } = params;
 
 	try {

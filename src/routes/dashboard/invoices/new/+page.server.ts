@@ -11,8 +11,8 @@ function generateInvoiceNumber() {
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
-	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
-		throw redirect(303, '/dashboard/invoices');
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
 	}
 
 	const invoiceNumberPreview = generateInvoiceNumber();
@@ -69,6 +69,10 @@ export const actions: Actions = {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
+		}
+
+		if (locals.role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede crear facturas.' });
 		}
 
 		const isAdmin = locals.role === 'admin';

@@ -2,7 +2,13 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { buildInvoiceBalances, toAmount } from '$lib/server/accounting';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
 	try {
 		const [facturasResult, proformasResult, allocationsResult] = await Promise.all([
 			locals.supabase

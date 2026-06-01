@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 	const { profile } = await parent();
 
 	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 
 	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] = await Promise.all([
