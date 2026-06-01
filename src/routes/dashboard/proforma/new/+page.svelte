@@ -83,8 +83,6 @@
 	// Form field reactive states
 	let invoiceNumber = $state('');
 	let selectedClientId = $state('');
-	let facturaTipo = $state('ninguna');
-	let ncf = $state('');
 
 	const clientProducts = $derived.by((): ProductOption[] => {
 		if (!selectedClientId) return [];
@@ -206,14 +204,14 @@
 </script>
 
 <svelte:head>
-	<title>Nueva factura - magikalInvoice</title>
+	<title>Nueva proforma - magikalInvoice</title>
 </svelte:head>
 
 <div class="mx-auto flex max-w-4xl flex-1 flex-col justify-start space-y-6 text-[#171717]">
 	<!-- Top back navigation link -->
 	<div>
 		<a
-			href={resolve('/dashboard/invoices')}
+			href={resolve('/dashboard/proforma')}
 			class="inline-flex items-center gap-1.5 text-xs font-medium text-[#707070] transition-colors duration-200 hover:text-[#171717]"
 		>
 			<ArrowLeft class="h-3.5 w-3.5" />
@@ -225,11 +223,11 @@
 	<div class="border-b border-[#ededed] pb-4">
 		<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
 			<FileText class="h-6 w-6 text-[#3ecf8e]" />
-			Crear nueva factura
+			Crear nueva proforma
 		</h1>
 		<p class="mt-0.5 text-xs text-[#707070]">
 			Completa los datos del cliente, selecciona productos y ajusta impuestos para emitir la
-			factura.
+			proforma.
 		</p>
 	</div>
 
@@ -252,7 +250,7 @@
 				/>
 			</svg>
 			<div>
-				<p class="font-medium">No se pudo publicar la factura</p>
+				<p class="font-medium">No se pudo publicar la proforma</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
 			</div>
 		</div>
@@ -276,36 +274,16 @@
 
 		<Card>
 			<CardHeader>
-				<CardTitle>1. Datos principales de la factura</CardTitle>
+				<CardTitle>1. Datos principales de la proforma</CardTitle>
 			</CardHeader>
 			<CardContent class="grid grid-cols-1 gap-5 md:grid-cols-3">
 				<Input
-					label="ID / número de factura"
+					label="ID / número de proforma"
 					name="invoice_number"
 					bind:value={invoiceNumber}
 					placeholder={data.invoiceNumberPreview || 'INV-2026-0001'}
 					disabled={loading}
 				/>
-
-				<Select
-					label="Tipo de factura"
-					name="factura_tipo"
-					bind:value={facturaTipo}
-					disabled={loading}
-				>
-										<option value="valor_fiscal">Valor fiscal</option>
-					<option value="ninguna">Ninguna</option>
-				</Select>
-
-				{#if facturaTipo === 'valor_fiscal'}
-					<Input
-						label="NCF"
-						name="ncf"
-						bind:value={ncf}
-						placeholder="Ej: B0100000101"
-						disabled={loading}
-					/>
-				{/if}
 
 				<input type="hidden" name="status" value="pending" />
 
@@ -525,7 +503,7 @@
 						<label
 							for="notes"
 							class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
-							>Términos / notas de la factura</label
+							>Términos / notas de la proforma</label
 						>
 						<textarea
 							id="notes"
@@ -610,7 +588,7 @@
 
 		<!-- Submit Buttons -->
 		<div class="flex justify-end gap-3 border-t border-[#ededed] pt-6">
-			<a href={resolve('/dashboard/invoices')}>
+			<a href={resolve('/dashboard/proforma')}>
 				<Button variant="outline" disabled={loading}>Cancelar</Button>
 			</a>
 
@@ -619,10 +597,10 @@
 					<div
 						class="h-4 w-4 animate-spin rounded-full border-2 border-[#171717]/20 border-t-[#171717]"
 					></div>
-					Guardando factura...
+					Guardando proforma...
 				{:else}
 					<Save class="h-4 w-4" />
-					Guardar factura
+					Guardar proforma
 				{/if}
 			</Button>
 		</div>

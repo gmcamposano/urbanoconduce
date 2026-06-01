@@ -50,6 +50,10 @@
 	// 	return found?.model ?? null;
 	// }
 
+	let selectedStatus = $state('');
+	const currentStatus = $derived(selectedStatus || invoice?.status || '');
+
+	let statusUpdating = $state(false);
 	let showDeleteModal = $state(false);
 	let deleteLoading = $state(false);
 	let confirmText = $state('');
@@ -116,18 +120,18 @@
 </script>
 
 <svelte:head>
-	<title>{invoice?.invoice_number || 'Factura'} - magikalInvoice</title>
+	<title>{invoice?.invoice_number || 'Proforma'} - magikalInvoice</title>
 </svelte:head>
 
 {#if invoice}
 	<div class="flex flex-1 flex-col justify-start space-y-6 px-4 text-[#171717] sm:px-6">
 		<!-- Actions Top Panel (no-print) -->
 		<div class="no-print rounded-lg border border-[#dfdfdf] bg-white p-4 sm:p-5">
-			<!-- Top Row: Back + Invoice Info + Status -->
-			<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<!-- Top Row: Back + Invoice Info + Badge -->
+			<div class="mb-4 flex items-center justify-between gap-4">
 				<div class="flex items-center gap-4">
 					<a
-						href={resolve('/dashboard/invoices')}
+						href={resolve('/dashboard/proforma')}
 						class="flex h-9 w-9 items-center justify-center rounded-md border border-[#dfdfdf] text-[#707070] transition-colors hover:bg-[#fafafa] hover:text-[#171717]"
 						aria-label="Volver"
 					>
@@ -140,54 +144,106 @@
 						</p>
 					</div>
 				</div>
-				<div class="sm:border-l sm:border-[#ededed] sm:pl-4">
+				<!-- Current Status Badge -->
+				{#if invoice.status === 'paid'}
 					<Badge variant="success">Pagada</Badge>
-				</div>
+				{:else if invoice.status === 'pending'}
+					<Badge variant="warning">Pendiente</Badge>
+				{:else if invoice.status === 'overdue'}
+					<Badge variant="danger">Vencida</Badge>
+				{:else}
+					<Badge variant="secondary">Borrador</Badge>
+				{/if}
 			</div>
 
 			<!-- Divider -->
 			<div class="mb-4 border-t border-[#ededed]"></div>
 
 			<!-- Bottom Row: Actions -->
-			<div class="flex flex-wrap items-center gap-2 sm:gap-3">
-				<!-- Print Button -->
-				<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
-					<Printer class="h-4 w-4" />
-					<span class="hidden sm:inline">Imprimir</span>
-					<span class="sm:hidden">Imprimir</span>
-				</Button>
-
-				<!-- Download PDF Button -->
-				<Button
-					variant="outline"
-					size="sm"
-					class="flex items-center gap-1.5"
-					onclick={handleDownloadPdf}
-				>
-					<Download class="h-4 w-4" />
-					<span class="hidden sm:inline">Descargar PDF</span>
-					<span class="sm:hidden">PDF</span>
-				</Button>
-
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				{#if isAdmin}
-					<a href={resolve(`/dashboard/invoices/${invoice.id}/edit`)}>
-						<Button variant="outline" size="sm" class="flex items-center gap-1.5">
-							<Edit3 class="h-4 w-4" />
-							<span class="hidden sm:inline">Editar factura</span>
-							<span class="sm:hidden">Editar</span>
+					<form
+						action="?/updateStatus"
+						method="POST"
+						class="flex flex-wrap items-center gap-2 pb-3 sm:pb-0 sm:pr-4 sm:border-r sm:border-[#ededed]"
+						use:enhance={() => {
+							statusUpdating = true;
+							return async ({ update }) => {
+								statusUpdating = false;
+								await update();
+							};
+						}}
+					>
+						<select
+							name="status"
+							value={currentStatus}
+							onchange={(event) => {
+								selectedStatus = event.currentTarget.value;
+							}}
+							disabled={statusUpdating}
+							class="h-8 min-w-30 cursor-pointer rounded-md border border-[#dfdfdf] bg-white px-3 text-xs text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e] focus-visible:outline-none"
+						>
+							<option value="draft">Borrador</option>
+							<option value="pending">Pendiente</option>
+							<option value="paid">Pagada</option>
+							<option value="overdue">Vencida</option>
+						</select>
+						<Button
+							type="submit"
+							variant="default"
+							size="sm"
+							class="h-8 px-2.5 text-xs"
+							disabled={selectedStatus === invoice.status || statusUpdating}
+						>
+							{#if statusUpdating}
+								Guardando...
+							{:else}
+								Actualizar
+							{/if}
 						</Button>
-					</a>
+					</form>
+				{/if}
 
+				<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:pl-4">
+					<!-- Print Button -->
+					<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
+						<Printer class="h-4 w-4" />
+						<span class="hidden sm:inline">Imprimir</span>
+						<span class="sm:hidden">Imprimir</span>
+					</Button>
+
+					<!-- Download PDF Button -->
 					<Button
-						variant="destructive"
+						variant="outline"
 						size="sm"
 						class="flex items-center gap-1.5"
-						onclick={() => (showDeleteModal = true)}
+						onclick={handleDownloadPdf}
 					>
-						<Trash2 class="h-4 w-4" />
-						<span class="hidden sm:inline">Eliminar</span>
+						<Download class="h-4 w-4" />
+						<span class="hidden sm:inline">Descargar PDF</span>
+						<span class="sm:hidden">PDF</span>
 					</Button>
-				{/if}
+
+					{#if isAdmin}
+						<a href={resolve(`/dashboard/proforma/${invoice.id}/edit`)}>
+							<Button variant="outline" size="sm" class="flex items-center gap-1.5">
+								<Edit3 class="h-4 w-4" />
+								<span class="hidden sm:inline">Editar proforma</span>
+								<span class="sm:hidden">Editar</span>
+							</Button>
+						</a>
+
+						<Button
+							variant="destructive"
+							size="sm"
+							class="flex items-center gap-1.5"
+							onclick={() => (showDeleteModal = true)}
+						>
+							<Trash2 class="h-4 w-4" />
+							<span class="hidden sm:inline">Eliminar</span>
+						</Button>
+					{/if}
+				</div>
 			</div>
 		</div>
 
@@ -198,7 +254,7 @@
 			>
 				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div>
-					<p class="font-bold">No se pudo procesar la factura</p>
+					<p class="font-bold">No se pudo procesar la proforma</p>
 					<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
 				</div>
 			</div>
@@ -447,7 +503,7 @@
 				</div>
 
 				<p class="text-sm leading-relaxed text-[#707070]">
-					¿Seguro que deseas eliminar la factura <strong class="text-[#171717]"
+					¿Seguro que deseas eliminar la proforma <strong class="text-[#171717]"
 						>{invoice?.invoice_number}</strong
 					>? Esto borrará el registro y todos los conceptos asociados de forma permanente.
 				</p>

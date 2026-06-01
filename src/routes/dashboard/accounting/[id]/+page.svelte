@@ -26,14 +26,17 @@
 
 	const payment = $derived(data.payment);
 	const isAdmin = $derived(data.profile?.role === 'admin');
+	const allocations = $derived(payment.allocations || []);
 
 	let showDeleteConfirm = $state(false);
 	let deleting = $state(false);
 
-	const getClientDisplay = (payment: { clients?: { client_type: string; full_name: string; company_name: string } | null }) => {
+	const getClientDisplay = (payment: {
+		clients?: { client_type: string; full_name: string; company_name?: string | null } | null;
+	}) => {
 		const c = payment.clients;
 		if (!c) return 'Cliente';
-		return c.client_type === 'company' ? c.company_name : c.full_name;
+		return c.client_type === 'company' ? c.company_name || c.full_name : c.full_name;
 	};
 
 	const getMethodIcon = (method: string) => {
@@ -113,7 +116,7 @@
 	{/if}
 
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-		<div class="lg:col-span-2 space-y-6">
+		<div class="space-y-6 lg:col-span-2">
 			<Card class="bg-white">
 				<CardHeader>
 					<CardTitle>Información del pago</CardTitle>
@@ -121,14 +124,14 @@
 				<CardContent class="space-y-4">
 					<div class="grid grid-cols-2 gap-6">
 						<div class="space-y-1">
-							<p class="text-xs font-medium text-[#707070] uppercase tracking-wider">Monto</p>
+							<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">Monto</p>
 							<p class="font-mono text-2xl font-medium text-[#24b47e]">
 								{formatCurrency(Number(payment.amount))}
 							</p>
 						</div>
 
 						<div class="space-y-1">
-							<p class="text-xs font-medium text-[#707070] uppercase tracking-wider">Método</p>
+							<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">Método</p>
 							<div class="flex items-center gap-2">
 								<MethodIcon class="h-5 w-5 text-[#707070]" />
 								<p class="font-medium">{getMethodLabel(payment.payment_method)}</p>
@@ -138,7 +141,9 @@
 
 					<div class="grid grid-cols-2 gap-6">
 						<div class="space-y-1">
-							<p class="text-xs font-medium text-[#707070] uppercase tracking-wider">Fecha de pago</p>
+							<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">
+								Fecha de pago
+							</p>
 							<div class="flex items-center gap-2">
 								<Calendar class="h-4 w-4 text-[#9a9a9a]" />
 								<p class="font-medium">
@@ -155,7 +160,9 @@
 
 						{#if payment.reference_number}
 							<div class="space-y-1">
-								<p class="text-xs font-medium text-[#707070] uppercase tracking-wider">Referencia</p>
+								<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">
+									Referencia
+								</p>
 								<p class="font-medium">{payment.reference_number}</p>
 							</div>
 						{/if}
@@ -163,7 +170,7 @@
 
 					{#if payment.notes}
 						<div class="space-y-1">
-							<p class="text-xs font-medium text-[#707070] uppercase tracking-wider">Notas</p>
+							<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">Notas</p>
 							<p class="text-sm text-[#707070]">{payment.notes}</p>
 						</div>
 					{/if}
@@ -186,37 +193,55 @@
 							</div>
 						</div>
 
-						{#if payment.invoice_id}
-							<div class="flex items-center gap-3">
-								<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-2">
-									<Receipt class="h-5 w-5 text-[#707070]" />
+						<div class="space-y-2">
+							<p class="text-xs text-[#707070]">Aplicado a</p>
+							{#if allocations.length > 0}
+								<div class="space-y-2">
+									{#each allocations as allocation (allocation.id)}
+										<div
+											class="flex items-center justify-between gap-3 rounded-lg border border-[#ededed] bg-[#fafafa] p-3"
+										>
+						<div class="min-w-0">
+							<a
+								href={resolve(
+									allocation.status === 'paid'
+										? '/dashboard/invoices/[id]'
+										: '/dashboard/proforma/[id]',
+									{ id: allocation.invoice_id }
+								)}
+								class="truncate font-medium text-[#24b47e] hover:underline"
+							>
+													{allocation.invoice_number}
+												</a>
+												<p class="text-xs text-[#707070]">
+													{formatCurrency(allocation.invoice_total_amount)} total · {new Date(
+														allocation.invoice_date
+													).toLocaleDateString('en-US', {
+														month: 'short',
+														day: 'numeric',
+														year: 'numeric',
+														timeZone: 'UTC'
+													})}
+												</p>
+											</div>
+											<p class="font-mono text-sm font-medium text-[#171717]">
+												{formatCurrency(allocation.applied_amount)}
+											</p>
+										</div>
+									{/each}
 								</div>
-								<div>
-									<p class="text-xs text-[#707070]">Factura asociada</p>
-									<a
-										href={resolve(`/dashboard/invoices/${payment.invoice_id}`)}
-										class="font-medium text-[#24b47e] hover:underline"
-									>
-										{payment.invoices?.invoice_number || 'N/A'}
-									</a>
-									{#if payment.invoices?.total_amount}
-										<span class="ml-2 text-sm text-[#707070]">
-											({formatCurrency(Number(payment.invoices.total_amount))})
-										</span>
-									{/if}
+							{:else}
+								<div class="flex items-center gap-3">
+									<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-2">
+										<Receipt class="h-5 w-5 text-[#707070]" />
+									</div>
+									<div>
+										<p class="text-xs text-[#707070]">Factura asociada</p>
+										<p class="font-medium text-[#9a9a9a]">Sin factura específica</p>
+									</div>
 								</div>
-							</div>
-						{:else}
-							<div class="flex items-center gap-3">
-								<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-2">
-									<Receipt class="h-5 w-5 text-[#707070]" />
-								</div>
-								<div>
-									<p class="text-xs text-[#707070]">Factura asociada</p>
-									<p class="font-medium text-[#9a9a9a]">Sin factura específica</p>
-								</div>
-							</div>
-						{/if}
+							{/if}
+						</div>
 
 						<div class="flex items-center gap-3">
 							<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-2">
@@ -238,15 +263,21 @@
 					<CardTitle>Resumen</CardTitle>
 				</CardHeader>
 				<CardContent class="space-y-3">
-					<div class="flex items-center justify-between py-2 border-b border-[#ededed]">
+					<div class="flex items-center justify-between border-b border-[#ededed] py-2">
 						<span class="text-sm text-[#707070]">Monto pagado</span>
-						<span class="font-mono font-medium text-[#24b47e]">{formatCurrency(Number(payment.amount))}</span>
+						<span class="font-mono font-medium text-[#24b47e]"
+							>{formatCurrency(Number(payment.amount))}</span
+						>
 					</div>
-					<div class="flex items-center justify-between py-2 border-b border-[#ededed]">
+					<div class="flex items-center justify-between border-b border-[#ededed] py-2">
 						<span class="text-sm text-[#707070]">Fecha</span>
-						<span class="text-sm font-medium">{new Date(payment.payment_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
+						<span class="text-sm font-medium"
+							>{new Date(payment.payment_date).toLocaleDateString('en-US', {
+								timeZone: 'UTC'
+							})}</span
+						>
 					</div>
-					<div class="flex items-center justify-between py-2 border-b border-[#ededed]">
+					<div class="flex items-center justify-between border-b border-[#ededed] py-2">
 						<span class="text-sm text-[#707070]">Método</span>
 						<Badge variant="secondary">{getMethodLabel(payment.payment_method)}</Badge>
 					</div>

@@ -11,6 +11,8 @@ export type InvoiceEditorData = {
 		notes: string | null;
 		tax_rate: number | string;
 		discount_amount: number | string;
+		factura_tipo?: string | null;
+		ncf?: string | null;
 	};
 	items: Array<{
 		id: string;
@@ -40,6 +42,8 @@ export type InvoiceEditorData = {
 
 export type InvoiceEditorState = {
 	invoiceNumber: string;
+	facturaTipo: string;
+	ncf: string;
 	selectedClientId: string;
 	clientName: string;
 	clientEmail: string;
@@ -113,6 +117,8 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 
 	return {
 		invoiceNumber: data.invoice.invoice_number || '',
+		facturaTipo: data.invoice.factura_tipo || 'proforma',
+		ncf: data.invoice.ncf || '',
 		selectedClientId,
 		clientName: data.invoice.client_name || '',
 		clientEmail: data.invoice.client_email || '',

@@ -32,19 +32,18 @@
 	const payments = $derived(data.payments || []);
 	const outstandingInvoices = $derived(data.outstandingInvoices || []);
 	const clients = $derived(data.clients || []);
+	const clientBalances = $derived(data.clientBalances || []);
 
-	const totalReceived = $derived(
-		payments.reduce((sum, p) => sum + Number(p.amount), 0)
-	);
+	const totalReceived = $derived(payments.reduce((sum, p) => sum + Number(p.amount), 0));
 
 	const totalOutstanding = $derived(
-		outstandingInvoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0)
+		outstandingInvoices.reduce((sum, inv) => sum + Number(inv.balanceDue), 0)
 	);
 
 	const totalOverdue = $derived(
 		outstandingInvoices
 			.filter((i) => i.status === 'overdue')
-			.reduce((sum, inv) => sum + Number(inv.total_amount), 0)
+			.reduce((sum, inv) => sum + Number(inv.balanceDue), 0)
 	);
 
 	const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0, 0);
@@ -56,10 +55,16 @@
 	);
 
 	const clientMap = $derived(
-		clients.reduce((acc, c) => {
-			acc[c.id] = c;
-			return acc;
-		}, {} as Record<string, { client_type: string; full_name: string; alias: string; company_name: string }>)
+		clients.reduce(
+			(acc, c) => {
+				acc[c.id] = c;
+				return acc;
+			},
+			{} as Record<
+				string,
+				{ client_type: string; full_name: string; alias: string; company_name: string }
+			>
+		)
 	);
 
 	const getClientDisplay = (clientId: string) => {
@@ -69,32 +74,10 @@
 	};
 
 	const filteredPayments = $derived(
-		payments.filter((p) => {
-			const clientDisplay = getClientDisplay(p.client_id).toLowerCase();
-			const invoiceNumber = p.invoices?.invoice_number?.toLowerCase() || '';
-			const searchLower = searchQuery.toLowerCase();
-			return (
-				clientDisplay.includes(searchLower) ||
-				invoiceNumber.includes(searchLower) ||
-				(p.reference_number && p.reference_number.toLowerCase().includes(searchLower))
-			);
-		})
+		payments.filter((p) => p.searchText.includes(searchQuery.toLowerCase()))
 	);
 
-	const outstandingByClient = $derived(() => {
-		const map: Record<string, { clientId: string; name: string; total: number }> = {};
-		outstandingInvoices.forEach((inv) => {
-			if (!map[inv.client_id]) {
-				map[inv.client_id] = {
-					clientId: inv.client_id,
-					name: getClientDisplay(inv.client_id),
-					total: 0
-				};
-			}
-			map[inv.client_id].total += Number(inv.total_amount);
-		});
-		return Object.values(map).sort((a, b) => b.total - a.total);
-	});
+	const outstandingByClient = $derived(clientBalances);
 
 	const formatCurrency = (val: number) => {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -212,9 +195,7 @@
 		<Card class="bg-white">
 			<CardContent class="flex items-center justify-between p-6">
 				<div class="space-y-1">
-					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">
-						Este mes
-					</p>
+					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">Este mes</p>
 					<p class="font-mono text-2xl font-medium text-[#24b47e]">
 						{formatCurrency(thisMonthCollections)}
 					</p>
@@ -247,7 +228,7 @@
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 		<div class="lg:col-span-2">
 			<Card class="bg-white">
-				<div class="px-6 py-4 border-b border-[#ededed]">
+				<div class="border-b border-[#ededed] px-6 py-4">
 					<h2 class="text-base font-medium text-[#171717]">Pagos registrados</h2>
 				</div>
 				<div class="w-full overflow-x-auto">
@@ -287,20 +268,15 @@
 											</div>
 										</td>
 										<td class="px-6 py-4">
-											<p class="font-medium text-[#171717]">{getClientDisplay(payment.client_id)}</p>
+											<p class="font-medium text-[#171717]">
+												{getClientDisplay(payment.client_id)}
+											</p>
 										</td>
 										<td class="px-6 py-4">
-											{#if payment.invoice_id}
-												<a
-													href={resolve(`/dashboard/invoices/${payment.invoice_id}`)}
-													class="flex items-center gap-1.5 text-xs text-[#707070] hover:text-[#24b47e] transition-colors"
-												>
-													<Receipt class="h-3.5 w-3.5" />
-													{payment.invoices?.invoice_number || 'N/A'}
-												</a>
-											{:else}
-												<span class="text-xs text-[#9a9a9a]">Sin factura</span>
-											{/if}
+											<div class="flex items-center gap-1.5 text-xs text-[#707070]">
+												<Receipt class="h-3.5 w-3.5" />
+												{payment.invoiceSummary}
+											</div>
 										</td>
 										<td class="px-6 py-4 font-mono font-medium text-[#24b47e]">
 											{formatCurrency(Number(payment.amount))}
@@ -352,25 +328,28 @@
 
 		<div class="lg:col-span-1">
 			<Card class="bg-white">
-				<div class="px-6 py-4 border-b border-[#ededed]">
+				<div class="border-b border-[#ededed] px-6 py-4">
 					<h2 class="text-base font-medium text-[#171717]">Saldos pendientes por cliente</h2>
 				</div>
 				<div class="divide-y divide-[#ededed]">
-					{#if outstandingByClient().length === 0}
+					{#if outstandingByClient.length === 0}
 						<div class="px-6 py-8 text-center text-xs text-[#707070]">
 							No hay facturas pendientes.
 						</div>
 					{:else}
-						{#each outstandingByClient() as item (item.clientId)}
+						{#each outstandingByClient as item (item.clientId)}
 							<div class="flex items-center justify-between px-6 py-4">
 								<div class="min-w-0 flex-1">
 									<p class="truncate font-medium text-[#171717]">{item.name}</p>
 									<p class="mt-0.5 text-xs text-[#707070]">
-										{outstandingInvoices.filter((i) => i.client_id === item.clientId).length} factura(s) pendiente(s)
+										{item.invoiceCount} proforma(s) pendiente(s)
+										{#if item.overdueBalance > 0}
+											· {formatCurrency(item.overdueBalance)} vencido
+										{/if}
 									</p>
 								</div>
 								<p class="font-mono text-sm font-medium text-[#e2005a]">
-									{formatCurrency(item.total)}
+									{formatCurrency(item.totalBalance)}
 								</p>
 							</div>
 						{/each}

@@ -6,15 +6,22 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
-	import { ArrowLeft, Save, AlertTriangle, Banknote, CreditCard, Wallet, Building2 } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		AlertTriangle,
+		Banknote,
+		Building2,
+		CreditCard,
+		Save,
+		Wallet
+	} from '@lucide/svelte';
 
 	let { data, form } = $props();
 
 	const clients = $derived(data.clients || []);
-	const invoices = $derived(data.invoices || []);
+	const clientBalances = $derived(data.clientBalances || []);
 
 	let selectedClientId = $state('');
-	let selectedInvoiceId = $state('');
 	let amount = $state('');
 	let paymentDate = $state(new Date().toISOString().split('T')[0]);
 	let paymentMethod = $state('');
@@ -22,28 +29,53 @@
 	let notes = $state('');
 	let saving = $state(false);
 
-	const filteredInvoices = $derived(
-		selectedClientId
-			? invoices.filter((inv) => inv.client_id === selectedClientId)
-			: []
-	);
-
-	const selectedInvoice = $derived(
-		selectedInvoiceId ? invoices.find((inv) => inv.id === selectedInvoiceId) : null
-	);
-
 	const clientMap = $derived(
-		clients.reduce((acc, c) => {
-			acc[c.id] = c;
-			return acc;
-		}, {} as Record<string, { client_type: string; full_name: string; company_name: string; alias: string; rnc: string; email: string }>)
+		clients.reduce(
+			(acc, c) => {
+				acc[c.id] = c;
+				return acc;
+			},
+			{} as Record<
+				string,
+				{
+					client_type: string;
+					full_name: string;
+					company_name: string;
+					alias: string;
+					rnc: string;
+					email: string;
+				}
+			>
+		)
 	);
 
-	const getClientDisplay = (clientId: string) => {
+	const clientBalanceMap = $derived(
+		clientBalances.reduce(
+			(acc, balance) => {
+				acc[balance.clientId] = balance;
+				return acc;
+			},
+			{} as Record<string, (typeof clientBalances)[number]>
+		)
+	);
+
+	function getClientDisplay(clientId: string) {
 		const c = clientMap[clientId];
 		if (!c) return '';
 		return c.client_type === 'company' ? `${c.company_name} (${c.alias})` : c.full_name;
-	};
+	}
+
+	const selectedClientCredit = $derived(
+		selectedClientId
+			? (clientBalanceMap[selectedClientId] ?? {
+					clientId: selectedClientId,
+					name: getClientDisplay(selectedClientId),
+					creditBalance: 0,
+					invoiceCount: 0,
+					overdueBalance: 0
+				})
+			: null
+	);
 
 	const formatCurrency = (val: number) => {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -75,7 +107,10 @@
 
 	<div>
 		<h1 class="text-2xl font-medium tracking-tight text-[#171717]">Registrar pago</h1>
-		<p class="mt-0.5 text-xs text-[#707070]">Registra un nuevo pago recibido de un cliente.</p>
+		<p class="mt-0.5 text-xs text-[#707070]">
+			Registra un abono que se aplicará automáticamente a sus proformas pendientes, empezando por la
+			más antigua.
+		</p>
 	</div>
 
 	{#if form?.error}
@@ -129,24 +164,34 @@
 					</div>
 
 					<div class="space-y-2">
-						<label for="invoice_id" class="text-sm font-medium text-[#171717]">
-							Factura asociada <span class="text-xs text-[#707070]">(opcional)</span>
-						</label>
-						<select
-							id="invoice_id"
-							name="invoice_id"
-							bind:value={selectedInvoiceId}
-							class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
-						>
-							<option value="">Sin factura específica</option>
-							{#each filteredInvoices as inv (inv.id)}
-								<option value={inv.id}>
-									{inv.invoice_number} - {formatCurrency(Number(inv.total_amount))} (pendiente: {formatCurrency(Number(inv.total_amount))})
-								</option>
-							{/each}
-						</select>
-						{#if selectedClientId && filteredInvoices.length === 0}
-							<p class="text-xs text-[#707070]">No hay facturas pendientes para este cliente.</p>
+						<p class="text-sm font-medium text-[#171717]">Crédito disponible</p>
+						{#if selectedClientCredit}
+							<div
+								class="rounded-md border border-[#ededed] bg-[#fafafa] px-3 py-2 text-xs text-[#707070]"
+							>
+								<p class="font-medium text-[#171717]">
+									{selectedClientCredit.creditBalance > 0
+										? 'Saldo disponible'
+										: 'Sin crédito disponible'}
+								</p>
+								<p
+									class={`mt-0.5 font-mono text-sm ${selectedClientCredit.creditBalance > 0 ? 'text-[#24b47e]' : 'text-[#e2005a]'}`}
+								>
+									{formatCurrency(selectedClientCredit.creditBalance)}
+								</p>
+								<p class="mt-1">
+									{selectedClientCredit.invoiceCount} proforma(s) pendiente(s)
+									{#if selectedClientCredit.overdueBalance > 0}
+										· {formatCurrency(selectedClientCredit.overdueBalance)} vencido
+									{/if}
+								</p>
+							</div>
+						{:else}
+							<div
+								class="rounded-md border border-[#ededed] bg-[#fafafa] px-3 py-2 text-xs text-[#707070]"
+							>
+								Selecciona un cliente para ver el saldo disponible.
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -157,7 +202,10 @@
 							Monto <span class="text-[#e2005a]">*</span>
 						</label>
 						<div class="relative">
-							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#707070]">$</span>
+							<span
+								class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-[#707070]"
+								>$</span
+							>
 							<input
 								type="number"
 								id="amount"
@@ -170,9 +218,9 @@
 								required
 							/>
 						</div>
-						{#if selectedInvoice}
+						{#if selectedClientCredit}
 							<p class="text-xs text-[#707070]">
-								Monto pendiente: {formatCurrency(Number(selectedInvoice.total_amount))}
+								Se aplicará automáticamente a las proformas pendientes más antiguas.
 							</p>
 						{/if}
 					</div>
@@ -193,9 +241,9 @@
 				</div>
 
 				<div class="space-y-2">
-					<label class="text-sm font-medium text-[#171717]">
+					<p class="text-sm font-medium text-[#171717]">
 						Método de pago <span class="text-[#e2005a]">*</span>
-					</label>
+					</p>
 					<div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
 						{#each paymentMethods as method (method.value)}
 							<label
@@ -243,7 +291,7 @@
 						bind:value={notes}
 						rows="3"
 						placeholder="Notas adicionales sobre el pago..."
-						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none resize-none"
+						class="w-full resize-none rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 					></textarea>
 				</div>
 			</CardContent>

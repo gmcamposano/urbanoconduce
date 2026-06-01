@@ -1,11 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { buildClientCreditSummary, buildInvoiceBalances } from '$lib/server/accounting';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
 	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
-		throw redirect(303, '/dashboard/accounting');
+		throw redirect(303, '/dashboard');
 	}
 
 	const { data: clients, error: clientsError } = await locals.supabase
@@ -14,23 +15,43 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.order('company_name', { ascending: true })
 		.order('full_name', { ascending: true });
 
-	const { data: invoices, error: invoicesError } = await locals.supabase
-		.from('invoices')
-		.select('id, invoice_number, client_id, client_name, total_amount, status, due_date')
-		.in('status', ['pending', 'overdue'])
-		.order('created_at', { ascending: false });
+	const [invoicesResult, allocationsResult] = await Promise.all([
+		locals.supabase
+			.from('invoices')
+			.select(
+				'id, client_id, invoice_number, total_amount, status, due_date, invoice_date, factura_tipo, created_at'
+			)
+			.in('status', ['pending', 'overdue'])
+			.order('created_at', { ascending: false }),
+		locals.supabase
+			.from('accounting_allocations')
+			.select('id, payment_id, invoice_id, applied_amount')
+	]);
 
 	if (clientsError) {
 		console.error('Supabase query error in payment load clients:', clientsError.message);
 	}
 
-	if (invoicesError) {
-		console.error('Supabase query error in payment load invoices:', invoicesError.message);
+	if (invoicesResult.error) {
+		console.error('Supabase query error in payment load invoices:', invoicesResult.error.message);
 	}
+
+	if (allocationsResult.error) {
+		console.error(
+			'Supabase query error in payment load allocations:',
+			allocationsResult.error.message
+		);
+	}
+
+	const invoiceBalances = buildInvoiceBalances(
+		invoicesResult.data || [],
+		allocationsResult.data || []
+	);
+	const clientBalances = buildClientCreditSummary(invoiceBalances, clients || []);
 
 	return {
 		clients: clients || [],
-		invoices: invoices || []
+		clientBalances
 	};
 };
 
@@ -47,7 +68,6 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const clientId = String(formData.get('client_id') ?? '').trim();
-		const invoiceId = String(formData.get('invoice_id') ?? '').trim() || null;
 		const amount = Number(formData.get('amount') ?? 0);
 		const paymentDate = String(formData.get('payment_date') ?? '').trim();
 		const paymentMethod = String(formData.get('payment_method') ?? '').trim();
@@ -68,45 +88,18 @@ export const actions: Actions = {
 		}
 
 		try {
-			const { error: paymentError } = await locals.supabase
-				.from('accounting')
-				.insert({
-					client_id: clientId,
-					invoice_id: invoiceId || null,
-					amount,
-					payment_date: paymentDate,
-					payment_method: paymentMethod,
-					reference_number: referenceNumber || null,
-					notes: notes || null,
-					created_by: user.id
-				})
-				.select('id')
-				.single();
+			const { error: paymentError } = await locals.supabase.rpc('record_accounting_payment', {
+				p_client_id: clientId,
+				p_amount: amount,
+				p_payment_date: paymentDate,
+				p_payment_method: paymentMethod,
+				p_reference_number: referenceNumber || null,
+				p_notes: notes || null,
+				p_created_by: user.id
+			});
 
 			if (paymentError) {
 				return fail(400, { error: paymentError.message });
-			}
-
-			if (invoiceId) {
-				const { data: invoicePayments } = await locals.supabase
-					.from('accounting')
-					.select('amount')
-					.eq('invoice_id', invoiceId);
-
-				const totalPaid = (invoicePayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-
-				const { data: invoice } = await locals.supabase
-					.from('invoices')
-					.select('total_amount')
-					.eq('id', invoiceId)
-					.single();
-
-				if (invoice && totalPaid >= Number(invoice.total_amount)) {
-					await locals.supabase
-						.from('invoices')
-						.update({ status: 'paid' })
-						.eq('id', invoiceId);
-				}
 			}
 		} catch (e: unknown) {
 			console.error('Payment save exception:', e);

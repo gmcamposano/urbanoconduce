@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
 
 	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 
 	const invoiceNumberPreview = generateInvoiceNumber();
@@ -71,14 +71,11 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		const isAdmin = locals.role === 'admin';
-
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
 		const invoiceNumber = invoiceNumberInput || generateInvoiceNumber();
-		const rawFacturaTipo = String(formData.get('factura_tipo') ?? 'ninguna').trim();
-		const facturaTipo = isAdmin && rawFacturaTipo === 'valor_fiscal' ? 'valor_fiscal' : 'ninguna';
-		const ncf = facturaTipo === 'valor_fiscal' ? String(formData.get('ncf') ?? '').trim() : '';
+		const facturaTipo = 'proforma';
+		const ncf = '';
 		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();
@@ -93,10 +90,6 @@ export const actions: Actions = {
 
 		if (!clientId || !clientName || !invoiceDate || !dueDate || !status) {
 			return fail(400, { error: 'Todos los datos principales son obligatorios.' });
-		}
-
-		if (facturaTipo === 'valor_fiscal' && !ncf) {
-			return fail(400, { error: 'El NCF es obligatorio para facturas de valor fiscal.' });
 		}
 
 		let items: Array<{ product_id: string; color: string; model: string; quantity: number }> = [];
@@ -199,7 +192,7 @@ export const actions: Actions = {
 				.insert({
 					invoice_number: invoiceNumber,
 					factura_tipo: facturaTipo,
-					ncf: facturaTipo === 'valor_fiscal' ? ncf : null,
+					ncf: null,
 					client_id: clientId,
 					client_name: clientName,
 					client_email: clientEmail,
@@ -243,6 +236,6 @@ export const actions: Actions = {
 			return fail(500, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
 
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 };

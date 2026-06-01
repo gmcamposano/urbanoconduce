@@ -209,25 +209,25 @@
 </script>
 
 <svelte:head>
-	<title>Editar factura - magikalInvoice</title>
+	<title>Editar proforma - magikalInvoice</title>
 </svelte:head>
 
 {#if invoice}
 	<div class="mx-auto flex max-w-4xl flex-1 flex-col justify-start space-y-6 text-[#171717]">
 		<div>
 			<a
-				href={resolve(`/dashboard/invoices/${invoice.id}`)}
+				href={resolve(`/dashboard/proforma/${invoice.id}`)}
 				class="inline-flex items-center gap-1.5 text-xs font-medium text-[#707070] transition-colors duration-200 hover:text-[#171717]"
 			>
 				<ArrowLeft class="h-3.5 w-3.5" />
-				Volver a la factura
+				Volver a la proforma
 			</a>
 		</div>
 
 		<div class="border-b border-[#ededed] pb-4">
 			<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
 				<FileText class="h-6 w-6 text-[#3ecf8e]" />
-				Editar factura
+				Editar proforma
 			</h1>
 			<p class="mt-0.5 text-xs text-[#707070]">
 				Completa los datos del cliente, selecciona productos y ajusta impuestos para guardar los cambios.
@@ -252,7 +252,7 @@
 					/>
 				</svg>
 				<div>
-					<p class="font-medium">No se pudo guardar la factura</p>
+					<p class="font-medium">No se pudo guardar la proforma</p>
 					<p class="mt-0.5 text-xs text-[#707070]">{actionForm.error}</p>
 				</div>
 			</div>
@@ -274,11 +274,11 @@
 
 			<Card>
 				<CardHeader>
-					<CardTitle>1. Datos principales de la factura</CardTitle>
+					<CardTitle>1. Datos principales de la proforma</CardTitle>
 				</CardHeader>
 				<CardContent class="grid grid-cols-1 gap-5 md:grid-cols-3">
 					<Input
-						label="ID / número de factura"
+						label="ID / número de proforma"
 						name="invoice_number"
 						bind:value={editor.invoiceNumber}
 						disabled={loading}
@@ -286,14 +286,13 @@
 
 					{#if isAdmin}
 						<Select
-							label="Tipo de factura"
+							label="Tipo de proforma"
 							name="factura_tipo"
 							bind:value={editor.facturaTipo}
 							disabled={loading}
 						>
-														<option value="valor_fiscal">Valor fiscal</option>
-							<option value="ninguna">Ninguna</option>
-						</Select>
+							<option value="proforma">Proforma</option>
+																				</Select>
 
 						{#if editor.facturaTipo === 'valor_fiscal'}
 							<Input
@@ -510,7 +509,7 @@
 							<label
 								for="notes"
 								class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase"
-								>Términos / notas de la factura</label
+								>Términos / notas de la proforma</label
 							>
 							<textarea
 								id="notes"
@@ -591,7 +590,7 @@
 			</div>
 
 			<div class="flex justify-end gap-3 border-t border-[#ededed] pt-6">
-				<a href={resolve(`/dashboard/invoices/${invoice.id}`)}>
+				<a href={resolve(`/dashboard/proforma/${invoice.id}`)}>
 					<Button variant="outline" disabled={loading}>Cancelar</Button>
 				</a>
 

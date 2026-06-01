@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-const VALID_STATUSES = ['paid'] as const;
+const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { id } = params;
@@ -16,11 +16,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 		if (invoiceError || !invoice) {
 			console.error('Error fetching invoice details:', invoiceError?.message);
-			throw redirect(303, '/dashboard/invoices');
+			throw redirect(303, '/dashboard/proforma');
 		}
 
-		if (invoice.status !== 'paid') {
-			throw redirect(303, `/dashboard/proforma/${id}`);
+		if (invoice.status === 'paid') {
+			throw redirect(303, `/dashboard/invoices/${id}`);
 		}
 
 		// 2. Fetch Line Items
@@ -62,7 +62,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		};
 	} catch (e) {
 		console.error('Invoice details load exception:', e);
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 };
 
@@ -87,24 +87,27 @@ export const actions: Actions = {
 		}
 
 		if (!VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number])) {
-			return fail(400, { error: 'Las facturas solo pueden marcarse como pagadas.' });
+			return fail(400, { error: 'El estado seleccionado no es válido.' });
 		}
 
 		try {
 			// Enforced by RLS: Only Admins can update invoices
 			const { error } = await locals.supabase
 				.from('invoices')
-				.update({ status })
+				.update({
+					status,
+					factura_tipo: status === 'paid' ? 'ninguna' : 'proforma'
+				})
 				.eq('id', id);
 
 			if (error) {
 				return fail(400, { error: error.message });
 			}
-
-			return { success: true };
 		} catch (e: any) {
 			return fail(400, { error: e.message || 'No se pudo actualizar el estado.' });
 		}
+
+		throw redirect(303, status === 'paid' ? `/dashboard/invoices/${id}` : `/dashboard/proforma/${id}`);
 	},
 
 	deleteInvoice: async ({ params, locals }) => {
@@ -133,6 +136,6 @@ export const actions: Actions = {
 			return fail(400, { error: e.message || 'No se pudo eliminar.' });
 		}
 
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 };

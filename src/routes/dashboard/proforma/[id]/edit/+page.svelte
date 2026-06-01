@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Editar factura - magikalInvoice</title>
+	<title>Editar proforma - magikalInvoice</title>
 </svelte:head>
 
 {#key data.invoice.id}

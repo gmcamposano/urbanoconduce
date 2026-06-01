@@ -8,10 +8,12 @@
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
-# Very important:
+# BEFORE ANY BUILD
 
-Before you begin, you should always talk like a caveman or use the caveman skill `.agents/caveman/SKILL.md`. Use when user says "caveman mode", "talk like caveman", "use caveman",
-"less tokens", "be brief", or invokes /caveman.
+1. Whenever you interact, you should always talk like a caveman which means using the caveman skill `.agents/skills/caveman/SKILL.md`.
+2. Whenever we are adding a new feature use the skill `.agents/skills/grill-with-docs/SKILL.md`
+
+# Very important:
 
 1. Always after creating a migration you must push the migration to supabase. Always use mcp supabase-dev first until the user has verified it works great. If he says its OK, we then push to production.
 2. You should ask if user wants to commit and push after changes are done. If answer is yes then suggest a commit title and message.
@@ -51,26 +53,32 @@ Analyze/count/filter/compare/search/parse/transform data: **write code** via `co
 ## BLOCKED — do NOT attempt
 
 ### curl / wget — BLOCKED
+
 Shell `curl`/`wget` intercepted and blocked. Do NOT retry.
 Use: `context-mode_ctx_fetch_and_index(url, source)` or `context-mode_ctx_execute(language: "javascript", code: "const r = await fetch(...)")`
 
 ### Inline HTTP — BLOCKED
+
 `fetch('http`, `requests.get(`, `requests.post(`, `http.get(`, `http.request(` — intercepted. Do NOT retry.
 Use: `context-mode_ctx_execute(language, code)` — only stdout enters context
 
 ### Direct web fetching — BLOCKED
+
 Use: `context-mode_ctx_fetch_and_index(url, source)` then `context-mode_ctx_search(queries)`
 
 ## REDIRECTED — use sandbox
 
 ### Shell (>20 lines output)
+
 Shell ONLY for: `git`, `mkdir`, `rm`, `mv`, `cd`, `ls`, `npm install`, `pip install`.
 Otherwise: `context-mode_ctx_batch_execute(commands, queries)` or `context-mode_ctx_execute(language: "shell", code: "...")`
 
 ### File reading (for analysis)
+
 Reading to **edit** → reading correct. Reading to **analyze/explore/summarize** → `context-mode_ctx_execute_file(path, language, code)`.
 
 ### grep / search (large results)
+
 Use `context-mode_ctx_execute(language: "shell", code: "grep ...")` in sandbox.
 
 ## Tool selection
@@ -106,21 +114,21 @@ Skills, roles, and decisions persist for the entire session. Do not abandon them
 
 Session history is persistent and searchable. On resume, search BEFORE asking the user:
 
-| Need | Command |
-|------|---------|
-| What did we decide? | `context-mode_ctx_search(queries: ["decision"], source: "decision", sort: "timeline")` |
-| What constraints exist? | `context-mode_ctx_search(queries: ["constraint"], source: "constraint")` |
+| Need                    | Command                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| What did we decide?     | `context-mode_ctx_search(queries: ["decision"], source: "decision", sort: "timeline")` |
+| What constraints exist? | `context-mode_ctx_search(queries: ["constraint"], source: "constraint")`               |
 
 DO NOT ask "what were we working on?" — SEARCH FIRST.
 If search returns 0 results, proceed as a fresh session.
 
 ## ctx commands
 
-| Command | Action |
-|---------|--------|
-| `ctx stats` | Call `stats` MCP tool, display full output verbatim |
-| `ctx doctor` | Call `doctor` MCP tool, run returned shell command, display as checklist |
-| `ctx upgrade` | Call `upgrade` MCP tool, run returned shell command, display as checklist |
-| `ctx purge` | Call `purge` MCP tool with confirm: true. Warns before wiping knowledge base. |
+| Command       | Action                                                                        |
+| ------------- | ----------------------------------------------------------------------------- |
+| `ctx stats`   | Call `stats` MCP tool, display full output verbatim                           |
+| `ctx doctor`  | Call `doctor` MCP tool, run returned shell command, display as checklist      |
+| `ctx upgrade` | Call `upgrade` MCP tool, run returned shell command, display as checklist     |
+| `ctx purge`   | Call `purge` MCP tool with confirm: true. Warns before wiping knowledge base. |
 
 After /clear or /compact: knowledge base and session stats preserved. Use `ctx purge` to start fresh.

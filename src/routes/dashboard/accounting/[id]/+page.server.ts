@@ -1,20 +1,43 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { buildPaymentSummaries } from '$lib/server/accounting';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
+	const { user } = await locals.safeGetUser();
+
+	if (!user) {
+		throw redirect(303, '/login');
+	}
+
 	const { id } = params;
 
 	try {
-		const { data: payment, error: paymentError } = await locals.supabase
-			.from('accounting')
-			.select('*, profiles:created_by(name, email), invoices(invoice_number, client_name, total_amount), clients(client_type, full_name, alias, company_name, rnc)')
-			.eq('id', id)
-			.single();
+		const [paymentResult, allocationsResult] = await Promise.all([
+			locals.supabase
+				.from('accounting')
+				.select(
+					'*, profiles:created_by(name, email), clients(client_type, full_name, alias, company_name, rnc), invoices:invoice_id(invoice_number, client_name, total_amount, due_date, invoice_date, status, factura_tipo)'
+				)
+				.eq('id', id)
+				.single(),
+			locals.supabase
+				.from('accounting_allocations')
+				.select(
+					'id, payment_id, invoice_id, applied_amount, invoices(invoice_number, client_name, total_amount, due_date, invoice_date, status, factura_tipo)'
+				)
+				.eq('payment_id', id)
+		]);
 
-		if (paymentError || !payment) {
-			console.error('Error fetching payment details:', paymentError?.message);
+		if (paymentResult.error || !paymentResult.data) {
+			console.error('Error fetching payment details:', paymentResult.error?.message);
 			throw redirect(303, '/dashboard/accounting');
 		}
+
+		if (allocationsResult.error) {
+			console.error('Error fetching payment allocations:', allocationsResult.error.message);
+		}
+
+		const payment = buildPaymentSummaries([paymentResult.data], allocationsResult.data || [])[0];
 
 		return {
 			payment
@@ -39,10 +62,9 @@ export const actions: Actions = {
 		}
 
 		try {
-			const { error } = await locals.supabase
-				.from('accounting')
-				.delete()
-				.eq('id', id);
+			const { error } = await locals.supabase.rpc('delete_accounting_payment', {
+				p_payment_id: id
+			});
 
 			if (error) {
 				return fail(400, { error: error.message });

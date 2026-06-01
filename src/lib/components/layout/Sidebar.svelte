@@ -32,8 +32,11 @@
 	}
 
 	function isActive(path: string) {
-		if (path === '/dashboard') {
-			return activePath === '/dashboard' || activePath.startsWith('/dashboard/invoices/');
+		if (path === '/dashboard/proforma') {
+			return activePath === '/dashboard/proforma' || activePath.startsWith('/dashboard/proforma/');
+		}
+		if (path === '/dashboard/invoices') {
+			return activePath === '/dashboard/invoices' || activePath.startsWith('/dashboard/invoices/');
 		}
 		if (path === '/dashboard/accounting') {
 			return activePath === '/dashboard/accounting' || activePath.startsWith('/dashboard/accounting/');
@@ -43,11 +46,11 @@
 </script>
 
 <aside
-	class="no-print hidden flex-col justify-between border-r border-[#dfdfdf] bg-white md:flex md:w-64"
+	class="no-print sticky top-0 hidden h-screen flex-col justify-between border-r border-[#dfdfdf] bg-white md:flex md:w-64"
 >
 	<div class="flex flex-col">
 		<a
-			href={resolve('/dashboard')}
+			href={resolve('/dashboard/proforma')}
 			class="hidden items-center gap-2.5 border-b border-[#ededed] px-6 py-8 md:flex md:cursor-pointer"
 		>
 			<div class="rounded-md border border-[#24b47e] bg-[#3ecf8e] p-2 shadow-sm">
@@ -60,16 +63,28 @@
 
 		<nav class="space-y-1 p-4">
 			<a
-				href={resolve('/dashboard')}
+				href={resolve('/dashboard/invoices')}
 				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
-					'/dashboard'
+					'/dashboard/invoices'
+				)}"
+				onclick={onNavigate}
+			>
+				<FileText class="h-4.5 w-4.5" />
+				Facturas
+			</a>
+
+			<a
+				href={resolve('/dashboard/proforma')}
+				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+					'/dashboard/proforma'
 				)}"
 				onclick={onNavigate}
 			>
 				<LayoutDashboard class="h-4.5 w-4.5" />
-				Facturas
+				Proformas
 			</a>
 
+		{#if profile?.role === 'admin'}
 			<a
 				href={resolve('/dashboard/accounting')}
 				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
@@ -80,6 +95,7 @@
 				<Calculator class="h-4.5 w-4.5" />
 				Contabilidad
 			</a>
+		{/if}
 
 			<a
 				href={resolve('/dashboard/clients')}

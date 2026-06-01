@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 	const { profile } = await parent();
 
 	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 
 	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] = await Promise.all([
@@ -46,11 +46,11 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 
 	if (invoiceResult.error || !invoiceResult.data) {
 		console.error('Error fetching invoice for edit:', invoiceResult.error?.message);
-		throw redirect(303, '/dashboard/invoices');
+		throw redirect(303, '/dashboard/proforma');
 	}
 
-	if (invoiceResult.data.status !== 'paid') {
-		throw redirect(303, `/dashboard/proforma/${params.id}/edit`);
+	if (invoiceResult.data.status === 'paid') {
+		throw redirect(303, `/dashboard/invoices/${params.id}/edit`);
 	}
 
 	if (itemsResult.error) {
@@ -121,15 +121,14 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumber = String(formData.get('invoice_number') ?? '').trim();
-		const rawFacturaTipo = String(formData.get('factura_tipo') ?? 'ninguna').trim();
-		const facturaTipo = rawFacturaTipo === 'valor_fiscal' ? 'valor_fiscal' : 'ninguna';
-		const ncf = facturaTipo === 'valor_fiscal' ? String(formData.get('ncf') ?? '').trim() : '';
 		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();
 		const invoiceDate = String(formData.get('invoice_date') ?? '').trim();
 		const dueDate = String(formData.get('due_date') ?? '').trim();
 		const status = String(formData.get('status') ?? '').trim();
+		const facturaTipo = status === 'paid' ? 'ninguna' : 'proforma';
+		const ncf = null;
 		const notes = String(formData.get('notes') ?? '').trim();
 		const includeTax = formData.get('include_tax') === 'true';
 		const taxRate = includeTax ? 18 : 0;
@@ -146,10 +145,6 @@ export const actions: Actions = {
 			!isValidStatus(status)
 		) {
 			return fail(400, { error: 'Los datos principales de la factura son obligatorios.' });
-		}
-
-		if (facturaTipo === 'valor_fiscal' && !ncf) {
-			return fail(400, { error: 'El NCF es obligatorio para facturas de valor fiscal.' });
 		}
 
 		let items: Array<{ product_id: string; color: string; model: string | null; quantity: number }> = [];
@@ -289,7 +284,7 @@ export const actions: Actions = {
 			.update({
 				invoice_number: invoiceNumber,
 				factura_tipo: facturaTipo,
-				ncf: facturaTipo === 'valor_fiscal' ? ncf : null,
+				ncf,
 				client_id: clientId,
 				client_name: clientName,
 				client_email: clientEmail,
@@ -338,6 +333,6 @@ export const actions: Actions = {
 			return fail(400, { error: insertItemsError.message });
 		}
 
-		throw redirect(303, `/dashboard/invoices/${params.id}`);
+		throw redirect(303, status === 'paid' ? `/dashboard/invoices/${params.id}` : `/dashboard/proforma/${params.id}`);
 	}
 };
