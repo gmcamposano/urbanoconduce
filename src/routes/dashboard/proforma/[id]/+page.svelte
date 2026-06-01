@@ -13,7 +13,6 @@
 		Trash2,
 		AlertTriangle,
 		FileText,
-		Mail,
 		Check
 	} from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
