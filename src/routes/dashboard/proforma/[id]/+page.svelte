@@ -64,6 +64,8 @@
 	);
 
 	const taxAmount = $derived(subtotal * (Number(invoice?.tax_rate || 0) / 100));
+	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
+	const showDiscount = $derived(discountAmount > 0);
 
 	function formatCurrency(val: number) {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -88,6 +90,8 @@
 					useCORS: true,
 					logging: false,
 					onclone: (clonedDoc: Document) => {
+						clonedDoc.documentElement.style.fontSize = '85%';
+						clonedDoc.body.style.fontSize = '85%';
 						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
 							const printableCard = card as HTMLElement;
 							printableCard.style.border = 'none';
@@ -102,11 +106,13 @@
 								statusLabel.style.lineHeight = '1';
 								statusLabel.style.transform = 'translateY(-4px)';
 							});
-						clonedDoc.querySelectorAll<HTMLElement>('.print-badge span').forEach((badge: HTMLElement) => {
-							const statusBadge = badge as HTMLElement;
-							statusBadge.style.border = 'none';
-							statusBadge.style.boxShadow = 'none';
-						});
+						clonedDoc
+							.querySelectorAll<HTMLElement>('.print-badge span')
+							.forEach((badge: HTMLElement) => {
+								const statusBadge = badge as HTMLElement;
+								statusBadge.style.border = 'none';
+								statusBadge.style.boxShadow = 'none';
+							});
 					}
 				},
 				jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
@@ -114,7 +120,7 @@
 			await html2pdf().set(opt).from(element).save();
 		} catch (err) {
 			console.error('PDF generation failed:', err);
-			alert('PDF generation failed. Please use your browser\'s Print > Save as PDF instead.');
+			alert("PDF generation failed. Please use your browser's Print > Save as PDF instead.");
 		}
 	}
 </script>
@@ -165,7 +171,7 @@
 					<form
 						action="?/updateStatus"
 						method="POST"
-						class="flex flex-wrap items-center gap-2 pb-3 sm:pb-0 sm:pr-4 sm:border-r sm:border-[#ededed]"
+						class="flex flex-wrap items-center gap-2 pb-3 sm:border-r sm:border-[#ededed] sm:pr-4 sm:pb-0"
 						use:enhance={() => {
 							statusUpdating = true;
 							return async ({ update }) => {
@@ -206,7 +212,12 @@
 
 				<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:pl-4">
 					<!-- Print Button -->
-					<Button variant="outline" size="sm" class="flex items-center gap-1.5" onclick={handlePrint}>
+					<Button
+						variant="outline"
+						size="sm"
+						class="flex items-center gap-1.5"
+						onclick={handlePrint}
+					>
 						<Printer class="h-4 w-4" />
 						<span class="hidden sm:inline">Imprimir</span>
 						<span class="sm:hidden">Imprimir</span>
@@ -292,10 +303,14 @@
 							</p>
 						</div>
 
-<!-- Bill statement IDs -->
+						<!-- Bill statement IDs -->
 						<div class="space-y-1.5 text-left sm:text-right">
 							<h2 class="text-3xl font-medium tracking-tight text-[#171717] uppercase">
-								{invoice.factura_tipo === 'proforma' ? 'PROFORMA' : invoice.factura_tipo === 'valor_fiscal' ? 'FACTURA VALOR FISCAL' : 'FACTURA COMERCIAL'}
+								{invoice.factura_tipo === 'proforma'
+									? 'PROFORMA'
+									: invoice.factura_tipo === 'valor_fiscal'
+										? 'FACTURA VALOR FISCAL'
+										: 'FACTURA COMERCIAL'}
 							</h2>
 							{#if invoice.factura_tipo === 'valor_fiscal' && invoice.ncf}
 								<p class="font-mono text-sm font-medium text-[#24b47e]">NCF: {invoice.ncf}</p>
@@ -356,41 +371,41 @@
 
 						<!-- Payment Status Indicator -->
 						<div class="flex flex-col items-end justify-center space-y-2 sm:text-right">
-							<h3 class="text-xs font-medium tracking-wider text-[#707070] uppercase leading-4">
+							<h3 class="text-xs leading-4 font-medium tracking-wider text-[#707070] uppercase">
 								Estado del pago:
 							</h3>
-					<div class="print-badge">
-						{#if invoice.status === 'paid'}
-							<span
-								class="inline-flex h-7 items-center justify-center gap-1.5 rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
-								style="background-color: #dcfce7; border: 1px solid #86efac; color: #171717;"
-							>
-								<Check class="h-3.5 w-3.5" />
-								<span class="print-badge-label">Pagada completamente</span>
-							</span>
-						{:else if invoice.status === 'pending'}
-							<span
-								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
-								style="background-color: #fef9c3; border: 1px solid #fde047; color: #171717;"
-							>
-								<span class="print-badge-label">Pendiente</span>
-							</span>
-						{:else if invoice.status === 'overdue'}
-							<span
-								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
-								style="background-color: #fce7f3; border: 1px solid #f9a8d4; color: #be185d;"
-							>
-								<span class="print-badge-label">Vencida</span>
-							</span>
-						{:else}
-							<span
-								class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
-								style="background-color: #fafafa; border: 1px solid #e5e5e5; color: #171717;"
-							>
-								<span class="print-badge-label">Borrador</span>
-							</span>
-						{/if}
-					</div>
+							<div class="print-badge">
+								{#if invoice.status === 'paid'}
+									<span
+										class="inline-flex h-7 items-center justify-center gap-1.5 rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+										style="background-color: #dcfce7; border: 1px solid #86efac; color: #171717;"
+									>
+										<Check class="h-3.5 w-3.5" />
+										<span class="print-badge-label">Pagada completamente</span>
+									</span>
+								{:else if invoice.status === 'pending'}
+									<span
+										class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+										style="background-color: #fef9c3; border: 1px solid #fde047; color: #171717;"
+									>
+										<span class="print-badge-label">Pendiente</span>
+									</span>
+								{:else if invoice.status === 'overdue'}
+									<span
+										class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+										style="background-color: #fce7f3; border: 1px solid #f9a8d4; color: #be185d;"
+									>
+										<span class="print-badge-label">Vencida</span>
+									</span>
+								{:else}
+									<span
+										class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+										style="background-color: #fafafa; border: 1px solid #e5e5e5; color: #171717;"
+									>
+										<span class="print-badge-label">Borrador</span>
+									</span>
+								{/if}
+							</div>
 						</div>
 					</div>
 
@@ -443,23 +458,25 @@
 
 					<!-- Summary block -->
 					<div class="flex justify-end pt-6">
-						<div class="w-full space-y-1 text-sm text-[#707070] sm:w-80">
-							<div class="print-border flex justify-between border-b border-[#ededed] pb-2">
+						<div class="w-full space-y-0.5 text-sm text-[#707070] sm:w-80">
+							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
 								<span class="font-medium">Subtotal</span>
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 							</div>
-							<div class="print-border flex justify-between border-b border-[#ededed] pb-2">
+							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
 								<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
 								>
 							</div>
-							<div class="print-border flex justify-between border-b border-[#ededed] pb-2">
-								<span class="font-medium">Descuento</span>
-								<span class="font-mono font-medium text-[#171717]"
-									>-{formatCurrency(Number(invoice.discount_amount))}</span
-								>
-							</div>
-							<div class="flex justify-between pt-2 text-base font-medium text-[#24b47e]">
+							{#if showDiscount}
+								<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
+									<span class="font-medium">Descuento</span>
+									<span class="font-mono font-medium text-[#171717]"
+										>-{formatCurrency(discountAmount)}</span
+									>
+								</div>
+							{/if}
+							<div class="flex justify-between pt-1.5 text-base font-medium text-[#24b47e]">
 								<span class="tracking-wide uppercase">Total a pagar</span>
 								<span class="font-mono text-lg text-[#171717]"
 									>{formatCurrency(Number(invoice.total_amount))}</span
@@ -568,6 +585,10 @@
 
 <style>
 	@media print {
+		:global(html) {
+			font-size: 75%;
+		}
+
 		.no-print {
 			display: none !important;
 		}
@@ -576,7 +597,7 @@
 			border: none !important;
 		}
 		.print-badge span {
-			 print-color-adjust: exact;
+			print-color-adjust: exact;
 			-webkit-print-color-adjust: exact;
 		}
 	}
