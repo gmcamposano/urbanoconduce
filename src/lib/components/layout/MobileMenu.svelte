@@ -11,7 +11,8 @@
 		Package,
 		Palette,
 		Boxes,
-		X
+		X,
+		Calculator
 	} from '@lucide/svelte';
 
 	let {
@@ -27,6 +28,9 @@
 	function isActive(path: string) {
 		if (path === '/dashboard') {
 			return activePath === '/dashboard' || activePath.startsWith('/dashboard/invoices/');
+		}
+		if (path === '/dashboard/accounting') {
+			return activePath === '/dashboard/accounting' || activePath.startsWith('/dashboard/accounting/');
 		}
 		return activePath === path;
 	}
@@ -76,6 +80,17 @@
 				>
 					<LayoutDashboard class="h-4.5 w-4.5" />
 					Facturas
+				</a>
+
+				<a
+					href={resolve('/dashboard/accounting')}
+					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+						'/dashboard/accounting'
+					)}"
+					onclick={onClose}
+				>
+					<Calculator class="h-4.5 w-4.5" />
+					Contabilidad
 				</a>
 
 				<a

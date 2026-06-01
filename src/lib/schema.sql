@@ -87,6 +87,19 @@ create table if not exists public.invoice_items (
 	created_at timestamptz not null default timezone('utc'::text, now())
 );
 
+create table if not exists public.accounting (
+	id uuid primary key default gen_random_uuid(),
+	invoice_id uuid references public.invoices(id) on delete set null,
+	client_id uuid not null references public.clients(id) on delete restrict,
+	amount numeric not null check (amount > 0),
+	payment_date date not null default current_date,
+	payment_method text not null check (payment_method in ('cash', 'transfer', 'check', 'card', 'other')),
+	reference_number text,
+	notes text,
+	created_by uuid references public.profiles(id) on delete set null,
+	created_at timestamptz not null default timezone('utc'::text, now())
+);
+
 alter table public.profiles enable row level security;
 alter table public.invoices enable row level security;
 alter table public.products enable row level security;
