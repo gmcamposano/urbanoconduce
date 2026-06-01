@@ -66,6 +66,26 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 	}
 
+	function inlineLoadedStyles(clonedDoc: Document) {
+		const style = clonedDoc.createElement('style');
+		const cssText = Array.from(document.styleSheets)
+			.map((sheet) => {
+				try {
+					return Array.from(sheet.cssRules)
+						.map((rule) => rule.cssText)
+						.join('\n');
+				} catch {
+					return '';
+				}
+			})
+			.filter(Boolean)
+			.join('\n');
+
+		style.textContent = cssText;
+		clonedDoc.head.appendChild(style);
+		clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((link) => link.remove());
+	}
+
 	function handlePrint() {
 		window.print();
 	}
@@ -85,8 +105,9 @@
 					useCORS: true,
 					logging: false,
 					onclone: (clonedDoc: Document) => {
-						clonedDoc.documentElement.style.fontSize = '85%';
-						clonedDoc.body.style.fontSize = '85%';
+						inlineLoadedStyles(clonedDoc);
+						clonedDoc.documentElement.style.fontSize = '90%';
+						clonedDoc.body.style.fontSize = '90%';
 						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
 							const printableCard = card as HTMLElement;
 							printableCard.style.border = 'none';
@@ -366,26 +387,26 @@
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
-										<td class="py-4">
+										<td class="py-2.5">
 											<p class="font-medium text-[#171717] capitalize">{item.description}</p>
 										</td>
-										<td class="py-4 text-[#707070] capitalize">
+										<td class="py-2.5 text-[#707070] capitalize">
 											{productModel}
 										</td>
-										<td class="py-4">
+										<td class="py-2.5">
 											{#if item.color}
 												<Badge variant="outline" class="capitalize">{item.color}</Badge>
 											{:else}
 												<span class="text-[#9a9a9a]">-</span>
 											{/if}
 										</td>
-										<td class="py-4 text-center font-mono text-[#707070]"
+										<td class="py-2.5 text-center font-mono text-[#707070]"
 											>{Number(item.quantity)}</td
 										>
-										<td class="py-4 text-right font-mono text-[#707070]"
+										<td class="py-2.5 text-right font-mono text-[#707070]"
 											>RD$ {formatCurrency(Number(item.unit_price))}</td
 										>
-										<td class="py-4 text-right font-mono font-medium text-[#171717]"
+										<td class="py-2.5 text-right font-mono font-medium text-[#171717]"
 											>{formatCurrency(Number(item.amount))}</td
 										>
 									</tr>
