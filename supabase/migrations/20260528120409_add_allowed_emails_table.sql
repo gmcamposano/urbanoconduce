@@ -52,10 +52,9 @@ BEGIN
 END;
 $$;
 
--- Restrict direct RPC access: only the postgres owner can execute
--- The SvelteKit server calls this via authenticated supabase client
--- with SECURITY DEFINER running as postgres
-REVOKE ALL PRIVILEGES ON FUNCTION public.is_email_allowed(text) FROM PUBLIC;
-REVOKE ALL PRIVILEGES ON FUNCTION public.is_email_allowed(text) FROM anon;
-REVOKE ALL PRIVILEGES ON FUNCTION public.is_email_allowed(text) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.is_email_allowed(text) TO postgres;
+-- SECURITY DEFINER: function body runs as postgres (bypasses RLS, uses postgres search_path)
+-- Callers need execute permission. Grant to both:
+--   - anon: for registration checks (user not yet authenticated)
+--   - authenticated: for post-login checks (e.g. admin panel)
+GRANT EXECUTE ON FUNCTION public.is_email_allowed(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.is_email_allowed(text) TO authenticated;

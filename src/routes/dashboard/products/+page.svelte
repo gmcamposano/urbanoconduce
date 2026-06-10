@@ -8,7 +8,7 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { Copy, Edit3, Package, Tags, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
+	import { Copy, Edit3, Package, Tags, Trash2, ArrowUp, ArrowDown, Search } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -18,6 +18,7 @@
 	const models = $derived(data.models || []);
 	const clients = $derived(data.clients || []);
 	let selectedClientFilter = $state('');
+	let searchQuery = $state('');
 
 	let sortBy = $state<string>('title');
 	let sortOrder = $state<'asc' | 'desc'>('asc');
@@ -51,6 +52,8 @@
 				}
 				case 'price':
 					return (Number(a.price_without_taxes) - Number(b.price_without_taxes)) * dir;
+				case 'created_at':
+					return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
 				default:
 					return 0;
 			}
@@ -58,9 +61,25 @@
 		return sorted;
 	});
 
-	const filteredProducts = $derived(
-		selectedClientFilter ? products.filter((p) => p.client_id === selectedClientFilter) : products
-	);
+	const filteredProducts = $derived.by(() => {
+		let result = selectedClientFilter
+			? products.filter((p) => p.client_id === selectedClientFilter)
+			: products;
+
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase().trim();
+			result = result.filter((p) => {
+				const modelName = models.find((m) => m.id === p.model)?.model?.toLowerCase() || '';
+				return (
+					p.title.toLowerCase().includes(query) ||
+					modelName.includes(query) ||
+					(p.description && p.description.toLowerCase().includes(query))
+				);
+			});
+		}
+
+		return result;
+	});
 
 	function getClientName(clientId: string | null): string {
 		if (!clientId) return '—';
@@ -516,16 +535,43 @@
 						placeholder="Todos los clientes"
 					/>
 				</div>
+				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
+					<div class="flex items-center gap-3">
+						<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
+						<input
+							type="text"
+							bind:value={searchQuery}
+							placeholder="Buscar por modelo, producto o descripción..."
+							class="flex-1 bg-transparent text-sm text-[#171717] placeholder:text-[#707070] outline-none"
+						/>
+					</div>
+				</div>
 				<div class="w-full overflow-x-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
 							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
+								<th class="px-6 py-5 font-bold">
+									<button
+										type="button"
+										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
+										onclick={() => toggleSort('created_at')}
+									>
+										Fecha
+										{#if sortBy === 'created_at'}
+											{#if sortOrder === 'asc'}
+												<ArrowUp class="h-3 w-3" />
+											{:else}
+												<ArrowDown class="h-3 w-3" />
+											{/if}
+										{/if}
+									</button>
+								</th>
 								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
 										onclick={() => toggleSort('client')}
 									>
 										Cliente
@@ -541,7 +587,7 @@
 								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
 										onclick={() => toggleSort('title')}
 									>
 										Producto
@@ -557,7 +603,7 @@
 								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
 										onclick={() => toggleSort('model')}
 									>
 										Modelo
@@ -570,11 +616,11 @@
 										{/if}
 									</button>
 								</th>
-								<th class="px-6 py-4 font-bold">Descripción</th>
+								<th class="px-6 py-4 font-bold uppercase">Descripción</th>
 								<th class="px-6 py-4 text-right font-bold">
 									<button
 										type="button"
-										class="ml-auto flex items-center gap-1 hover:text-[#3ecf8e] transition-colors"
+										class="ml-auto flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
 										onclick={() => toggleSort('price')}
 									>
 										Precio
@@ -587,9 +633,9 @@
 										{/if}
 									</button>
 								</th>
-								<th class="px-6 py-4 text-right font-bold">Precio con impuesto</th>
+								<th class="px-6 py-4 text-right font-bold uppercase">Precio con impuesto</th>
 								{#if canManage}
-									<th class="px-6 py-4 text-right font-bold">Acciones</th>
+									<th class="px-6 py-4 text-right font-bold uppercase">Acciones</th>
 								{/if}
 							</tr>
 						</thead>
@@ -597,7 +643,7 @@
 							{#if sortedProducts.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 7 : 6}
+										colspan={canManage ? 8 : 7}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>{selectedClientFilter
 											? 'Este cliente no tiene productos.'
@@ -607,6 +653,13 @@
 							{:else}
 								{#each sortedProducts as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
+										<td class="px-6 py-5 text-right font-mono text-xs text-[#707070] whitespace-nowrap"
+											>{new Date(product.created_at).toLocaleDateString('es-DO', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric'
+											})}</td
+										>
 										<td class="px-6 py-4 text-xs text-[#707070]">
 											{getClientName(product.client_id)}
 										</td>
