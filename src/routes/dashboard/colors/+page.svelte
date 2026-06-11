@@ -6,7 +6,7 @@
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import { Droplets, Edit3, Palette, Trash2 } from '@lucide/svelte';
+	import { AlertTriangle, Droplets, Edit3, Palette, Trash2 } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -16,6 +16,8 @@
 
 	let loading = $state(false);
 	let deleteLoadingId = $state<string | null>(null);
+	let colorToDelete = $state<{ id: string; color: string } | null>(null);
+	let deleteConfirmText = $state('');
 	let editingColor = $state<{ id: string; color: string } | null>(null);
 	let color = $state('');
 
@@ -179,8 +181,10 @@
 														class="contents"
 														use:enhance={() => {
 															deleteLoadingId = item.id;
-															return async ({ update }) => {
+															return async ({ result, update }) => {
 																deleteLoadingId = null;
+																colorToDelete = null;
+																deleteConfirmText = '';
 																await update();
 															};
 														}}
@@ -193,10 +197,9 @@
 															class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
 															title="Borrar color"
 															disabled={deleteLoadingId === item.id}
-															onclick={(event) => {
-																if (!confirm(`¿Eliminar el color ${item.color}?`)) {
-																	event.preventDefault();
-																}
+															onclick={() => {
+																colorToDelete = item;
+																deleteConfirmText = '';
 															}}
 														>
 															<Trash2 class="h-4 w-4" />
@@ -214,4 +217,79 @@
 			</CardContent>
 		</Card>
 	</div>
+
+<!-- Delete Confirmation Modal -->
+{#if colorToDelete}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm">
+		<Card class="w-full max-w-sm">
+			<CardContent class="space-y-4 p-6">
+				<div class="flex items-center gap-2.5 text-[#e2005a]">
+					<AlertTriangle class="h-6 w-6" />
+					<h3 class="text-lg font-medium">Confirmar eliminación</h3>
+				</div>
+
+				<p class="text-sm leading-relaxed text-[#707070]">
+					¿Seguro que deseas eliminar el color <strong class="text-[#171717] capitalize"
+						>{colorToDelete.color}</strong
+					>? Esta acción es permanente y no se puede deshacer.
+				</p>
+
+				<div class="space-y-2">
+					<label for="confirmDelete" class="text-xs font-medium text-[#707070]">
+						Escribe <strong class="text-[#171717]">{colorToDelete.color}</strong> para confirmar
+					</label>
+					<input
+						id="confirmDelete"
+						type="text"
+						bind:value={deleteConfirmText}
+						placeholder={colorToDelete.color}
+						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#e2005a] focus-visible:ring-1 focus-visible:ring-[#e2005a]/30 focus-visible:outline-none"
+					/>
+				</div>
+
+				<div class="flex justify-end gap-3 pt-2">
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={deleteLoadingId !== null}
+						onclick={() => {
+							colorToDelete = null;
+							deleteConfirmText = '';
+						}}
+					>
+						Cancelar
+					</Button>
+
+					<form
+						action="?/deleteColor"
+						method="POST"
+						use:enhance={() => {
+							deleteLoadingId = colorToDelete?.id ?? null;
+							return async ({ result, update }) => {
+								deleteLoadingId = null;
+								colorToDelete = null;
+								deleteConfirmText = '';
+								await update();
+							};
+						}}
+					>
+						<input type="hidden" name="id" value={colorToDelete?.id} />
+						<Button
+							type="submit"
+							variant="destructive"
+							size="sm"
+							disabled={deleteLoadingId !== null || deleteConfirmText !== colorToDelete?.color}
+						>
+							{#if deleteLoadingId !== null}
+								Eliminando...
+							{:else}
+								Eliminar
+							{/if}
+						</Button>
+					</form>
+				</div>
+			</CardContent>
+		</Card>
+	</div>
+{/if}
 </div>

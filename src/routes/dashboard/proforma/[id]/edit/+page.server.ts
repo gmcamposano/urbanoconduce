@@ -10,7 +10,7 @@ function isValidStatus(status: string): status is (typeof VALID_STATUSES)[number
 export const load: PageServerLoad = async ({ parent, params, locals }) => {
 	const { profile } = await parent();
 
-	if (profile?.role !== 'admin') {
+	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
 		throw redirect(303, '/dashboard/proforma');
 	}
 
@@ -115,8 +115,8 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		if (locals.role !== 'admin') {
-			return fail(403, { error: 'Solo un administrador puede editar facturas.' });
+		if (locals.role !== 'admin' && locals.role !== 'editor') {
+			return fail(403, { error: 'No tienes permisos para editar proformas.' });
 		}
 
 		const formData = await request.formData();

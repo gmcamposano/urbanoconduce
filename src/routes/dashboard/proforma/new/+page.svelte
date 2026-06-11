@@ -485,6 +485,21 @@
 									</td>
 								</tr>
 							{/each}
+							<tr class="hover:bg-transparent">
+								<td colspan="7" class="px-3 py-2">
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										class="flex w-full items-center gap-1.5 text-xs text-[#707070] hover:text-[#3ecf8e]"
+										onclick={addItem}
+										disabled={loading || !canAddItem}
+									>
+										<Plus class="h-3.5 w-3.5" />
+										Añadir fila
+									</Button>
+								</td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
