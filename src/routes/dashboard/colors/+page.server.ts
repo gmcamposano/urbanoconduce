@@ -55,6 +55,16 @@ export const actions: Actions = {
 		}
 
 		try {
+			const { data: existing } = await locals.supabase
+				.from('product_colors')
+				.select('id')
+				.ilike('color', color)
+				.single();
+
+			if (existing) {
+				return fail(400, { error: 'Este color ya existe.' });
+			}
+
 			const { error } = await locals.supabase.from('product_colors').insert({
 				color,
 				created_by: user.id
@@ -92,6 +102,17 @@ export const actions: Actions = {
 		}
 
 		try {
+			const { data: existing } = await locals.supabase
+				.from('product_colors')
+				.select('id')
+				.ilike('color', color)
+				.neq('id', colorId)
+				.single();
+
+			if (existing) {
+				return fail(400, { error: 'Este color ya existe.' });
+			}
+
 			const { error } = await locals.supabase
 				.from('product_colors')
 				.update({ color })
