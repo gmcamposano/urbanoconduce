@@ -5,6 +5,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import { SvelteDate, SvelteMap } from 'svelte/reactivity';
 	import {
 		Search,
 		Plus,
@@ -47,20 +48,18 @@
 	const invoices = $derived(data.invoices || []);
 	const facturas = $derived(data.facturas || []);
 
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const todayTime = today.getTime();
+	const todayTime = new SvelteDate().setHours(0, 0, 0, 0);
 
 	function isExpired(dueDate: string) {
 		if (!dueDate) return false;
-		const due = new Date(dueDate);
+		const due = new SvelteDate(dueDate);
 		return due.getTime() < todayTime;
 	}
 
 	function totalByClient<T extends { client_id: string; total_amount: number | string }>(
 		rows: T[]
-	): Map<string, number> {
-		const map = new Map<string, number>();
+	): SvelteMap<string, number> {
+		const map = new SvelteMap<string, number>();
 		for (const row of rows) {
 			map.set(row.client_id, (map.get(row.client_id) ?? 0) + Number(row.total_amount));
 		}
@@ -87,12 +86,8 @@
 	});
 
 	const totalOverdue = $derived.by(() => {
-		const expiredProformaByClient = totalByClient(
-			invoices.filter((p) => isExpired(p.due_date))
-		);
-		const expiredFacturaByClient = totalByClient(
-			facturas.filter((f) => isExpired(f.due_date))
-		);
+		const expiredProformaByClient = totalByClient(invoices.filter((p) => isExpired(p.due_date)));
+		const expiredFacturaByClient = totalByClient(facturas.filter((f) => isExpired(f.due_date)));
 		let total = 0;
 		for (const [clientId, proformaTotal] of expiredProformaByClient) {
 			const facturaTotal = expiredFacturaByClient.get(clientId) ?? 0;
@@ -174,64 +169,82 @@
 	<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 		<!-- Card 1 -->
 		<Card class="bg-white">
-			<CardContent class="flex items-center justify-between p-6">
-				<div class="space-y-1">
+			<CardContent class="relative p-6 pt-14">
+				<div
+					class="absolute top-4 left-4 shrink-0 rounded-md border border-[#ededed] bg-[#fafafa] p-2"
+				>
+					<TrendingUp class="h-3.5 w-3.5 text-[#707070] sm:h-4 sm:w-4" />
+				</div>
+				<div class="min-w-0 space-y-1">
 					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">
 						Total facturado
 					</p>
-					<p class="font-mono text-2xl font-medium text-[#171717]">
+					<p
+						class="font-mono text-lg leading-none font-medium whitespace-nowrap text-[#171717] tabular-nums sm:text-xl lg:text-2xl"
+					>
 						{formatCurrency(totalInvoiced)}
 					</p>
-				</div>
-				<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-3">
-					<TrendingUp class="h-6 w-6 text-[#707070]" />
 				</div>
 			</CardContent>
 		</Card>
 
 		<!-- Card 2 -->
 		<Card class="bg-white">
-			<CardContent class="flex items-center justify-between p-6">
-				<div class="space-y-1">
+			<CardContent class="relative p-6 pt-14">
+				<div
+					class="absolute top-4 left-4 shrink-0 rounded-md border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-2"
+				>
+					<CheckCircle class="h-3.5 w-3.5 text-[#24b47e] sm:h-4 sm:w-4" />
+				</div>
+				<div class="min-w-0 space-y-1">
 					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">
 						Monto pagado
 					</p>
-					<p class="font-mono text-2xl font-medium text-[#24b47e]">{formatCurrency(totalPaid)}</p>
-				</div>
-				<div class="rounded-md border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-3">
-					<CheckCircle class="h-6 w-6 text-[#24b47e]" />
+					<p
+						class="font-mono text-lg leading-none font-medium whitespace-nowrap text-[#24b47e] tabular-nums sm:text-xl lg:text-2xl"
+					>
+						{formatCurrency(totalPaid)}
+					</p>
 				</div>
 			</CardContent>
 		</Card>
 
 		<!-- Card 3 -->
 		<Card class="bg-white">
-			<CardContent class="flex items-center justify-between p-6">
-				<div class="space-y-1">
+			<CardContent class="relative p-6 pt-14">
+				<div
+					class="absolute top-4 left-4 shrink-0 rounded-md border border-[#ededed] bg-[#fafafa] p-2"
+				>
+					<Clock class="h-3.5 w-3.5 text-[#707070] sm:h-4 sm:w-4" />
+				</div>
+				<div class="min-w-0 space-y-1">
 					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">Pendiente</p>
-					<p class="font-mono text-2xl font-medium text-[#171717]">
+					<p
+						class="font-mono text-lg leading-none font-medium whitespace-nowrap text-[#171717] tabular-nums sm:text-xl lg:text-2xl"
+					>
 						{formatCurrency(totalPending)}
 					</p>
-				</div>
-				<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-3">
-					<Clock class="h-6 w-6 text-[#707070]" />
 				</div>
 			</CardContent>
 		</Card>
 
 		<!-- Card 4 -->
 		<Card class="bg-white">
-			<CardContent class="flex items-center justify-between p-6">
-				<div class="space-y-1">
+			<CardContent class="relative p-6 pt-14">
+				<div
+					class="absolute top-4 left-4 shrink-0 rounded-md border border-[#e2005a]/20 bg-[#e2005a]/10 p-2"
+				>
+					<AlertTriangle class="h-3.5 w-3.5 text-[#e2005a] sm:h-4 sm:w-4" />
+				</div>
+				<div class="min-w-0 space-y-1">
 					<p class="text-[10px] font-medium tracking-wider text-[#707070] uppercase">
 						Monto vencido
 					</p>
-					<p class="font-mono text-2xl font-medium text-[#e2005a]">
+					<p
+						class="font-mono text-lg leading-none font-medium whitespace-nowrap text-[#e2005a] tabular-nums sm:text-xl lg:text-2xl"
+					>
 						{formatCurrency(totalOverdue)}
 					</p>
-				</div>
-				<div class="rounded-md border border-[#e2005a]/20 bg-[#e2005a]/10 p-3">
-					<AlertTriangle class="h-6 w-6 text-[#e2005a]" />
 				</div>
 			</CardContent>
 		</Card>
@@ -297,7 +310,7 @@
 					{#if filteredInvoices.length === 0}
 						<tr>
 							<td colspan="7" class="px-6 py-12 text-center text-xs text-[#707070]">
-							No se encontraron proformas. Agrega una para comenzar.
+								No se encontraron proformas. Agrega una para comenzar.
 							</td>
 						</tr>
 					{:else}
@@ -443,7 +456,7 @@
 						method="POST"
 						use:enhance={() => {
 							deleteLoading = true;
-							return async ({ result, update }) => {
+							return async ({ update }) => {
 								deleteLoading = false;
 								invoiceToDelete = null;
 								confirmText = '';

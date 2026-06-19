@@ -60,12 +60,12 @@
 			: toTitleCase(client.full_name || 'Cliente sin nombre');
 	}
 
-	function getAvailableColors(itemId: string): typeof colors {
+	function getAvailableColors(itemId: string): (typeof colors)[number][] {
 		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
 	}
 
-	function getAvailableProducts(itemId: string) {
+	function getAvailableProducts(itemId: string): ProductOption[] {
 		const usedProductIds = items
 			.filter((i) => i.id !== itemId && i.product_id)
 			.map((i) => i.product_id);
@@ -73,12 +73,10 @@
 	}
 
 	// Set up date defaults
-	const today = new SvelteDate();
-	const formattedToday = today.toISOString().split('T')[0];
-
-	const thirtyDaysLater = new SvelteDate(today);
-	thirtyDaysLater.setDate(today.getDate() + 30);
-	const formattedDue = thirtyDaysLater.toISOString().split('T')[0];
+	const formattedToday = new SvelteDate().toISOString().split('T')[0];
+	const formattedDue = new SvelteDate(Date.now() + 30 * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split('T')[0];
 
 	// Form field reactive states
 	let invoiceNumber = $state('');
@@ -113,7 +111,8 @@
 	}
 
 	let notes = $state('');
-	let includeTax = $state(false);
+	type TaxMode = 'none' | 'included' | 'added';
+	let taxMode = $state<TaxMode>('none');
 	let discountAmount = $state<number>(0);
 
 	// Line items state
@@ -172,18 +171,26 @@
 		}
 	}
 
-	// Subtotal calculations (derived)
-	const subtotal = $derived(
+	// Totals calculations (derived)
+	const lineTotal = $derived(
 		items.reduce(
 			(sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
 			0
 		)
 	);
 
-	const taxRate = $derived(includeTax ? 18 : 0);
-	const taxAmount = $derived(subtotal * (taxRate / 100));
-
-	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0)));
+	const taxRate = 18;
+	const subtotal = $derived.by(() => (taxMode === 'included' ? lineTotal / 1.18 : lineTotal));
+	const taxAmount = $derived.by(() => {
+		if (taxMode === 'none') return 0;
+		if (taxMode === 'included') return lineTotal - subtotal;
+		return subtotal * (taxRate / 100);
+	});
+	const totalAmount = $derived.by(() => {
+		const discount = Number(discountAmount) || 0;
+		if (taxMode === 'none') return Math.max(0, subtotal - discount);
+		return Math.max(0, subtotal + taxAmount - discount);
+	});
 
 	// Helpers to add or remove line items
 
@@ -193,7 +200,8 @@
 	) {
 		item.product_id = productId;
 		const product = clientProducts.find((entry) => entry.id === productId);
-		item.unit_price = Number(product?.price_without_taxes || 0);
+		const basePrice = Number(product?.price_without_taxes || 0);
+		item.unit_price = basePrice;
 		item.model = product?.model ?? null;
 	}
 
@@ -384,25 +392,27 @@
 								<th class="w-1/4 px-3 py-2.5 font-semibold">Modelo</th>
 								<th class="w-1/5 px-3 py-2.5 font-semibold">Color</th>
 								<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
-								<th class="w-32 px-3 py-2.5 text-right font-semibold">Precio unit.</th>
+							<th class="w-32 px-3 py-2.5 text-right font-semibold">
+								Precio unit.
+							</th>
 								<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
 								<th class="w-8 px-3 py-2.5"></th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
+								{@const availableProducts = getAvailableProducts(item.id) ?? []}
+								{@const availableColors = getAvailableColors(item.id) ?? []}
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-3 py-2">
 										<SearchableSelect
-											options={getAvailableProducts(item.id).map((p) => ({
+											options={availableProducts.map((p: ProductOption) => ({
 												value: p.id,
 												label: getProductLabel(p)
 											}))}
 											bind:value={item.product_id}
 											placeholder={selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
-											disabled={loading ||
-												!selectedClientId ||
-												getAvailableProducts(item.id).length === 0}
+											disabled={loading || !selectedClientId || availableProducts.length === 0}
 											onchange={(value) => applyProductToItem(item, value)}
 										/>
 									</td>
@@ -419,14 +429,14 @@
 											label=""
 											name="color"
 											bind:value={item.color}
-											disabled={loading || getAvailableColors(item.id).length === 0}
+											disabled={loading || availableColors.length === 0}
 											class="text-xs capitalize"
 										>
 											<option value="">Color</option>
-											{#if getAvailableColors(item.id).length === 0}
+											{#if availableColors.length === 0}
 												<option value="" disabled>No hay colores</option>
 											{/if}
-											{#each getAvailableColors(item.id) as color (color.id)}
+											{#each availableColors as color (color.id)}
 												<option value={color.color}>{color.color}</option>
 											{/each}
 										</Select>
@@ -454,7 +464,6 @@
 												min="0"
 												step="any"
 												bind:value={item.unit_price}
-												readonly
 												disabled={loading}
 												class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-right font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 											/>
@@ -544,57 +553,123 @@
 						Resumen y totales
 					</CardTitle>
 				</CardHeader>
-				<CardContent class="space-y-4">
+				<CardContent class="space-y-5">
 					<!-- Tax & Discount inputs -->
-					<div class="grid grid-cols-1 gap-4 border-b border-[#ededed] pb-4 md:grid-cols-2">
-						<label
-							class="flex items-center gap-3 rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717]"
-						>
-							<input
-								type="checkbox"
-								name="include_tax"
-								value="true"
-								bind:checked={includeTax}
-								disabled={loading}
-								class="h-4 w-4 rounded border-[#c7c7c7] accent-[#3ecf8e]"
-							/>
-							<span class="text-sm font-medium">Incluir impuesto 18%</span>
-						</label>
-
-						<Input
-							label="Descuento ($)"
-							name="discount_amount"
-							type="number"
-							min="0"
-							step="any"
-							bind:value={discountAmount}
-							disabled={loading}
-						/>
+					<div class="space-y-3 border-b border-[#ededed] pb-5">
+						<div class="space-y-2">
+							<div class="flex items-center justify-between">
+								<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">Impuestos</p>
+								<span
+									class="rounded-full border border-[#ededed] bg-[#fafafa] px-2.5 py-1 text-[10px] font-medium tracking-wider text-[#707070] uppercase"
+								>
+								{taxMode === 'none'
+									? 'Sin ITBIS'
+									: taxMode === 'included'
+										? 'Incluye impuestos'
+										: 'Incluir ITBIS'}
+							</span>
+							</div>
+							<div
+								class="grid grid-cols-1 gap-2 rounded-lg border border-[#dfdfdf] bg-[#fafafa] p-1.5 sm:grid-cols-3"
+							>
+								<label class="cursor-pointer">
+								<input
+									type="radio"
+									name="tax_mode"
+									value="none"
+									bind:group={taxMode}
+									disabled={loading}
+									class="peer sr-only"
+								/>
+									<div
+										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+									>
+										Sin ITBIS
+									</div>
+								</label>
+								<label class="cursor-pointer">
+								<input
+									type="radio"
+									name="tax_mode"
+									value="included"
+									bind:group={taxMode}
+									disabled={loading}
+									class="peer sr-only"
+								/>
+									<div
+										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+									>
+										Incluye impuestos
+									</div>
+								</label>
+								<label class="cursor-pointer sm:col-start-3">
+								<input
+									type="radio"
+									name="tax_mode"
+									value="added"
+									bind:group={taxMode}
+									disabled={loading}
+									class="peer sr-only"
+								/>
+									<div
+										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+									>
+										Incluir ITBIS
+									</div>
+								</label>
+							</div>
+							<p class="text-xs text-[#707070]">
+								{taxMode === 'none'
+									? 'Sin ITBIS, impuesto en 0.'
+									: taxMode === 'included'
+										? 'Incluye impuestos: subtotal neto desde precio con ITBIS.'
+										: 'Incluir ITBIS: suma 18% al total final.'}
+							</p>
+						</div>
+                    
+						<div class="flex justify-end">
+							<div class="w-full max-w-sm">
+								<Input
+									label="Descuento ($)"
+									name="discount_amount"
+									type="number"
+									min="0"
+									step="any"
+									bind:value={discountAmount}
+									disabled={loading}
+								/>
+							</div>
+						</div>
 					</div>
 
 					<!-- Pricing breakdown details -->
-					<div class="space-y-2 text-sm text-[#707070]">
-						<div class="flex justify-between">
-							<span>Subtotal</span>
-							<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
-						</div>
-						<div class="flex justify-between">
-							<span>Impuesto ({taxRate}%)</span>
-							<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
-						</div>
-						<div class="flex justify-between">
-							<span>Descuento</span>
-							<span class="font-mono font-medium text-[#171717]"
-								>-{formatCurrency(discountAmount || 0)}</span
-							>
+					<div class="rounded-xl border border-[#ededed] bg-[#fafafa] p-4">
+						<div class="space-y-3 text-sm text-[#707070]">
+							<div class="flex items-center justify-between">
+								<span>{taxMode === 'included' ? 'Subtotal neto' : 'Subtotal'}</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span>Impuesto ({taxRate}%)</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
+								>
+							</div>
+							<div class="flex items-center justify-between">
+								<span>Descuento</span>
+								<span class="font-mono font-medium text-[#171717]"
+									>-{formatCurrency(discountAmount || 0)}</span
+								>
+							</div>
 						</div>
 
-						<div class="flex justify-between border-t border-[#ededed] pt-2 text-base font-medium">
+						<div
+							class="mt-4 flex items-center justify-between border-t border-[#dfdfdf] pt-4 text-base font-medium"
+						>
 							<span class="flex items-center gap-1 text-[#24b47e]">
 								<DollarSign class="h-4.5 w-4.5" />
 								Total a pagar
 							</span>
-							<span class="font-mono text-[#171717]">{formatCurrency(totalAmount)}</span>
+							<span class="font-mono text-xl text-[#171717]">{formatCurrency(totalAmount)}</span>
 						</div>
 					</div>
 				</CardContent>
