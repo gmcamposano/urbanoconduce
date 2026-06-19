@@ -60,16 +60,24 @@
 			: toTitleCase(client.full_name || 'Cliente sin nombre');
 	}
 
-	function getAvailableColors(itemId: string): (typeof colors)[number][] {
-		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
+	function getAvailableColors(itemId: string, productId: string): (typeof colors)[number][] {
+		if (!productId) return colors;
+		const usedColors = items
+			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
+			.map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
 	}
 
 	function getAvailableProducts(itemId: string): ProductOption[] {
-		const usedProductIds = items
-			.filter((i) => i.id !== itemId && i.product_id)
-			.map((i) => i.product_id);
-		return clientProducts.filter((p) => !usedProductIds.includes(p.id));
+		return clientProducts.filter((product) => {
+			const otherItemsWithProduct = items.filter((i) => i.id !== itemId && i.product_id === product.id);
+			if (otherItemsWithProduct.length === 0) return true;
+			const hasColorSelected = otherItemsWithProduct.some((i) => i.color);
+			if (!hasColorSelected) return false;
+			const usedColors = otherItemsWithProduct.map((i) => i.color).filter(Boolean);
+			const availableColorsForProduct = colors.filter((c) => !usedColors.includes(c.color));
+			return availableColorsForProduct.length > 0;
+		});
 	}
 
 	// Set up date defaults
@@ -195,7 +203,7 @@
 	// Helpers to add or remove line items
 
 	function applyProductToItem(
-		item: { product_id: string; model: string | null; unit_price: number },
+		item: { product_id: string; model: string | null; unit_price: number; color: string },
 		productId: string
 	) {
 		item.product_id = productId;
@@ -203,6 +211,11 @@
 		const basePrice = Number(product?.price_without_taxes || 0);
 		item.unit_price = basePrice;
 		item.model = product?.model ?? null;
+		if (item.color) {
+			const availableColors = getAvailableColors(item.id, productId);
+			const colorStillAvailable = availableColors.some((c) => c.color === item.color);
+			if (!colorStillAvailable) item.color = '';
+		}
 	}
 
 	// Formatter helper
@@ -402,7 +415,7 @@
 						<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
 								{@const availableProducts = getAvailableProducts(item.id) ?? []}
-								{@const availableColors = getAvailableColors(item.id) ?? []}
+								{@const availableColors = getAvailableColors(item.id, item.product_id) ?? []}
 								<tr class="hover:bg-[#fafafa]">
 									<td class="px-3 py-2">
 										<SearchableSelect
