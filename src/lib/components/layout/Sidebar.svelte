@@ -62,16 +62,18 @@
 		</a>
 
 		<nav class="space-y-1 p-4">
-			<a
-				href={resolve('/dashboard/invoices')}
-				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
-					'/dashboard/invoices'
-				)}"
-				onclick={onNavigate}
-			>
-				<FileText class="h-4.5 w-4.5" />
-				Facturas
-			</a>
+			{#if profile?.role !== 'editor'}
+				<a
+					href={resolve('/dashboard/invoices')}
+					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+						'/dashboard/invoices'
+					)}"
+					onclick={onNavigate}
+				>
+					<FileText class="h-4.5 w-4.5" />
+					Facturas
+				</a>
+			{/if}
 
 			<a
 				href={resolve('/dashboard/proforma')}

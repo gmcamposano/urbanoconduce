@@ -372,7 +372,7 @@
 											</Button>
 										</a>
 
-										{#if isAdmin}
+										{#if canManage}
 											<a href={resolve(`/dashboard/proforma/${inv.id}/edit`)}>
 												<Button
 													variant="ghost"
