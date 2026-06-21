@@ -203,7 +203,7 @@
 	// Helpers to add or remove line items
 
 	function applyProductToItem(
-		item: { product_id: string; model: string | null; unit_price: number; color: string },
+		item: { id: string; product_id: string; model: string | null; unit_price: number; color: string },
 		productId: string
 	) {
 		item.product_id = productId;

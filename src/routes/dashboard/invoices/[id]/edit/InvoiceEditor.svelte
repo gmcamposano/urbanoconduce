@@ -51,6 +51,13 @@
 
 	let { invoice, products, colors, models, clients, initial, form: actionForm, isAdmin }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & { clients: ClientOption[]; initial: EditorState; form: ActionData; isAdmin?: boolean } = $props();
 
+	function createEditorState(source: EditorState): EditorState {
+		return {
+			...source,
+			items: source.items.map((item) => ({ ...item }))
+		};
+	}
+
 	let editor = $state<EditorState>({
 		invoiceNumber: '',
 		facturaTipo: 'proforma',
@@ -65,6 +72,10 @@
 		includeTax: false,
 		discountAmount: 0,
 		items: []
+	});
+
+	onMount(() => {
+		editor = createEditorState(initial);
 	});
 
 	function toTitleCase(str: string): string {
@@ -117,16 +128,26 @@
 		return getClientName(selectedClient);
 	}
 
-	function getAvailableColors(itemId: string): typeof colors {
-		const usedColors = editor.items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
+	function getAvailableColors(itemId: string, productId: string): (typeof colors)[number][] {
+		if (!productId) return colors;
+		const usedColors = editor.items
+			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
+			.map((i) => i.color);
 		return colors.filter((c) => !usedColors.includes(c.color));
 	}
 
-	function getAvailableProducts(itemId: string) {
-		const usedProductIds = editor.items
-			.filter((i) => i.id !== itemId && i.product_id)
-			.map((i) => i.product_id);
-		return clientProducts.filter((p) => !usedProductIds.includes(p.id));
+	function getAvailableProducts(itemId: string): ProductOption[] {
+		return clientProducts.filter((product) => {
+			const otherItemsWithProduct = editor.items.filter(
+				(i) => i.id !== itemId && i.product_id === product.id
+			);
+			if (otherItemsWithProduct.length === 0) return true;
+			const hasColorSelected = otherItemsWithProduct.some((i) => i.color);
+			if (!hasColorSelected) return false;
+			const usedColors = otherItemsWithProduct.map((i) => i.color).filter(Boolean);
+			const availableColorsForProduct = colors.filter((c) => !usedColors.includes(c.color));
+			return availableColorsForProduct.length > 0;
+		});
 	}
 
 	function createItem(): InvoiceFormItem {
@@ -150,27 +171,6 @@
 			}
 		}
 	}
-
-	function seedEditor() {
-		Object.assign(editor, initial);
-		if (initial.selectedClientId) {
-			editor.selectedClientId = initial.selectedClientId;
-		} else {
-			const matchedClient = clients.find(
-				(c) =>
-					(c.client_type === 'company'
-						? c.company_name || c.alias
-						: c.full_name) === initial.clientName
-			);
-			if (matchedClient) {
-				editor.selectedClientId = matchedClient.id;
-			}
-		}
-	}
-
-	onMount(() => {
-		seedEditor();
-	});
 
 	let loading = $state(false);
 
@@ -201,6 +201,11 @@
 		const product = clientProducts.find((entry) => entry.id === productId);
 		item.unit_price = Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
+		if (item.color) {
+			const availableColors = getAvailableColors(item.id, productId);
+			const colorStillAvailable = availableColors.some((c) => c.color === item.color);
+			if (!colorStillAvailable) item.color = '';
+		}
 	}
 
 	function formatCurrency(val: number) {
@@ -405,13 +410,15 @@
 							</thead>
 							<tbody class="divide-y divide-[#ededed]">
 								{#each editor.items as item (item.id)}
+									{@const availableProducts = getAvailableProducts(item.id) ?? []}
+									{@const availableColors = getAvailableColors(item.id, item.product_id) ?? []}
 									<tr class="hover:bg-[#fafafa]">
 										<td class="px-3 py-2">
 											<SearchableSelect
-												options={getAvailableProducts(item.id).map((p) => ({ value: p.id, label: getProductLabel(p) }))}
+												options={availableProducts.map((p) => ({ value: p.id, label: getProductLabel(p) }))}
 												bind:value={item.product_id}
 												placeholder={editor.selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
-												disabled={loading || !editor.selectedClientId || getAvailableProducts(item.id).length === 0}
+												disabled={loading || !editor.selectedClientId || availableProducts.length === 0}
 												onchange={(value) => applyProductToItem(item, value)}
 											/>
 										</td>
@@ -428,14 +435,14 @@
 												label=""
 												name="color"
 												bind:value={item.color}
-												disabled={loading || getAvailableColors(item.id).length === 0}
+												disabled={loading || availableColors.length === 0}
 												class="text-xs capitalize"
 											>
 												<option value="">Color</option>
-												{#if getAvailableColors(item.id).length === 0}
+												{#if availableColors.length === 0}
 													<option value="" disabled>No hay colores</option>
 												{/if}
-												{#each getAvailableColors(item.id) as color (color.id)}
+												{#each availableColors as color (color.id)}
 													<option value={color.color}>{color.color}</option>
 												{/each}
 											</Select>

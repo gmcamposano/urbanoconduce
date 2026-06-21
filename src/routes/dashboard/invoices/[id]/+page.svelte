@@ -191,7 +191,7 @@
 					onclick={handleDownloadPdf}
 				>
 					<Download class="h-4 w-4" />
-					<span class="hidden sm:inline">Descargar PDF</span>
+					<span class="hidden sm:inline">Guardar PDF</span>
 					<span class="sm:hidden">PDF</span>
 				</Button>
 
@@ -370,32 +370,40 @@
 
 					<!-- Items Table -->
 					<div class="space-y-4">
-						<table class="w-full border-collapse text-left text-sm">
+						<table class="w-full table-fixed border-collapse text-left text-sm">
 							<thead>
 								<tr
 									class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
 								>
-									<th class="py-3 font-semibold">Descripción</th>
-									<th class="py-3 font-semibold">Modelo</th>
-									<th class="py-3 font-semibold">Color</th>
-									<th class="w-20 py-3 text-center font-semibold">Cant.</th>
-									<th class="w-32 py-3 text-right font-semibold">Precio unitario</th>
-									<th class="w-32 py-3 text-right font-semibold">Total</th>
+									<th class="w-[38%] py-3 pr-5 font-semibold">Descripción</th>
+									<th class="w-[14%] px-3 py-3 text-center font-semibold">Modelo</th>
+									<th class="w-[14%] px-3 py-3 text-center font-semibold">Color</th>
+									<th class="w-[8%] py-3 text-center font-semibold whitespace-nowrap">Cant.</th>
+									<th class="w-[13%] py-3 text-right font-semibold whitespace-nowrap"
+										>Precio unitario</th
+									>
+									<th class="w-[13%] py-3 text-right font-semibold whitespace-nowrap">Total</th>
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
-										<td class="py-2.5">
-											<p class="font-medium text-[#171717] capitalize">{item.description}</p>
+										<td class="py-2.5 pr-5 align-top">
+											<p class="font-medium break-words text-[#171717] capitalize">
+												{item.description}
+											</p>
 										</td>
-										<td class="py-2.5 text-[#707070] capitalize">
+										<td class="px-3 py-2.5 text-center align-top text-[#707070] capitalize">
 											{productModel}
 										</td>
-										<td class="py-2.5">
+										<td class="px-3 py-2.5 text-center align-top">
 											{#if item.color}
-												<Badge variant="outline" class="capitalize">{item.color}</Badge>
+												<span
+													class="inline-flex h-6 items-center justify-center rounded-md border border-[#dfdfdf] bg-white px-3 text-xs leading-none font-medium whitespace-nowrap text-[#707070] capitalize"
+												>
+													{item.color}
+												</span>
 											{:else}
 												<span class="text-[#9a9a9a]">-</span>
 											{/if}

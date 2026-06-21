@@ -7,12 +7,7 @@
 		children?: Snippet;
 	}
 
-	let {
-		variant = 'default',
-		class: className = '',
-		children,
-		...rest
-	}: Props = $props();
+	let { variant = 'default', class: className = '', children, ...rest }: Props = $props();
 
 	const variants = {
 		default: 'bg-[#3ecf8e] text-[#171717] border-[#3ecf8e]/35',
@@ -26,7 +21,9 @@
 </script>
 
 <span
-	class="inline-flex items-center rounded border px-2.5 py-0.5 text-xs font-medium select-none transition-colors {variants[variant]} {className}"
+	class="inline-flex items-center justify-center rounded border px-2.5 py-0.5 text-xs leading-none font-medium transition-colors select-none {variants[
+		variant
+	]} {className}"
 	{...rest}
 >
 	{#if children}

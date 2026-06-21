@@ -130,8 +130,9 @@ export const actions: Actions = {
 		const facturaTipo = status === 'paid' ? 'ninguna' : 'proforma';
 		const ncf = null;
 		const notes = String(formData.get('notes') ?? '').trim();
-		const includeTax = formData.get('include_tax') === 'true';
-		const taxRate = includeTax ? 18 : 0;
+		const rawTaxMode = String(formData.get('tax_mode') ?? 'none').trim();
+		const taxMode = rawTaxMode === 'included' || rawTaxMode === 'added' ? rawTaxMode : 'none';
+		const taxRate = taxMode === 'none' ? 0 : 18;
 		const discountAmount = Number(formData.get('discount_amount') || 0);
 		const itemsJson = String(formData.get('items') ?? '[]');
 
@@ -229,11 +230,16 @@ export const actions: Actions = {
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
 			const model = (item.model || '').trim() || null;
+			const unitPrice = Number((item as { unit_price?: number }).unit_price);
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
 					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
 				});
+			}
+
+			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
 			}
 
 			if (product.client_id !== clientId) {
@@ -246,7 +252,6 @@ export const actions: Actions = {
 				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
 			}
 
-			const unitPrice = Number(product.price_without_taxes);
 			normalizedItems.push({
 				product_id: item.product_id,
 				description: product.title,
@@ -258,9 +263,18 @@ export const actions: Actions = {
 			});
 		}
 
-		const subtotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
-		const taxAmount = subtotal * (taxRate / 100);
-		const totalAmount = Math.max(0, subtotal + taxAmount - discountAmount);
+		const lineTotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
+		const subtotal = taxMode === 'included' ? lineTotal / 1.18 : lineTotal;
+		const taxAmount =
+			taxMode === 'none'
+				? 0
+				: taxMode === 'included'
+					? lineTotal - subtotal
+					: subtotal * (taxRate / 100);
+		const totalAmount = Math.max(
+			0,
+			taxMode === 'none' ? subtotal - discountAmount : subtotal + taxAmount - discountAmount
+		);
 
 		const previousInvoice = {
 			invoice_number: invoiceResult.data.invoice_number,

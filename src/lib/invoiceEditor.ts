@@ -106,11 +106,13 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 	let selectedClientId = invoiceClientId;
 
 	if (!selectedClientId && items.length) {
-		const firstItem = items[0];
-		if (firstItem.product_id) {
-			const product = products.get(firstItem.product_id);
+		for (const item of items) {
+			if (!item.product_id) continue;
+
+			const product = products.get(item.product_id);
 			if (product) {
 				selectedClientId = product.client_id;
+				break;
 			}
 		}
 	}

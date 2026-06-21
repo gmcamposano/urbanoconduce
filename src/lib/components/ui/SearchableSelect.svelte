@@ -39,7 +39,7 @@
 	let dropdownMaxHeight = $state(240);
 	let removePositionListeners: (() => void) | null = null;
 
-	const uid = 'searchable-' + Math.random().toString(36).substring(2, 9);
+	const uid = $props.id();
 
 	const filteredOptions = $derived(
 		searchQuery.trim() === ''

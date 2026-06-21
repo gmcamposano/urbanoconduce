@@ -4,7 +4,7 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	
 	import { SvelteDate, SvelteMap } from 'svelte/reactivity';
 	import {
 		Search,
@@ -346,15 +346,23 @@
 									{formatCurrency(Number(inv.total_amount))}
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
-									{#if inv.status === 'paid'}
-										<Badge variant="success">Pagada</Badge>
-									{:else if inv.status === 'pending'}
-										<Badge variant="warning">Pendiente</Badge>
-									{:else if inv.status === 'overdue'}
-										<Badge variant="danger">Vencida</Badge>
-									{:else}
-										<Badge variant="secondary">Borrador</Badge>
-									{/if}
+									<span
+										class="text-xs font-medium {inv.status === 'paid'
+											? 'text-[#24b47e]'
+											: inv.status === 'pending'
+												? 'text-[#ca8a04]'
+												: inv.status === 'overdue'
+													? 'text-[#e2005a]'
+													: 'text-[#707070]'}"
+									>
+										{inv.status === 'paid'
+											? 'Pagada'
+											: inv.status === 'pending'
+												? 'Pendiente'
+												: inv.status === 'overdue'
+													? 'Vencida'
+													: 'Borrador'}
+									</span>
 								</td>
 								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
 									{toTitleCase(inv.profiles?.name || 'Usuario desconocido')}
