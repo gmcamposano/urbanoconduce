@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			throw redirect(303, '/dashboard/invoices');
 		}
 
-		if (invoice.status !== 'paid') {
+		if (invoice.factura_tipo === 'proforma') {
 			throw redirect(303, `/dashboard/proforma/${id}`);
 		}
 
@@ -98,18 +98,17 @@ export const actions: Actions = {
 
 		try {
 			// Enforced by RLS: Only Admins can update invoices
-			const { error } = await locals.supabase
-				.from('invoices')
-				.update({ status })
-				.eq('id', id);
+			const { error } = await locals.supabase.from('invoices').update({ status }).eq('id', id);
 
 			if (error) {
 				return fail(400, { error: error.message });
 			}
 
 			return { success: true };
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'No se pudo actualizar el estado.' });
+		} catch (e: unknown) {
+			return fail(400, {
+				error: e instanceof Error ? e.message : 'No se pudo actualizar el estado.'
+			});
 		}
 	},
 
@@ -127,16 +126,13 @@ export const actions: Actions = {
 
 		try {
 			// Enforced by RLS: Only Admins can delete invoices
-			const { error } = await locals.supabase
-				.from('invoices')
-				.delete()
-				.eq('id', id);
+			const { error } = await locals.supabase.from('invoices').delete().eq('id', id);
 
 			if (error) {
 				return fail(400, { error: error.message });
 			}
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'No se pudo eliminar.' });
+		} catch (e: unknown) {
+			return fail(400, { error: e instanceof Error ? e.message : 'No se pudo eliminar.' });
 		}
 
 		throw redirect(303, '/dashboard/invoices');

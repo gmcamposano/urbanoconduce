@@ -4,8 +4,8 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	
-	import { SvelteDate, SvelteMap } from 'svelte/reactivity';
+
+	import { SvelteDate } from 'svelte/reactivity';
 	import {
 		Search,
 		Plus,
@@ -39,6 +39,7 @@
 	// Local states for search and filtering
 	let searchQuery = $state('');
 	let statusFilter = $state<'all' | 'draft' | 'pending' | 'paid' | 'overdue'>('all');
+	const statusOptions = ['all', 'draft', 'pending', 'paid', 'overdue'] as const;
 
 	// Delete confirmation modal states
 	let invoiceToDelete = $state<{ id: string; number: string } | null>(null);
@@ -46,7 +47,8 @@
 	let confirmText = $state('');
 
 	const invoices = $derived(data.invoices || []);
-	const facturas = $derived(data.facturas || []);
+
+	type CollectionState = 'draft' | 'pending' | 'partial' | 'paid' | 'overdue';
 
 	const todayTime = new SvelteDate().setHours(0, 0, 0, 0);
 
@@ -56,44 +58,65 @@
 		return due.getTime() < todayTime;
 	}
 
-	function totalByClient<T extends { client_id: string; total_amount: number | string }>(
-		rows: T[]
-	): SvelteMap<string, number> {
-		const map = new SvelteMap<string, number>();
-		for (const row of rows) {
-			map.set(row.client_id, (map.get(row.client_id) ?? 0) + Number(row.total_amount));
+	function getCollectionState(invoice: {
+		status: string;
+		paidAmount?: number;
+		balanceDue?: number;
+		total_amount: number | string;
+	}) {
+		const paidAmount = Number(invoice.paidAmount || 0);
+		const balanceDue = Number(invoice.balanceDue || 0);
+		const totalAmount = Number(invoice.total_amount || 0);
+
+		if (totalAmount > 0 && balanceDue <= 0) return 'paid' satisfies CollectionState;
+		if (paidAmount > 0) return 'partial' satisfies CollectionState;
+		if (invoice.status === 'overdue') return 'overdue' satisfies CollectionState;
+		if (invoice.status === 'pending') return 'pending' satisfies CollectionState;
+		return 'draft' satisfies CollectionState;
+	}
+
+	function getCollectionLabel(state: CollectionState) {
+		switch (state) {
+			case 'paid':
+				return 'Saldada';
+			case 'partial':
+				return 'Abonada parcial';
+			case 'overdue':
+				return 'Vencida';
+			case 'pending':
+				return 'Pendiente';
+			default:
+				return 'Borrador';
 		}
-		return map;
+	}
+
+	function getCollectionClass(state: CollectionState) {
+		switch (state) {
+			case 'paid':
+				return 'text-[#24b47e]';
+			case 'partial':
+				return 'text-[#0f766e]';
+			case 'overdue':
+				return 'text-[#e2005a]';
+			case 'pending':
+				return 'text-[#ca8a04]';
+			default:
+				return 'text-[#707070]';
+		}
 	}
 
 	// Metric calculations (derived)
-	// - Total facturado = sum of proforma total_amount.
-	// - Monto pagado = sum of paidAmount on proformas.
-	// - Pendiente: for each client, proforma total - factura total (clamped to 0).
-	// - Vencido: same logic but only for proformas/facturas past their due_date.
 	const totalInvoiced = $derived(invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0));
 	const totalPaid = $derived(invoices.reduce((sum, inv) => sum + Number(inv.paidAmount || 0), 0));
-
-	const totalPending = $derived.by(() => {
-		const proformaByClient = totalByClient(invoices);
-		const facturaByClient = totalByClient(facturas);
-		let total = 0;
-		for (const [clientId, proformaTotal] of proformaByClient) {
-			const facturaTotal = facturaByClient.get(clientId) ?? 0;
-			total += Math.max(0, proformaTotal - facturaTotal);
-		}
-		return total;
-	});
-
+	const totalPending = $derived(
+		invoices
+			.filter((inv) => getCollectionState(inv) !== 'draft')
+			.reduce((sum, inv) => sum + Number(inv.balanceDue || 0), 0)
+	);
 	const totalOverdue = $derived.by(() => {
-		const expiredProformaByClient = totalByClient(invoices.filter((p) => isExpired(p.due_date)));
-		const expiredFacturaByClient = totalByClient(facturas.filter((f) => isExpired(f.due_date)));
-		let total = 0;
-		for (const [clientId, proformaTotal] of expiredProformaByClient) {
-			const facturaTotal = expiredFacturaByClient.get(clientId) ?? 0;
-			total += Math.max(0, proformaTotal - facturaTotal);
-		}
-		return total;
+		return invoices
+			.filter((inv) => Number(inv.balanceDue || 0) > 0 && isExpired(inv.due_date))
+			.reduce((sum, inv) => sum + Number(inv.balanceDue || 0), 0);
 	});
 
 	// Filtered invoices (derived)
@@ -275,13 +298,13 @@
 				<Filter class="h-3.5 w-3.5" />
 				Estado:
 			</span>
-			{#each ['all', 'draft', 'pending', 'paid', 'overdue'] as item (item)}
+			{#each statusOptions as item (item)}
 				<button
 					class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200 {statusFilter ===
 					item
 						? 'border border-[#24b47e] bg-[#3ecf8e] text-[#171717]'
 						: 'border border-transparent bg-transparent text-[#707070] hover:text-[#171717]'}"
-					onclick={() => (statusFilter = item as any)}
+					onclick={() => (statusFilter = item)}
 				>
 					{item}
 				</button>
@@ -315,6 +338,7 @@
 						</tr>
 					{:else}
 						{#each filteredInvoices as inv (inv.id)}
+							{@const collectionState = getCollectionState(inv)}
 							<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
 								<td class="px-6 py-4 font-medium whitespace-nowrap text-[#171717]">
 									<a
@@ -343,25 +367,23 @@
 									</div>
 								</td>
 								<td class="px-6 py-4 font-mono font-medium text-[#171717]">
-									{formatCurrency(Number(inv.total_amount))}
+									<div class="space-y-1">
+										<p>{formatCurrency(Number(inv.total_amount))}</p>
+										{#if Number(inv.paidAmount || 0) > 0}
+											<p class="text-[11px] text-[#24b47e]">
+												Abonado {formatCurrency(Number(inv.paidAmount || 0))}
+											</p>
+										{/if}
+										{#if getCollectionState(inv) !== 'draft'}
+											<p class="text-[11px] text-[#707070]">
+												Restante {formatCurrency(Number(inv.balanceDue || 0))}
+											</p>
+										{/if}
+									</div>
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
-									<span
-										class="text-xs font-medium {inv.status === 'paid'
-											? 'text-[#24b47e]'
-											: inv.status === 'pending'
-												? 'text-[#ca8a04]'
-												: inv.status === 'overdue'
-													? 'text-[#e2005a]'
-													: 'text-[#707070]'}"
-									>
-										{inv.status === 'paid'
-											? 'Pagada'
-											: inv.status === 'pending'
-												? 'Pendiente'
-												: inv.status === 'overdue'
-													? 'Vencida'
-													: 'Borrador'}
+									<span class="text-xs font-medium {getCollectionClass(collectionState)}">
+										{getCollectionLabel(collectionState)}
 									</span>
 								</td>
 								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">

@@ -14,10 +14,15 @@ type InvoiceRecord = {
 	status: string;
 	due_date: string;
 	invoice_date: string;
+	tax_rate?: number | string;
+	discount_amount?: number | string;
+	ncf?: string | null;
+	notes?: string | null;
 	factura_tipo?: string | null;
 	created_at?: string;
 	client_name?: string | null;
 	client_email?: string | null;
+	clients?: { client_type?: string | null; rnc?: string | null } | null;
 	profiles?: { name?: string | null; email?: string | null } | null;
 };
 
@@ -28,10 +33,15 @@ type InvoiceRelation = {
 	total_amount?: number | string | null;
 	due_date?: string | null;
 	invoice_date?: string | null;
+	tax_rate?: number | string | null;
+	discount_amount?: number | string | null;
+	ncf?: string | null;
+	notes?: string | null;
 	status?: string | null;
 	factura_tipo?: string | null;
 	client_name?: string | null;
 	client_email?: string | null;
+	clients?: { client_type?: string | null; rnc?: string | null } | null;
 	profiles?: { name?: string | null; email?: string | null } | null;
 };
 

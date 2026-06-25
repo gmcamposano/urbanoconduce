@@ -14,42 +14,43 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		throw redirect(303, '/dashboard/proforma');
 	}
 
-	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] = await Promise.all([
-		locals.supabase
-			.from('invoices')
-			.select('*, profiles:created_by(name, email)')
-			.eq('id', params.id)
-			.single(),
-		locals.supabase
-			.from('invoice_items')
-			.select('*')
-			.eq('invoice_id', params.id)
-			.order('created_at', { ascending: true }),
-		locals.supabase
-			.from('products')
-			.select('id, title, price_without_taxes, model, client_id')
-			.order('title', { ascending: true }),
-		locals.supabase
-			.from('product_colors')
-			.select('id, color')
-			.order('color', { ascending: true }),
-		locals.supabase
-			.from('product_models')
-			.select('id, model')
-			.order('model', { ascending: true }),
-		locals.supabase
-			.from('clients')
-			.select('id, client_type, full_name, company_name, alias, email')
-			.order('company_name', { ascending: true })
-			.order('full_name', { ascending: true })
-	]);
+	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] =
+		await Promise.all([
+			locals.supabase
+				.from('invoices')
+				.select('*, profiles:created_by(name, email)')
+				.eq('id', params.id)
+				.single(),
+			locals.supabase
+				.from('invoice_items')
+				.select('*')
+				.eq('invoice_id', params.id)
+				.order('created_at', { ascending: true }),
+			locals.supabase
+				.from('products')
+				.select('id, title, price_without_taxes, model, client_id')
+				.order('title', { ascending: true }),
+			locals.supabase
+				.from('product_colors')
+				.select('id, color')
+				.order('color', { ascending: true }),
+			locals.supabase
+				.from('product_models')
+				.select('id, model')
+				.order('model', { ascending: true }),
+			locals.supabase
+				.from('clients')
+				.select('id, client_type, full_name, company_name, alias, email')
+				.order('company_name', { ascending: true })
+				.order('full_name', { ascending: true })
+		]);
 
 	if (invoiceResult.error || !invoiceResult.data) {
 		console.error('Error fetching invoice for edit:', invoiceResult.error?.message);
 		throw redirect(303, '/dashboard/invoices');
 	}
 
-	if (invoiceResult.data.status !== 'paid') {
+	if (invoiceResult.data.factura_tipo === 'proforma') {
 		throw redirect(303, `/dashboard/proforma/${params.id}/edit`);
 	}
 
@@ -152,7 +153,12 @@ export const actions: Actions = {
 			return fail(400, { error: 'El NCF es obligatorio para facturas de valor fiscal.' });
 		}
 
-		let items: Array<{ product_id: string; color: string; model: string | null; quantity: number }> = [];
+		let items: Array<{
+			product_id: string;
+			color: string;
+			model: string | null;
+			quantity: number;
+		}>;
 		try {
 			items = JSON.parse(itemsJson);
 		} catch {
@@ -181,15 +187,8 @@ export const actions: Actions = {
 				.from('product_colors')
 				.select('id, color')
 				.in('color', selectedColors.length ? selectedColors : ['__no_color__']),
-			locals.supabase
-				.from('invoices')
-				.select('*')
-				.eq('id', params.id)
-				.single(),
-			locals.supabase
-				.from('invoice_items')
-				.select('*')
-				.eq('invoice_id', params.id)
+			locals.supabase.from('invoices').select('*').eq('id', params.id).single(),
+			locals.supabase.from('invoice_items').select('*').eq('invoice_id', params.id)
 		]);
 
 		if (invoiceResult.error || !invoiceResult.data) {
@@ -317,20 +316,18 @@ export const actions: Actions = {
 			return fail(400, { error: deleteItemsError.message });
 		}
 
-		const { error: insertItemsError } = await locals.supabase
-			.from('invoice_items')
-			.insert(
-				normalizedItems.map((item) => ({
-					invoice_id: params.id,
-					product_id: item.product_id,
-					description: item.description,
-					color: item.color,
-					model: item.model,
-					quantity: item.quantity,
-					unit_price: item.unit_price,
-					amount: item.amount
-				}))
-			);
+		const { error: insertItemsError } = await locals.supabase.from('invoice_items').insert(
+			normalizedItems.map((item) => ({
+				invoice_id: params.id,
+				product_id: item.product_id,
+				description: item.description,
+				color: item.color,
+				model: item.model,
+				quantity: item.quantity,
+				unit_price: item.unit_price,
+				amount: item.amount
+			}))
+		);
 
 		if (insertItemsError) {
 			await locals.supabase.from('invoice_items').insert(previousItems);

@@ -20,6 +20,7 @@
 
 	const invoice = $derived(data.invoice);
 	const items = $derived(data.items || []);
+	const paymentBreakdown = $derived(data.paymentBreakdown || []);
 	// const products = $derived(data.products || []);
 	const models = $derived(data.models || []);
 
@@ -56,6 +57,8 @@
 	let deleteLoading = $state(false);
 	let confirmText = $state('');
 
+	type CollectionState = 'draft' | 'pending' | 'partial' | 'paid' | 'overdue';
+
 	// Pricing helper calculations (explicit type annotations to prevent implicit any errors)
 	const subtotal = $derived(
 		items.reduce((sum: number, item: { amount: number | string }) => sum + Number(item.amount), 0)
@@ -64,9 +67,74 @@
 	const taxAmount = $derived(subtotal * (Number(invoice?.tax_rate || 0) / 100));
 	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
 	const showDiscount = $derived(discountAmount > 0);
+	const collectionState = $derived(
+		invoice ? getCollectionState(invoice) : ('draft' as CollectionState)
+	);
+
+	function getCollectionState(source: {
+		status: string;
+		paidAmount?: number;
+		balanceDue?: number;
+		total_amount: number | string;
+	}) {
+		const paidAmount = Number(source.paidAmount || 0);
+		const balanceDue = Number(source.balanceDue || 0);
+		const totalAmount = Number(source.total_amount || 0);
+
+		if (totalAmount > 0 && balanceDue <= 0) return 'paid' satisfies CollectionState;
+		if (paidAmount > 0) return 'partial' satisfies CollectionState;
+		if (source.status === 'overdue') return 'overdue' satisfies CollectionState;
+		if (source.status === 'pending') return 'pending' satisfies CollectionState;
+		return 'draft' satisfies CollectionState;
+	}
+
+	function getCollectionLabel(state: CollectionState) {
+		switch (state) {
+			case 'paid':
+				return 'Saldada';
+			case 'partial':
+				return 'Abonada parcialmente';
+			case 'overdue':
+				return 'Vencida';
+			case 'pending':
+				return 'Pendiente';
+			default:
+				return 'Borrador';
+		}
+	}
+
+	function getCollectionClass(state: CollectionState) {
+		switch (state) {
+			case 'paid':
+				return 'text-[#24b47e]';
+			case 'partial':
+				return 'text-[#0f766e]';
+			case 'overdue':
+				return 'text-[#e2005a]';
+			case 'pending':
+				return 'text-[#ca8a04]';
+			default:
+				return 'text-[#707070]';
+		}
+	}
 
 	function formatCurrency(val: number) {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+	}
+
+	function getMethodLabel(method: string) {
+		switch (method) {
+			case 'cash':
+				return 'Efectivo';
+			case 'transfer':
+				return 'Transferencia';
+			case 'check':
+				return 'Cheque';
+			case 'card':
+				return 'Tarjeta';
+			default:
+				return 'Otro';
+		}
 	}
 
 	function inlineLoadedStyles(clonedDoc: Document) {
@@ -170,22 +238,8 @@
 					</div>
 				</div>
 				<!-- Current Status Badge -->
-				<span
-					class="text-xs font-medium {invoice.status === 'paid'
-						? 'text-[#24b47e]'
-						: invoice.status === 'pending'
-							? 'text-[#ca8a04]'
-							: invoice.status === 'overdue'
-								? 'text-[#e2005a]'
-								: 'text-[#707070]'}"
-				>
-					{invoice.status === 'paid'
-						? 'Pagada'
-						: invoice.status === 'pending'
-							? 'Pendiente'
-							: invoice.status === 'overdue'
-								? 'Vencida'
-								: 'Borrador'}
+				<span class="text-xs font-medium {getCollectionClass(collectionState)}">
+					{getCollectionLabel(collectionState)}
 				</span>
 			</div>
 
@@ -218,8 +272,10 @@
 						>
 							<option value="draft">Borrador</option>
 							<option value="pending">Pendiente</option>
-							<option value="paid">Pagada</option>
 							<option value="overdue">Vencida</option>
+							{#if invoice.status === 'paid'}
+								<option value="paid" disabled>Saldada automaticamente</option>
+							{/if}
 						</select>
 						<Button
 							type="submit"
@@ -402,15 +458,22 @@
 								Estado del pago:
 							</h3>
 							<div class="print-badge">
-								{#if invoice.status === 'paid'}
+								{#if collectionState === 'paid'}
 									<span
 										class="inline-flex h-7 items-center justify-center gap-1.5 rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
 										style="background-color: #dcfce7; border: 1px solid #86efac; color: #171717;"
 									>
 										<Check class="h-3.5 w-3.5" />
-										<span class="print-badge-label">Pagada completamente</span>
+										<span class="print-badge-label">Saldada</span>
 									</span>
-								{:else if invoice.status === 'pending'}
+								{:else if collectionState === 'partial'}
+									<span
+										class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
+										style="background-color: #ccfbf1; border: 1px solid #5eead4; color: #115e59;"
+									>
+										<span class="print-badge-label">Abonada parcialmente</span>
+									</span>
+								{:else if collectionState === 'pending'}
 									<span
 										class="inline-flex h-7 items-center justify-center rounded border px-3 py-0 text-xs font-medium tracking-wider uppercase"
 										style="background-color: #fef9c3; border: 1px solid #fde047; color: #171717;"
@@ -433,6 +496,26 @@
 									</span>
 								{/if}
 							</div>
+							<div class="grid w-full max-w-sm grid-cols-3 gap-3 pt-2 text-left sm:text-right">
+								<div>
+									<p class="text-[10px] tracking-wider text-[#707070] uppercase">Total</p>
+									<p class="font-mono text-sm font-medium text-[#171717]">
+										{formatCurrency(Number(invoice.total_amount || 0))}
+									</p>
+								</div>
+								<div>
+									<p class="text-[10px] tracking-wider text-[#707070] uppercase">Abonado</p>
+									<p class="font-mono text-sm font-medium text-[#24b47e]">
+										{formatCurrency(Number(invoice.paidAmount || 0))}
+									</p>
+								</div>
+								<div>
+									<p class="text-[10px] tracking-wider text-[#707070] uppercase">Restante</p>
+									<p class="font-mono text-sm font-medium text-[#171717]">
+										{formatCurrency(Number(invoice.balanceDue || 0))}
+									</p>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -446,11 +529,18 @@
 									<th class="w-[38%] px-3 py-3 align-middle font-semibold">Descripción</th>
 									<th class="w-[14%] px-3 py-3 text-center align-middle font-semibold">Modelo</th>
 									<th class="w-[14%] px-3 py-3 text-center align-middle font-semibold">Color</th>
-									<th class="w-[8%] px-3 py-3 text-center align-middle font-semibold whitespace-nowrap">Cant.</th>
-									<th class="w-[16%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
+									<th
+										class="w-[8%] px-3 py-3 text-center align-middle font-semibold whitespace-nowrap"
+										>Cant.</th
+									>
+									<th
+										class="w-[16%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
 										>Precio unitario</th
 									>
-									<th class="w-[10%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap">Total</th>
+									<th
+										class="w-[10%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
+										>Total</th
+									>
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
@@ -467,7 +557,7 @@
 										</td>
 										<td class="px-3 py-2.5 text-center align-middle">
 											{#if item.color}
-												<span class="text-xs font-medium capitalize text-[#707070]">
+												<span class="text-xs font-medium text-[#707070] capitalize">
 													{item.color}
 												</span>
 											{:else}
@@ -480,7 +570,8 @@
 										<td class="px-3 py-2.5 text-right align-middle font-mono text-[#707070]"
 											>RD$ {formatCurrency(Number(item.unit_price))}</td
 										>
-										<td class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
+										<td
+											class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
 											>{formatCurrency(Number(item.amount))}</td
 										>
 									</tr>
@@ -516,6 +607,79 @@
 								>
 							</div>
 						</div>
+					</div>
+
+					<div class="space-y-4 pt-8">
+						<div
+							class="flex flex-col gap-1 border-t border-[#ededed] pt-6 sm:flex-row sm:items-end sm:justify-between"
+						>
+							<div>
+								<h3 class="text-sm font-medium tracking-wide text-[#171717] uppercase">
+									Historial de abonos
+								</h3>
+								<p class="text-xs text-[#707070]">
+									Detalle de adelantos registrados para esta proforma.
+								</p>
+							</div>
+							<p class="text-xs text-[#707070]">
+								{paymentBreakdown.length} movimiento(s)
+							</p>
+						</div>
+
+						{#if paymentBreakdown.length === 0}
+							<div
+								class="rounded-lg border border-[#ededed] bg-[#fafafa] px-4 py-5 text-sm text-[#707070]"
+							>
+								No hay abonos registrados todavia.
+							</div>
+						{:else}
+							<div
+								class="divide-y divide-[#ededed] overflow-hidden rounded-lg border border-[#ededed] bg-[#fafafa]"
+							>
+								{#each paymentBreakdown as payment (payment.id)}
+									<div
+										class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+									>
+										<div class="min-w-0 space-y-1">
+											<p class="text-sm font-medium text-[#171717]">
+												{new Date(payment.payment_date || payment.created_at).toLocaleDateString(
+													'es-ES',
+													{
+														month: 'long',
+														day: 'numeric',
+														year: 'numeric',
+														timeZone: 'UTC'
+													}
+												)}
+											</p>
+											<p class="text-xs tracking-wider text-[#707070] uppercase">
+												{getMethodLabel(payment.payment_method || '')}
+												{#if payment.reference_number}
+													· Ref. {payment.reference_number}
+												{/if}
+											</p>
+											{#if payment.notes}
+												<p class="text-xs text-[#707070]">{payment.notes}</p>
+											{/if}
+											<div class="flex flex-wrap items-center gap-3 text-[11px] text-[#707070]">
+												<a
+													href={resolve(`/dashboard/accounting/${payment.payment_id}`)}
+													class="font-medium text-[#24b47e] hover:underline"
+												>
+													Ver pago
+												</a>
+												{#if payment.created_by_name}
+													<span>Registrado por {payment.created_by_name}</span>
+												{/if}
+											</div>
+										</div>
+										<p class="font-mono text-sm font-medium text-[#24b47e]">
+											{formatCurrency(Number(payment.applied_amount || 0))}
+										</p>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</div>
 

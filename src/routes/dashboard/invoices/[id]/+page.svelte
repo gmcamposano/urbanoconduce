@@ -62,6 +62,20 @@
 	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
 	const showDiscount = $derived(discountAmount > 0);
 
+	function getStatusBadgeVariant(status: string) {
+		if (status === 'paid') return 'success';
+		if (status === 'pending') return 'warning';
+		if (status === 'overdue') return 'danger';
+		return 'secondary';
+	}
+
+	function getStatusLabel(status: string) {
+		if (status === 'paid') return 'Pagada';
+		if (status === 'pending') return 'Pendiente';
+		if (status === 'overdue') return 'Vencida';
+		return 'Borrador';
+	}
+
 	function formatCurrency(val: number) {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 	}
@@ -167,7 +181,9 @@
 					</div>
 				</div>
 				<div class="sm:border-l sm:border-[#ededed] sm:pl-4">
-					<Badge variant="success">Pagada</Badge>
+					<Badge variant={getStatusBadgeVariant(invoice.status)}
+						>{getStatusLabel(invoice.status)}</Badge
+					>
 				</div>
 			</div>
 

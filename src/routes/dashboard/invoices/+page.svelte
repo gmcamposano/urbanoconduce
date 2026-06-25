@@ -38,6 +38,7 @@
 	// Local states for search and filtering
 	let searchQuery = $state('');
 	let statusFilter = $state<'all' | 'draft' | 'pending' | 'paid' | 'overdue'>('all');
+	const statusOptions = ['all', 'draft', 'pending', 'paid', 'overdue'] as const;
 
 	// Delete confirmation modal states
 	let invoiceToDelete = $state<{ id: string; number: string } | null>(null);
@@ -76,7 +77,9 @@
 	// - Vencido: same logic but only for proformas/facturas past their due_date.
 	const totalInvoiced = $derived(invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0));
 	const totalPaid = $derived(
-		invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.total_amount), 0)
+		invoices
+			.filter((inv) => inv.status === 'paid')
+			.reduce((sum, inv) => sum + Number(inv.total_amount), 0)
 	);
 
 	const totalPending = $derived.by(() => {
@@ -91,12 +94,8 @@
 	});
 
 	const totalOverdue = $derived.by(() => {
-		const expiredProformaByClient = totalByClient(
-			proformas.filter((p) => isExpired(p.due_date))
-		);
-		const expiredFacturaByClient = totalByClient(
-			invoices.filter((f) => isExpired(f.due_date))
-		);
+		const expiredProformaByClient = totalByClient(proformas.filter((p) => isExpired(p.due_date)));
+		const expiredFacturaByClient = totalByClient(invoices.filter((f) => isExpired(f.due_date)));
 		let total = 0;
 		for (const [clientId, proformaTotal] of expiredProformaByClient) {
 			const facturaTotal = expiredFacturaByClient.get(clientId) ?? 0;
@@ -254,7 +253,7 @@
 			</div>
 			<input
 				type="text"
-						placeholder="Buscar por cliente o factura..."
+				placeholder="Buscar por cliente o factura..."
 				bind:value={searchQuery}
 				class="block w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-9 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 			/>
@@ -266,13 +265,13 @@
 				<Filter class="h-3.5 w-3.5" />
 				Estado:
 			</span>
-			{#each ['all', 'draft', 'pending', 'paid', 'overdue'] as item (item)}
+			{#each statusOptions as item (item)}
 				<button
 					class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200 {statusFilter ===
 					item
 						? 'border border-[#24b47e] bg-[#3ecf8e] text-[#171717]'
 						: 'border border-transparent bg-transparent text-[#707070] hover:text-[#171717]'}"
-					onclick={() => (statusFilter = item as any)}
+					onclick={() => (statusFilter = item)}
 				>
 					{item}
 				</button>
@@ -307,17 +306,19 @@
 					{:else}
 						{#each filteredInvoices as inv (inv.id)}
 							<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
-					<td class="px-6 py-4 font-medium whitespace-nowrap text-[#171717]">
-						<a
-							href={resolve(
-								inv.status === 'paid' ? '/dashboard/invoices/[id]' : '/dashboard/proforma/[id]',
-								{ id: inv.id }
-							)}
-							class="flex items-center gap-1.5 transition-colors hover:text-[#24b47e]"
-						>
-							<FileText class="h-4 w-4 text-[#9a9a9a]" />
-							{inv.invoice_number}
-						</a>
+								<td class="px-6 py-4 font-medium whitespace-nowrap text-[#171717]">
+									<a
+										href={resolve(
+											inv.factura_tipo === 'proforma'
+												? '/dashboard/proforma/[id]'
+												: '/dashboard/invoices/[id]',
+											{ id: inv.id }
+										)}
+										class="flex items-center gap-1.5 transition-colors hover:text-[#24b47e]"
+									>
+										<FileText class="h-4 w-4 text-[#9a9a9a]" />
+										{inv.invoice_number}
+									</a>
 								</td>
 								<td class="px-6 py-4">
 									<div>
@@ -366,16 +367,18 @@
 											</Button>
 										</a>
 
-						{#if isAdmin}
-							<a
-								href={resolve(
-									inv.status === 'paid' ? '/dashboard/invoices/[id]/edit' : '/dashboard/proforma/[id]/edit',
-									{ id: inv.id }
-								)}
-							>
-								<Button
-									variant="ghost"
-									size="icon"
+										{#if isAdmin}
+											<a
+												href={resolve(
+													inv.factura_tipo === 'proforma'
+														? '/dashboard/proforma/[id]/edit'
+														: '/dashboard/invoices/[id]/edit',
+													{ id: inv.id }
+												)}
+											>
+												<Button
+													variant="ghost"
+													size="icon"
 													class="h-8 w-8 text-[#707070] hover:text-[#171717]"
 													title="Editar factura"
 												>

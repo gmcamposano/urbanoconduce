@@ -201,16 +201,16 @@
 										<div
 											class="flex items-center justify-between gap-3 rounded-lg border border-[#ededed] bg-[#fafafa] p-3"
 										>
-						<div class="min-w-0">
-							<a
-								href={resolve(
-									allocation.status === 'paid'
-										? '/dashboard/invoices/[id]'
-										: '/dashboard/proforma/[id]',
-									{ id: allocation.invoice_id }
-								)}
-								class="truncate font-medium text-[#24b47e] hover:underline"
-							>
+											<div class="min-w-0">
+												<a
+													href={resolve(
+														allocation.factura_tipo === 'proforma'
+															? '/dashboard/proforma/[id]'
+															: '/dashboard/invoices/[id]',
+														{ id: allocation.invoice_id }
+													)}
+													class="truncate font-medium text-[#24b47e] hover:underline"
+												>
 													{allocation.invoice_number}
 												</a>
 												<p class="text-xs text-[#707070]">

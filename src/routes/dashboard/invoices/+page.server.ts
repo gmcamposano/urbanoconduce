@@ -14,12 +14,12 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			locals.supabase
 				.from('invoices')
 				.select('*, profiles:created_by(name, email)')
-				.eq('status', 'paid')
+				.neq('factura_tipo', 'proforma')
 				.order('created_at', { ascending: false }),
 			locals.supabase
 				.from('invoices')
 				.select('*, profiles:created_by(name, email)')
-				.neq('status', 'paid')
+				.eq('factura_tipo', 'proforma')
 				.order('created_at', { ascending: false }),
 			locals.supabase
 				.from('accounting_allocations')
@@ -96,8 +96,8 @@ export const actions: Actions = {
 			}
 
 			return { success: true };
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'Ocurrió un error al eliminar.' });
+		} catch (e: unknown) {
+			return fail(400, { error: e instanceof Error ? e.message : 'Ocurrió un error al eliminar.' });
 		}
 	}
 };
