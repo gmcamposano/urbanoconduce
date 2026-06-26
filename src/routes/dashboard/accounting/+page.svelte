@@ -14,6 +14,7 @@
 		AlertTriangle,
 		Trash2,
 		Eye,
+		Edit3,
 		Receipt,
 		Calendar
 	} from '@lucide/svelte';
@@ -301,6 +302,17 @@
 												</a>
 
 												{#if isAdmin}
+													<a href={resolve(`/dashboard/accounting/${payment.id}/edit`)}>
+														<Button
+															variant="ghost"
+															size="icon"
+															class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+															title="Editar pago"
+														>
+															<Edit3 class="h-4 w-4" />
+														</Button>
+													</a>
+
 													<Button
 														variant="ghost"
 														size="icon"

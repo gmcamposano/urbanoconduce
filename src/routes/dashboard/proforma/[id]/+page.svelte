@@ -25,6 +25,7 @@
 	const models = $derived(data.models || []);
 
 	const profile = $derived(data.profile);
+	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const isAdmin = $derived(profile?.role === 'admin');
 
 	function getModelName(modelId: string | null): string {
@@ -318,15 +319,7 @@
 						<span class="sm:hidden">PDF</span>
 					</Button>
 
-					{#if isAdmin}
-						<a href={resolve(`/dashboard/proforma/${invoice.id}/edit`)}>
-							<Button variant="outline" size="sm" class="flex items-center gap-1.5">
-								<Edit3 class="h-4 w-4" />
-								<span class="hidden sm:inline">Editar proforma</span>
-								<span class="sm:hidden">Editar</span>
-							</Button>
-						</a>
-
+					{#if canManage}
 						<Button
 							variant="destructive"
 							size="sm"
@@ -336,6 +329,16 @@
 							<Trash2 class="h-4 w-4" />
 							<span class="hidden sm:inline">Eliminar</span>
 						</Button>
+					{/if}
+
+					{#if isAdmin}
+						<a href={resolve(`/dashboard/proforma/${invoice.id}/edit`)}>
+							<Button variant="outline" size="sm" class="flex items-center gap-1.5">
+								<Edit3 class="h-4 w-4" />
+								<span class="hidden sm:inline">Editar proforma</span>
+								<span class="sm:hidden">Editar</span>
+							</Button>
+						</a>
 					{/if}
 				</div>
 			</div>

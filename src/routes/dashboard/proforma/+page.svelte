@@ -34,7 +34,6 @@
 	// Active role state
 	const profile = $derived(data.profile);
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
-	const isAdmin = $derived(profile?.role === 'admin');
 
 	// Local states for search and filtering
 	let searchQuery = $state('');
@@ -415,8 +414,8 @@
 											</a>
 										{/if}
 
-										<!-- Deleting option (Admins only) -->
-										{#if isAdmin}
+										<!-- Deleting option (Admins and editors) -->
+										{#if canManage}
 											<Button
 												variant="ghost"
 												size="icon"

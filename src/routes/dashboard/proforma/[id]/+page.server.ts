@@ -199,12 +199,26 @@ export const actions: Actions = {
 			throw redirect(303, '/login');
 		}
 
-		if (locals.role !== 'admin') {
-			return fail(403, { error: 'Solo un administrador puede eliminar facturas.' });
+		if (locals.role !== 'admin' && locals.role !== 'editor') {
+			return fail(403, { error: 'Solo administradores y editores pueden eliminar proformas.' });
 		}
 
 		try {
-			// Enforced by RLS: Only Admins can delete invoices
+			const { data: invoice, error: invoiceError } = await locals.supabase
+				.from('invoices')
+				.select('id, factura_tipo')
+				.eq('id', id)
+				.single();
+
+			if (invoiceError || !invoice) {
+				return fail(404, { error: 'No se encontró la proforma.' });
+			}
+
+			if (invoice.factura_tipo !== 'proforma') {
+				return fail(403, { error: 'Solo se pueden eliminar proformas desde este módulo.' });
+			}
+
+			// Enforced by RLS: admins can delete any invoice, editors only proformas
 			const { error } = await locals.supabase.from('invoices').delete().eq('id', id);
 
 			if (error) {

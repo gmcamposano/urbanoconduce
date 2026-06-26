@@ -16,6 +16,7 @@
 		FileText,
 		Trash2,
 		Printer,
+		Edit3,
 		AlertTriangle,
 		Banknote,
 		CreditCard,
@@ -95,6 +96,13 @@
 			</Button>
 
 			{#if isAdmin}
+				<a href={resolve(`/dashboard/accounting/${payment.id}/edit`)}>
+					<Button variant="outline">
+						<Edit3 class="mr-2 h-4 w-4" />
+						Editar
+					</Button>
+				</a>
+
 				<Button variant="outline" onclick={() => (showDeleteConfirm = true)}>
 					<Trash2 class="mr-2 h-4 w-4" />
 					Eliminar
