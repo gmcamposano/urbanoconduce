@@ -331,7 +331,7 @@
 						</Button>
 					{/if}
 
-					{#if isAdmin}
+					{#if canManage}
 						<a href={resolve(`/dashboard/proforma/${invoice.id}/edit`)}>
 							<Button variant="outline" size="sm" class="flex items-center gap-1.5">
 								<Edit3 class="h-4 w-4" />

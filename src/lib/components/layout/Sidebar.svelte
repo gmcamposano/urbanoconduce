@@ -86,7 +86,7 @@
 				Proformas
 			</a>
 
-		{#if profile?.role === 'admin'}
+		{#if profile?.role === 'admin' || profile?.role === 'editor'}
 			<a
 				href={resolve('/dashboard/accounting')}
 				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
