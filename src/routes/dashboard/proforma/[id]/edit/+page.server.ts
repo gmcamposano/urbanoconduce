@@ -257,10 +257,6 @@ export const actions: Actions = {
 				});
 			}
 
-			if (selectedColors.length > 0 && !color) {
-				return fail(400, { error: 'Debes seleccionar un color para cada concepto.' });
-			}
-
 			normalizedItems.push({
 				product_id: item.product_id,
 				description: product.title,
