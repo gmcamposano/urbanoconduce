@@ -61,15 +61,23 @@
 	}
 
 	function getAvailableColors(itemId: string): typeof colors {
-		const usedColors = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
-		return colors.filter((c) => !usedColors.includes(c.color));
+		const currentColor = items.find((i) => i.id === itemId)?.color;
+		const usedColorsByOthers = items
+			.filter((i) => i.id !== itemId && i.color)
+			.map((i) => i.color);
+		return colors.filter(
+			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
+		);
 	}
 
 	function getAvailableProducts(itemId: string) {
+		const currentProductId = items.find((i) => i.id === itemId)?.product_id;
 		const usedProductIds = items
 			.filter((i) => i.id !== itemId && i.product_id)
 			.map((i) => i.product_id);
-		return clientProducts.filter((p) => !usedProductIds.includes(p.id));
+		return clientProducts.filter(
+			(p) => p.id === currentProductId || !usedProductIds.includes(p.id)
+		);
 	}
 
 	// Set up date defaults

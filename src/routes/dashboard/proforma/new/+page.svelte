@@ -62,14 +62,19 @@
 
 	function getAvailableColors(itemId: string, productId: string): (typeof colors)[number][] {
 		if (!productId) return colors;
-		const usedColors = items
+		const currentColor = items.find((i) => i.id === itemId)?.color;
+		const usedColorsByOthers = items
 			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
 			.map((i) => i.color);
-		return colors.filter((c) => !usedColors.includes(c.color));
+		return colors.filter(
+			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
+		);
 	}
 
 	function getAvailableProducts(itemId: string): ProductOption[] {
+		const currentProductId = items.find((i) => i.id === itemId)?.product_id;
 		return clientProducts.filter((product) => {
+			if (product.id === currentProductId) return true;
 			const otherItemsWithProduct = items.filter((i) => i.id !== itemId && i.product_id === product.id);
 			if (otherItemsWithProduct.length === 0) return true;
 			const hasColorSelected = otherItemsWithProduct.some((i) => i.color);

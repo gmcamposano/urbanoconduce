@@ -133,14 +133,19 @@
 
 	function getAvailableColors(itemId: string, productId: string): (typeof colors)[number][] {
 		if (!productId) return colors;
-		const usedColors = editor.items
+		const currentColor = editor.items.find((i) => i.id === itemId)?.color;
+		const usedColorsByOthers = editor.items
 			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
 			.map((i) => i.color);
-		return colors.filter((c) => !usedColors.includes(c.color));
+		return colors.filter(
+			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
+		);
 	}
 
 	function getAvailableProducts(itemId: string): ProductOption[] {
+		const currentProductId = editor.items.find((i) => i.id === itemId)?.product_id;
 		return clientProducts.filter((product) => {
+			if (product.id === currentProductId) return true;
 			const otherItemsWithProduct = editor.items.filter(
 				(i) => i.id !== itemId && i.product_id === product.id
 			);
