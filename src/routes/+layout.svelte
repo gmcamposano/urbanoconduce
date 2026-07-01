@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { supabase } from '$lib/supabaseClient';
+	import RouteLoadingBar from '$lib/components/RouteLoadingBar.svelte';
 
 	let { children } = $props();
 
@@ -28,5 +29,6 @@
 </svelte:head>
 
 <div class="relative flex min-h-screen flex-col bg-white text-[#171717]">
+	<RouteLoadingBar />
 	{@render children()}
 </div>
