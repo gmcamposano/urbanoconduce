@@ -12,6 +12,7 @@ RUN npm prune --production
 
 # Stage 2: Run the application
 FROM node:22-alpine
+RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=builder /app/build build/
 COPY --from=builder /app/node_modules node_modules/
