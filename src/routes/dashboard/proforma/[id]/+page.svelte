@@ -61,6 +61,10 @@
 	type CollectionState = 'draft' | 'pending' | 'partial' | 'paid' | 'overdue';
 
 	// Pricing helper calculations (explicit type annotations to prevent implicit any errors)
+	const totalQuantity = $derived(
+		items.reduce((sum: number, item: { quantity: number | string }) => sum + Number(item.quantity), 0)
+	);
+
 	const subtotal = $derived(
 		items.reduce((sum: number, item: { amount: number | string }) => sum + Number(item.amount), 0)
 	);
@@ -547,7 +551,7 @@
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
-								{#each sortedItems as item (item.id ?? item.description)}
+									{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="text-[#171717]">
 										<td class="px-3 py-2.5 align-middle">
@@ -578,8 +582,15 @@
 											>{formatCurrency(Number(item.amount))}</td
 										>
 									</tr>
-								{/each}
-							</tbody>
+							{/each}
+						</tbody>
+						<tfoot>
+							<tr class="border-t-2 border-[#171717] font-medium text-[#171717]">
+								<td colspan="3" class="px-3 py-2.5 text-right align-middle text-sm">Cantidad de artículos</td>
+								<td class="px-3 py-2.5 text-center align-middle font-mono">{totalQuantity}</td>
+								<td colspan="2" class="px-3 py-2.5"></td>
+							</tr>
+						</tfoot>
 						</table>
 					</div>
 

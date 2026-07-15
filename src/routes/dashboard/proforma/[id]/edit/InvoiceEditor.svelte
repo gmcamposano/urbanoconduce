@@ -183,6 +183,10 @@
 	let loading = $state(false);
 	let taxMode = $state<TaxMode>('none');
 
+	const totalQuantity = $derived(
+		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+	);
+
 	const lineTotal = $derived(
 		editor.items.reduce(
 			(sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
@@ -664,6 +668,10 @@
 
 						<div class="rounded-xl border border-[#ededed] bg-[#fafafa] p-4">
 							<div class="space-y-3 text-sm text-[#707070]">
+								<div class="flex items-center justify-between">
+									<span>Cantidad de artículos</span>
+									<span class="font-mono font-medium text-[#171717]">{totalQuantity}</span>
+								</div>
 								<div class="flex items-center justify-between">
 									<span>{taxMode === 'included' ? 'Subtotal neto' : 'Subtotal'}</span>
 									<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
