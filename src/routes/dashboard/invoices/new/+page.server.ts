@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { resolveVariantIdForItem } from '$lib/server/inventory';
 
 function generateInvoiceNumber() {
 	const year = new Date().getUTCFullYear();
@@ -65,7 +66,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 };
 
 export const actions: Actions = {
-	createInvoice: async ({ request, locals, params }) => {
+	createInvoice: async ({ request, locals }) => {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
@@ -103,7 +104,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'El NCF es obligatorio para facturas de valor fiscal.' });
 		}
 
-		let items: Array<{ product_id: string; color: string; model: string; quantity: number }> = [];
+		let items: Array<{ product_id: string; color: string; model: string; quantity: number }>;
 		try {
 			items = JSON.parse(itemsJson || '[]');
 		} catch {
@@ -151,6 +152,7 @@ export const actions: Actions = {
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
 		const normalizedItems: Array<{
 			product_id: string;
+			product_variant_id: string | null;
 			description: string;
 			color: string | null;
 			model: string | null;
@@ -178,8 +180,20 @@ export const actions: Actions = {
 
 			const unitPrice = Number(product.price_without_taxes);
 			const model = (item.model || '').trim() || null;
+			const { id: variantId } = await resolveVariantIdForItem(
+				locals.supabase,
+				item.product_id,
+				color
+			);
+			if (!variantId) {
+				return fail(400, {
+					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`
+				});
+			}
+
 			normalizedItems.push({
 				product_id: item.product_id,
+				product_variant_id: variantId,
 				description: product.title,
 				color: color || null,
 				model,
@@ -193,19 +207,22 @@ export const actions: Actions = {
 		const taxAmount = subtotal * (taxRate / 100);
 		const totalAmount = Math.max(0, subtotal + taxAmount - discountAmount);
 
+		const targetStatus = status;
+
 		try {
 			const { data: invoice, error: invoiceError } = await locals.supabase
 				.from('invoices')
 				.insert({
 					invoice_number: invoiceNumber,
 					factura_tipo: facturaTipo,
+					document_type: 'factura',
 					ncf: facturaTipo === 'valor_fiscal' ? ncf : null,
 					client_id: clientId,
 					client_name: clientName,
 					client_email: clientEmail,
 					invoice_date: invoiceDate,
 					due_date: dueDate,
-					status,
+					status: 'pending',
 					notes,
 					tax_rate: taxRate,
 					discount_amount: discountAmount,
@@ -222,6 +239,7 @@ export const actions: Actions = {
 			const invoiceItemsData = normalizedItems.map((item) => ({
 				invoice_id: invoice.id,
 				product_id: item.product_id,
+				product_variant_id: item.product_variant_id,
 				description: item.description,
 				color: item.color,
 				model: item.model,
@@ -238,9 +256,22 @@ export const actions: Actions = {
 				await locals.supabase.from('invoices').delete().eq('id', invoice.id);
 				return fail(400, { error: `Failed to save invoice items: ${itemsError.message}` });
 			}
-		} catch (e: any) {
+
+			if (targetStatus !== 'pending') {
+				const { error: statusError } = await locals.supabase
+					.from('invoices')
+					.update({ status: targetStatus })
+					.eq('id', invoice.id);
+
+				if (statusError) {
+					await locals.supabase.from('invoices').delete().eq('id', invoice.id);
+					return fail(400, { error: statusError.message });
+				}
+			}
+		} catch (e: unknown) {
 			console.error('Invoice save exception:', e);
-			return fail(500, { error: e.message || 'Ocurrió un error inesperado.' });
+			const message = e instanceof Error ? e.message : String(e);
+			return fail(500, { error: message || 'Ocurrió un error inesperado.' });
 		}
 
 		throw redirect(303, '/dashboard/invoices');

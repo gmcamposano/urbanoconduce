@@ -284,6 +284,7 @@ export const actions: Actions = {
 			.update({
 				invoice_number: invoiceNumber,
 				factura_tipo: facturaTipo,
+				document_type: 'factura',
 				ncf: facturaTipo === 'valor_fiscal' ? ncf : null,
 				client_id: clientId,
 				client_name: clientName,

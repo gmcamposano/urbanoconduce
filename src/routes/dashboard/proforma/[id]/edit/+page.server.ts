@@ -303,6 +303,7 @@ export const actions: Actions = {
 			.update({
 				invoice_number: invoiceNumber,
 				factura_tipo: facturaTipo,
+				document_type: 'proforma',
 				ncf,
 				client_id: clientId,
 				client_name: clientName,

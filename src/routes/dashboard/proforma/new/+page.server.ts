@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { resolveVariantIdForItem } from '$lib/server/inventory';
 
 function generateInvoiceNumber() {
 	const year = new Date().getUTCFullYear();
@@ -65,7 +66,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 };
 
 export const actions: Actions = {
-	createInvoice: async ({ request, locals, params }) => {
+	createInvoice: async ({ request, locals }) => {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
@@ -75,7 +76,6 @@ export const actions: Actions = {
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
 		const invoiceNumber = invoiceNumberInput || generateInvoiceNumber();
 		const facturaTipo = 'proforma';
-		const ncf = '';
 		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();
@@ -99,7 +99,7 @@ export const actions: Actions = {
 			model: string;
 			quantity: number;
 			unit_price: number;
-		}> = [];
+		}>;
 		try {
 			items = JSON.parse(itemsJson || '[]');
 		} catch {
@@ -147,6 +147,7 @@ export const actions: Actions = {
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
 		const normalizedItems: Array<{
 			product_id: string;
+			product_variant_id: string | null;
 			description: string;
 			color: string | null;
 			model: string | null;
@@ -178,8 +179,20 @@ export const actions: Actions = {
 			}
 
 			const model = (item.model || '').trim() || null;
+			const { id: variantId } = await resolveVariantIdForItem(
+				locals.supabase,
+				item.product_id,
+				color
+			);
+			if (!variantId) {
+				return fail(400, {
+					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`
+				});
+			}
+
 			normalizedItems.push({
 				product_id: item.product_id,
+				product_variant_id: variantId,
 				description: product.title,
 				color: color || null,
 				model,
@@ -189,14 +202,51 @@ export const actions: Actions = {
 			});
 		}
 
+		if (status === 'paid') {
+			const { data: stockData, error: stockError } = await locals.supabase
+				.from('inventory_movements')
+				.select('product_variant_id, quantity')
+				.in(
+					'product_variant_id',
+					normalizedItems.map((i) => i.product_variant_id)
+				);
+			if (stockError) {
+				return fail(400, { error: stockError.message });
+			}
+			const stockByVariant: Record<string, number> = {};
+			for (const m of stockData || []) {
+				stockByVariant[m.product_variant_id] =
+					(stockByVariant[m.product_variant_id] || 0) + m.quantity;
+			}
+			const demandByVariant: Record<string, number> = {};
+			for (const i of normalizedItems) {
+				const vid = i.product_variant_id || '';
+				demandByVariant[vid] = (demandByVariant[vid] || 0) + i.quantity;
+			}
+			const insufficient = Object.entries(demandByVariant).filter(
+				([vid, demand]) => (stockByVariant[vid] || 0) < demand
+			);
+			if (insufficient.length > 0) {
+				return fail(400, {
+					error: `Stock insuficiente para ${insufficient.length} variante(s).`
+				});
+			}
+		}
+
 		const lineTotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
 		const subtotal = taxMode === 'included' ? lineTotal / 1.18 : lineTotal;
 		const taxAmount =
-			taxMode === 'none' ? 0 : taxMode === 'included' ? lineTotal - subtotal : subtotal * (taxRate / 100);
+			taxMode === 'none'
+				? 0
+				: taxMode === 'included'
+					? lineTotal - subtotal
+					: subtotal * (taxRate / 100);
 		const totalAmount = Math.max(
 			0,
 			taxMode === 'none' ? subtotal - discountAmount : subtotal + taxAmount - discountAmount
 		);
+
+		const targetStatus = status;
 
 		try {
 			const { data: invoice, error: invoiceError } = await locals.supabase
@@ -204,13 +254,14 @@ export const actions: Actions = {
 				.insert({
 					invoice_number: invoiceNumber,
 					factura_tipo: facturaTipo,
+					document_type: 'proforma',
 					ncf: null,
 					client_id: clientId,
 					client_name: clientName,
 					client_email: clientEmail,
 					invoice_date: invoiceDate,
 					due_date: dueDate,
-					status,
+					status: 'pending',
 					notes,
 					tax_rate: taxRate,
 					discount_amount: discountAmount,
@@ -227,6 +278,7 @@ export const actions: Actions = {
 			const invoiceItemsData = normalizedItems.map((item) => ({
 				invoice_id: invoice.id,
 				product_id: item.product_id,
+				product_variant_id: item.product_variant_id,
 				description: item.description,
 				color: item.color,
 				model: item.model,
@@ -243,9 +295,22 @@ export const actions: Actions = {
 				await locals.supabase.from('invoices').delete().eq('id', invoice.id);
 				return fail(400, { error: `Failed to save invoice items: ${itemsError.message}` });
 			}
-		} catch (e: any) {
+
+			if (targetStatus !== 'pending') {
+				const { error: statusError } = await locals.supabase
+					.from('invoices')
+					.update({ status: targetStatus })
+					.eq('id', invoice.id);
+
+				if (statusError) {
+					await locals.supabase.from('invoices').delete().eq('id', invoice.id);
+					return fail(400, { error: statusError.message });
+				}
+			}
+		} catch (e: unknown) {
 			console.error('Invoice save exception:', e);
-			return fail(500, { error: e.message || 'Ocurrió un error inesperado.' });
+			const message = e instanceof Error ? e.message : String(e);
+			return fail(500, { error: message || 'Ocurrió un error inesperado.' });
 		}
 
 		throw redirect(303, '/dashboard/proforma');

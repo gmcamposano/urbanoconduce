@@ -11,7 +11,8 @@
 		Package,
 		Palette,
 		Boxes,
-		Calculator
+		Calculator,
+		Warehouse
 	} from '@lucide/svelte';
 
 	let {
@@ -39,7 +40,14 @@
 			return activePath === '/dashboard/invoices' || activePath.startsWith('/dashboard/invoices/');
 		}
 		if (path === '/dashboard/accounting') {
-			return activePath === '/dashboard/accounting' || activePath.startsWith('/dashboard/accounting/');
+			return (
+				activePath === '/dashboard/accounting' || activePath.startsWith('/dashboard/accounting/')
+			);
+		}
+		if (path === '/dashboard/inventory') {
+			return (
+				activePath === '/dashboard/inventory' || activePath.startsWith('/dashboard/inventory/')
+			);
 		}
 		return activePath === path;
 	}
@@ -86,18 +94,18 @@
 				Proformas
 			</a>
 
-		{#if profile?.role === 'admin' || profile?.role === 'editor'}
-			<a
-				href={resolve('/dashboard/accounting')}
-				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
-					'/dashboard/accounting'
-				)}"
-				onclick={onNavigate}
-			>
-				<Calculator class="h-4.5 w-4.5" />
-				Contabilidad
-			</a>
-		{/if}
+			{#if profile?.role === 'admin' || profile?.role === 'editor'}
+				<a
+					href={resolve('/dashboard/accounting')}
+					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+						'/dashboard/accounting'
+					)}"
+					onclick={onNavigate}
+				>
+					<Calculator class="h-4.5 w-4.5" />
+					Contabilidad
+				</a>
+			{/if}
 
 			<a
 				href={resolve('/dashboard/clients')}
@@ -119,6 +127,17 @@
 			>
 				<Package class="h-4.5 w-4.5" />
 				Productos
+			</a>
+
+			<a
+				href={resolve('/dashboard/inventory')}
+				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+					'/dashboard/inventory'
+				)}"
+				onclick={onNavigate}
+			>
+				<Warehouse class="h-4.5 w-4.5" />
+				Inventario
 			</a>
 
 			<a
