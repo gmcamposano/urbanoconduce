@@ -56,6 +56,7 @@
 			result = result.filter(
 				(i) =>
 					i.product_title.toLowerCase().includes(query) ||
+					getModelName(i.model_id).toLowerCase().includes(query) ||
 					i.color.toLowerCase().includes(query) ||
 					(i.sku || '').toLowerCase().includes(query)
 			);
@@ -150,7 +151,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Buscar producto, color o SKU..."
+					placeholder="Buscar producto, modelo, color o SKU..."
 					class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 				/>
 			</div>
