@@ -100,6 +100,7 @@
 	let dueDate = $state(formattedDue);
 
 	const clients = $derived((data.clients || []) as ClientOption[]);
+	const clientPrices = $derived(data.clientPrices || []);
 
 	const selectedClient = $derived(clients.find((c) => c.id === selectedClientId) || null);
 	const clientEmail = $derived(selectedClient?.email || '');
@@ -109,6 +110,16 @@
 		items = items.map((item) => {
 			if (item.product_id && !validProductIds.has(item.product_id)) {
 				return { ...item, product_id: '', model: null, unit_price: 0 };
+			}
+			if (item.product_id) {
+				const cp = clientPrices.find(
+					(p) => p.client_id === selectedClientId && p.product_id === item.product_id
+				);
+				const product = clientProducts.find((p) => p.id === item.product_id);
+				return {
+					...item,
+					unit_price: cp ? Number(cp.unit_price) : Number(product?.price_without_taxes || 0)
+				};
 			}
 			return item;
 		});
@@ -195,7 +206,12 @@
 	) {
 		item.product_id = productId;
 		const product = clientProducts.find((entry) => entry.id === productId);
-		item.unit_price = Number(product?.price_without_taxes || 0);
+		const clientPrice = clientPrices.find(
+			(cp) => cp.client_id === selectedClientId && cp.product_id === productId
+		);
+		item.unit_price = clientPrice
+			? Number(clientPrice.unit_price)
+			: Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
 	}
 

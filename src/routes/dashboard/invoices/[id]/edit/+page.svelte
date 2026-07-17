@@ -18,5 +18,15 @@
 		colors: data.colors,
 		models: data.models || []
 	})}
-	<InvoiceEditor invoice={data.invoice} products={data.products} colors={data.colors} models={data.models || []} clients={data.clients || []} {initial} {form} isAdmin={data.isAdmin} />
+	<InvoiceEditor
+		invoice={data.invoice}
+		products={data.products}
+		colors={data.colors}
+		models={data.models || []}
+		clients={data.clients || []}
+		clientPrices={data.clientPrices || []}
+		{initial}
+		{form}
+		isAdmin={data.isAdmin}
+	/>
 {/key}

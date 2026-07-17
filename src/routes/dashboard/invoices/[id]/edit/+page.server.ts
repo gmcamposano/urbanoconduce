@@ -15,36 +15,38 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		throw redirect(303, '/dashboard/proforma');
 	}
 
-	const [invoiceResult, itemsResult, productsResult, colorsResult, modelsResult, clientsResult] =
-		await Promise.all([
-			locals.supabase
-				.from('invoices')
-				.select('*, profiles:created_by(name, email)')
-				.eq('id', params.id)
-				.single(),
-			locals.supabase
-				.from('invoice_items')
-				.select('*')
-				.eq('invoice_id', params.id)
-				.order('created_at', { ascending: true }),
-			locals.supabase
-				.from('products')
-				.select('id, title, price_without_taxes, model')
-				.order('title', { ascending: true }),
-			locals.supabase
-				.from('product_colors')
-				.select('id, color')
-				.order('color', { ascending: true }),
-			locals.supabase
-				.from('product_models')
-				.select('id, model')
-				.order('model', { ascending: true }),
-			locals.supabase
-				.from('clients')
-				.select('id, client_type, full_name, company_name, alias, email')
-				.order('company_name', { ascending: true })
-				.order('full_name', { ascending: true })
-		]);
+	const [
+		invoiceResult,
+		itemsResult,
+		productsResult,
+		colorsResult,
+		modelsResult,
+		clientsResult,
+		clientPricesResult
+	] = await Promise.all([
+		locals.supabase
+			.from('invoices')
+			.select('*, profiles:created_by(name, email)')
+			.eq('id', params.id)
+			.single(),
+		locals.supabase
+			.from('invoice_items')
+			.select('*')
+			.eq('invoice_id', params.id)
+			.order('created_at', { ascending: true }),
+		locals.supabase
+			.from('products')
+			.select('id, title, price_without_taxes, model')
+			.order('title', { ascending: true }),
+		locals.supabase.from('product_colors').select('id, color').order('color', { ascending: true }),
+		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
+		locals.supabase
+			.from('clients')
+			.select('id, client_type, full_name, company_name, alias, email')
+			.order('company_name', { ascending: true })
+			.order('full_name', { ascending: true }),
+		locals.supabase.from('client_product_prices').select('product_id, client_id, unit_price')
+	]);
 
 	if (invoiceResult.error || !invoiceResult.data) {
 		console.error('Error fetching invoice for edit:', invoiceResult.error?.message);
@@ -73,6 +75,10 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 
 	if (clientsResult.error) {
 		console.error('Error fetching clients for edit:', clientsResult.error.message);
+	}
+
+	if (clientPricesResult.error) {
+		console.error('Error fetching client prices for edit:', clientPricesResult.error.message);
 	}
 
 	const products = productsResult.data || [];
@@ -106,6 +112,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		colors,
 		models,
 		clients,
+		clientPrices: clientPricesResult.data || [],
 		isAdmin: profile?.role === 'admin'
 	};
 };

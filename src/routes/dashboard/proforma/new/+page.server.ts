@@ -39,6 +39,10 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.order('company_name', { ascending: true })
 		.order('full_name', { ascending: true });
 
+	const { data: clientPrices, error: clientPricesError } = await locals.supabase
+		.from('client_product_prices')
+		.select('product_id, client_id, unit_price');
+
 	if (productsError) {
 		console.error('Supabase query error in invoice load products:', productsError.message);
 	}
@@ -55,12 +59,17 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Supabase query error in invoice load clients:', clientsError.message);
 	}
 
+	if (clientPricesError) {
+		console.error('Supabase query error in client_prices load:', clientPricesError.message);
+	}
+
 	return {
 		invoiceNumberPreview,
 		products: products || [],
 		colors: colors || [],
 		models: models || [],
 		clients: clients || [],
+		clientPrices: clientPrices || [],
 		isAdmin: profile?.role === 'admin'
 	};
 };

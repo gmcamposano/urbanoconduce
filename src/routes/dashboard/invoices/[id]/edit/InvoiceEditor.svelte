@@ -55,11 +55,13 @@
 		colors,
 		models,
 		clients,
+		clientPrices,
 		initial,
 		form: actionForm,
 		isAdmin
 	}: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & {
 		clients: ClientOption[];
+		clientPrices: { product_id: string; client_id: string; unit_price: number }[];
 		initial: EditorState;
 		form: ActionData;
 		isAdmin?: boolean;
@@ -218,7 +220,12 @@
 	function applyProductToItem(item: InvoiceFormItem, productId: string) {
 		item.product_id = productId;
 		const product = clientProducts.find((entry) => entry.id === productId);
-		item.unit_price = Number(product?.price_without_taxes || 0);
+		const clientPrice = clientPrices.find(
+			(cp) => cp.client_id === editor.selectedClientId && cp.product_id === productId
+		);
+		item.unit_price = clientPrice
+			? Number(clientPrice.unit_price)
+			: Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
 		if (item.color) {
 			const availableColors = getAvailableColors(item.id, productId);
