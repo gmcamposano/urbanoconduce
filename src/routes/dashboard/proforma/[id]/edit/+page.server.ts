@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { resolveUnitPrices } from '$lib/server/inventory';
 
 const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
@@ -223,6 +224,7 @@ export const actions: Actions = {
 			}
 		}
 
+		const { prices: resolvedPrices } = await resolveUnitPrices(locals.supabase, clientId, products);
 		const productMap = new Map(products.map((product) => [product.id, product]));
 		const normalizedItems: Array<{
 			product_id: string;
@@ -239,7 +241,8 @@ export const actions: Actions = {
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
 			const model = (item.model || '').trim() || null;
-			const unitPrice = Number((item as { unit_price?: number }).unit_price);
+			const unitPrice =
+				resolvedPrices.get(item.product_id) ?? Number((item as { unit_price?: number }).unit_price);
 
 			if (!product || quantity <= 0) {
 				return fail(400, {

@@ -270,5 +270,82 @@ export const actions: Actions = {
 		} catch (e: any) {
 			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
 		}
+	},
+	upsertClientPrice: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (!canManageCatalog(locals.role)) {
+			return fail(403, { error: 'No tienes permisos para gestionar precios por cliente.' });
+		}
+
+		const formData = await request.formData();
+		const productId = (formData.get('product_id') as string)?.trim() ?? '';
+		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
+		const unitPrice = Number(formData.get('unit_price') ?? 0);
+
+		if (!productId || !clientId) {
+			return fail(400, { error: 'El producto y el cliente son obligatorios.' });
+		}
+
+		if (Number.isNaN(unitPrice) || unitPrice < 0) {
+			return fail(400, { error: 'El precio por cliente debe ser mayor o igual a cero.' });
+		}
+
+		try {
+			const { error } = await locals.supabase.from('client_product_prices').upsert(
+				{
+					product_id: productId,
+					client_id: clientId,
+					unit_price: unitPrice,
+					created_by: user.id
+				},
+				{ onConflict: 'client_id,product_id' }
+			);
+
+			if (error) {
+				return fail(400, { error: error.message });
+			}
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
+
+		return { success: true, message: 'Precio por cliente guardado.' };
+	},
+	deleteClientPrice: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (!canManageCatalog(locals.role)) {
+			return fail(403, { error: 'No tienes permisos para gestionar precios por cliente.' });
+		}
+
+		const formData = await request.formData();
+		const productId = (formData.get('product_id') as string)?.trim() ?? '';
+		const clientId = (formData.get('client_id') as string)?.trim() ?? '';
+
+		if (!productId || !clientId) {
+			return fail(400, { error: 'El producto y el cliente son obligatorios.' });
+		}
+
+		try {
+			const { error } = await locals.supabase
+				.from('client_product_prices')
+				.delete()
+				.eq('product_id', productId)
+				.eq('client_id', clientId);
+
+			if (error) {
+				return fail(400, { error: error.message });
+			}
+		} catch (e: any) {
+			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		}
+
+		return { success: true, message: 'Precio por cliente eliminado.' };
 	}
 };

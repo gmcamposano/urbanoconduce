@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveVariantIdForItem } from '$lib/server/inventory';
+import { resolveVariantIdForItem, resolveUnitPrices } from '$lib/server/inventory';
 
 function generateInvoiceNumber() {
 	const year = new Date().getUTCFullYear();
@@ -128,6 +128,12 @@ export const actions: Actions = {
 			return fail(400, { error: productsError.message });
 		}
 
+		const { prices: resolvedPrices } = await resolveUnitPrices(
+			locals.supabase,
+			clientId,
+			products || []
+		);
+
 		if (selectedColors.length > 0) {
 			const { data: colors, error: colorsError } = await locals.supabase
 				.from('product_colors')
@@ -160,7 +166,7 @@ export const actions: Actions = {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
-			const unitPrice = Number(item.unit_price);
+			const unitPrice = resolvedPrices.get(item.product_id) ?? Number(item.unit_price);
 
 			if (!product || quantity <= 0) {
 				return fail(400, {

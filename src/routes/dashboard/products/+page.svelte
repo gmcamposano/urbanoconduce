@@ -9,6 +9,7 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { Copy, Edit3, Package, Tags, Trash2, ArrowUp, ArrowDown, Search } from '@lucide/svelte';
+	import ProductRow from './ProductRow.svelte';
 
 	let { data, form } = $props();
 
@@ -17,6 +18,7 @@
 	const products = $derived(data.products || []);
 	const models = $derived(data.models || []);
 	const clients = $derived(data.clients || []);
+	const clientPrices = $derived(data.clientPrices || []);
 	let searchQuery = $state('');
 
 	let sortBy = $state<string>('title');
@@ -30,6 +32,24 @@
 			sortOrder = 'asc';
 		}
 	}
+
+	const filteredProducts = $derived.by(() => {
+		let result = products;
+
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase().trim();
+			result = result.filter((p) => {
+				const modelName = models.find((m) => m.id === p.model)?.model?.toLowerCase() || '';
+				return (
+					p.title.toLowerCase().includes(query) ||
+					modelName.includes(query) ||
+					(p.description && p.description.toLowerCase().includes(query))
+				);
+			});
+		}
+
+		return result;
+	});
 
 	const sortedProducts = $derived.by(() => {
 		const sorted = [...filteredProducts];
@@ -53,24 +73,6 @@
 			}
 		});
 		return sorted;
-	});
-
-	const filteredProducts = $derived.by(() => {
-		let result = products;
-
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase().trim();
-			result = result.filter((p) => {
-				const modelName = models.find((m) => m.id === p.model)?.model?.toLowerCase() || '';
-				return (
-					p.title.toLowerCase().includes(query) ||
-					modelName.includes(query) ||
-					(p.description && p.description.toLowerCase().includes(query))
-				);
-			});
-		}
-
-		return result;
 	});
 
 	let loading = $state(false);
@@ -414,7 +416,8 @@
 							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-								<th class="px-6 py-5 font-bold">
+								<th class="w-8 px-3 py-4"></th>
+								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
 										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
@@ -422,11 +425,9 @@
 									>
 										Fecha
 										{#if sortBy === 'created_at'}
-											{#if sortOrder === 'asc'}
-												<ArrowUp class="h-3 w-3" />
-											{:else}
-												<ArrowDown class="h-3 w-3" />
-											{/if}
+											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+													class="h-3 w-3"
+												/>{/if}
 										{/if}
 									</button>
 								</th>
@@ -438,11 +439,9 @@
 									>
 										Producto
 										{#if sortBy === 'title'}
-											{#if sortOrder === 'asc'}
-												<ArrowUp class="h-3 w-3" />
-											{:else}
-												<ArrowDown class="h-3 w-3" />
-											{/if}
+											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+													class="h-3 w-3"
+												/>{/if}
 										{/if}
 									</button>
 								</th>
@@ -454,11 +453,9 @@
 									>
 										Modelo
 										{#if sortBy === 'model'}
-											{#if sortOrder === 'asc'}
-												<ArrowUp class="h-3 w-3" />
-											{:else}
-												<ArrowDown class="h-3 w-3" />
-											{/if}
+											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+													class="h-3 w-3"
+												/>{/if}
 										{/if}
 									</button>
 								</th>
@@ -471,11 +468,9 @@
 									>
 										Precio
 										{#if sortBy === 'price'}
-											{#if sortOrder === 'asc'}
-												<ArrowUp class="h-3 w-3" />
-											{:else}
-												<ArrowDown class="h-3 w-3" />
-											{/if}
+											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+													class="h-3 w-3"
+												/>{/if}
 										{/if}
 									</button>
 								</th>
@@ -489,72 +484,26 @@
 							{#if sortedProducts.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 7 : 6}
+										colspan={canManage ? 8 : 7}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay productos registrados.</td
 									>
 								</tr>
 							{:else}
 								{#each sortedProducts as product (product.id)}
-									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
-										<td
-											class="px-6 py-5 text-right font-mono text-xs whitespace-nowrap text-[#707070]"
-											>{new Date(product.created_at).toLocaleDateString('es-DO', {
-												year: 'numeric',
-												month: 'short',
-												day: 'numeric'
-											})}</td
-										>
-										<td class="px-6 py-4 font-medium text-[#171717]">{capitalize(product.title)}</td
-										>
-										<td class="px-6 py-4 text-xs text-[#707070] capitalize">
-											{product.model
-												? models.find((m) => m.id === product.model)?.model || '—'
-												: '—'}
-										</td>
-										<td class="px-6 py-4 text-xs text-[#707070]"
-											>{product.description ? sentenceCase(product.description) : '—'}</td
-										>
-										<td class="px-6 py-4 text-right font-mono text-[#171717]"
-											>{formatCurrency(Number(product.price_without_taxes))}</td
-										>
-										<td class="px-6 py-4 text-right font-mono text-xs text-[#707070]"
-											>{formatCurrency(Number(product.price_without_taxes) * 1.18)}</td
-										>
-										{#if canManage}
-											<td class="px-6 py-4 text-right whitespace-nowrap">
-												<div class="flex items-center justify-end gap-1.5">
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-8 w-8 text-[#707070] hover:text-[#171717]"
-														title="Duplicar para otro modelo"
-														onclick={() => openSingleDuplicateModal(product)}
-													>
-														<Copy class="h-4 w-4" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-8 w-8 text-[#707070] hover:text-[#171717]"
-														title="Editar producto"
-														onclick={() => startEditing(product)}
-													>
-														<Edit3 class="h-4 w-4" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
-														title="Borrar producto"
-														onclick={() => openDeleteDialog(product)}
-													>
-														<Trash2 class="h-4 w-4" />
-													</Button>
-												</div>
-											</td>
-										{/if}
-									</tr>
+									<ProductRow
+										{product}
+										{models}
+										{clients}
+										overrides={clientPrices.filter((cp) => cp.product_id === product.id)}
+										{canManage}
+										{capitalize}
+										{sentenceCase}
+										{formatCurrency}
+										openSingleDuplicateModal={openSingleDuplicateModal}
+										startEditing={startEditing}
+										openDeleteDialog={openDeleteDialog}
+									/>
 								{/each}
 							{/if}
 						</tbody>
@@ -746,8 +695,10 @@
 						{capitalize(productToDuplicateForModels.title)}
 					</p>
 					<p class="text-xs text-[#707070]">
-						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con impuesto:
-						{formatCurrency(Number(productToDuplicateForModels.price_without_taxes) * 1.18)})
+						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con
+						impuesto: {formatCurrency(
+							Number(productToDuplicateForModels.price_without_taxes) * 1.18
+						)})
 					</p>
 					{#if productToDuplicateForModels.description}
 						<p class="mt-1 text-xs text-[#707070]">

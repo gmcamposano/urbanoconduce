@@ -145,6 +145,25 @@ export async function getClientProductPrices(
 	return { prices, error: null };
 }
 
+/**
+ * Resolve the effective unit price for every product for a given client.
+ * Uses the client-specific price (precio por cliente) when it exists,
+ * otherwise falls back to the catalog price (products.price_without_taxes).
+ */
+export async function resolveUnitPrices(
+	supabase: TypedSupabase,
+	clientId: string,
+	products: { id: string; price_without_taxes: number | string }[]
+) {
+	const ids = products.map((p) => p.id);
+	const { prices, error } = await getClientProductPrices(supabase, clientId, ids);
+	const resolved = new Map<string, number>();
+	for (const p of products) {
+		resolved.set(p.id, prices.get(p.id) ?? Number(p.price_without_taxes));
+	}
+	return { prices: resolved, error };
+}
+
 export async function recordInventoryMovement(
 	supabase: TypedSupabase,
 	params: {
