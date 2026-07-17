@@ -56,7 +56,6 @@
 			result = result.filter(
 				(i) =>
 					i.product_title.toLowerCase().includes(query) ||
-					i.client_name.toLowerCase().includes(query) ||
 					i.color.toLowerCase().includes(query) ||
 					(i.sku || '').toLowerCase().includes(query)
 			);
@@ -71,8 +70,6 @@
 			switch (sortBy) {
 				case 'product':
 					return a.product_title.toLowerCase().localeCompare(b.product_title.toLowerCase()) * dir;
-				case 'client':
-					return a.client_name.toLowerCase().localeCompare(b.client_name.toLowerCase()) * dir;
 				case 'model':
 					return getModelName(a.model_id).localeCompare(getModelName(b.model_id)) * dir;
 				case 'stock':
@@ -153,7 +150,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Buscar producto, cliente, color o SKU..."
+					placeholder="Buscar producto, color o SKU..."
 					class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 				/>
 			</div>
@@ -210,20 +207,6 @@
 									{/if}
 								</button>
 							</th>
-							<th class="px-6 py-4 font-bold">
-								<button
-									type="button"
-									class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
-									onclick={() => toggleSort('client')}
-								>
-									Cliente
-									{#if sortBy === 'client'}
-										{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
-												class="h-3 w-3"
-											/>{/if}
-									{/if}
-								</button>
-							</th>
 							<th class="px-6 py-4 font-bold uppercase">Modelo</th>
 							<th class="px-6 py-4 font-bold uppercase">Color</th>
 							<th class="px-6 py-4 font-bold uppercase">SKU</th>
@@ -249,7 +232,7 @@
 					<tbody class="divide-y divide-[#ededed]">
 						{#if sortedItems.length === 0}
 							<tr>
-								<td colspan="9" class="px-6 py-12 text-center text-xs text-[#707070]">
+								<td colspan="8" class="px-6 py-12 text-center text-xs text-[#707070]">
 									No hay variantes en inventario.
 								</td>
 							</tr>
@@ -259,7 +242,6 @@
 									<td class="px-6 py-4 font-medium text-[#171717]">
 										{capitalize(item.product_title)}
 									</td>
-									<td class="px-6 py-4 text-xs text-[#707070]">{item.client_name}</td>
 									<td class="px-6 py-4 text-xs text-[#707070]">{getModelName(item.model_id)}</td>
 									<td class="px-6 py-4 text-xs text-[#707070]"
 										>{formatInventoryColor(item.color)}</td

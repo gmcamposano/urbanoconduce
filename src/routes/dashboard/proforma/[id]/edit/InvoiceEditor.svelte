@@ -51,7 +51,21 @@
 		email: string | null;
 	};
 
-	let { invoice, products, colors, models, clients, initial, form: actionForm, isAdmin }: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & { clients: ClientOption[]; initial: EditorState; form: ActionData; isAdmin?: boolean } = $props();
+	let {
+		invoice,
+		products,
+		colors,
+		models,
+		clients,
+		initial,
+		form: actionForm,
+		isAdmin
+	}: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & {
+		clients: ClientOption[];
+		initial: EditorState;
+		form: ActionData;
+		isAdmin?: boolean;
+	} = $props();
 
 	function createEditorState(source: EditorState): EditorState {
 		return {
@@ -89,10 +103,8 @@
 	}
 
 	const clientProducts = $derived.by((): ProductOption[] => {
-		if (!editor.selectedClientId) return [];
-
-		return [...products.filter((product) => product.client_id === editor.selectedClientId)].sort(
-			(a, b) => getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
+		return [...products].sort((a, b) =>
+			getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
 		);
 	});
 
@@ -103,8 +115,8 @@
 
 	const isFormValid = $derived(
 		editor.selectedClientId.trim() !== '' &&
-		editor.items.length > 0 &&
-		editor.items.every((item) => item.product_id && item.unit_price > 0)
+			editor.items.length > 0 &&
+			editor.items.every((item) => item.product_id && item.unit_price > 0)
 	);
 
 	function getModelName(modelId: string | null): string {
@@ -137,9 +149,7 @@
 		const usedColorsByOthers = editor.items
 			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
 			.map((i) => i.color);
-		return colors.filter(
-			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
-		);
+		return colors.filter((c) => c.color === currentColor || !usedColorsByOthers.includes(c.color));
 	}
 
 	function getAvailableProducts(itemId: string): ProductOption[] {
@@ -171,7 +181,9 @@
 
 	function cleanupItems() {
 		if (editor.items.length > 1) {
-			const filtered = editor.items.filter((item, index) => index === editor.items.length - 1 || item.product_id);
+			const filtered = editor.items.filter(
+				(item, index) => index === editor.items.length - 1 || item.product_id
+			);
 			if (filtered.length === 0) {
 				editor.items = [createItem()];
 			} else if (filtered.length < editor.items.length) {
@@ -257,7 +269,8 @@
 				Editar proforma
 			</h1>
 			<p class="mt-0.5 text-xs text-[#707070]">
-				Completa los datos del cliente, selecciona productos y ajusta impuestos para guardar los cambios.
+				Completa los datos del cliente, selecciona productos y ajusta impuestos para guardar los
+				cambios.
 			</p>
 		</div>
 
@@ -319,7 +332,7 @@
 							disabled={loading}
 						>
 							<option value="proforma">Proforma</option>
-																				</Select>
+						</Select>
 
 						{#if editor.facturaTipo === 'valor_fiscal'}
 							<Input
@@ -436,10 +449,17 @@
 									<tr class="hover:bg-[#fafafa]">
 										<td class="px-3 py-2">
 											<SearchableSelect
-												options={availableProducts.map((p) => ({ value: p.id, label: getProductLabel(p) }))}
+												options={availableProducts.map((p) => ({
+													value: p.id,
+													label: getProductLabel(p)
+												}))}
 												bind:value={item.product_id}
-												placeholder={editor.selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
-												disabled={loading || !editor.selectedClientId || availableProducts.length === 0}
+												placeholder={editor.selectedClientId
+													? 'Selecciona'
+													: 'Primero elige un cliente'}
+												disabled={loading ||
+													!editor.selectedClientId ||
+													availableProducts.length === 0}
 												onchange={(value) => applyProductToItem(item, value)}
 											/>
 										</td>
@@ -582,7 +602,9 @@
 						<div class="space-y-3 border-b border-[#ededed] pb-5">
 							<div class="space-y-2">
 								<div class="flex items-center justify-between">
-									<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">Impuestos</p>
+									<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">
+										Impuestos
+									</p>
 									<span
 										class="rounded-full border border-[#ededed] bg-[#fafafa] px-2.5 py-1 text-[10px] font-medium tracking-wider text-[#707070] uppercase"
 									>
@@ -674,11 +696,15 @@
 								</div>
 								<div class="flex items-center justify-between">
 									<span>{taxMode === 'included' ? 'Subtotal neto' : 'Subtotal'}</span>
-									<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
+									<span class="font-mono font-medium text-[#171717]"
+										>{formatCurrency(subtotal)}</span
+									>
 								</div>
 								<div class="flex items-center justify-between">
 									<span>Impuesto ({taxRate}%)</span>
-									<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
+									<span class="font-mono font-medium text-[#171717]"
+										>{formatCurrency(taxAmount)}</span
+									>
 								</div>
 								<div class="flex items-center justify-between">
 									<span>Descuento</span>

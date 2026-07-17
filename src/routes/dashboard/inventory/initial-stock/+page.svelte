@@ -47,7 +47,6 @@
 		return items.filter(
 			(i) =>
 				i.product_title.toLowerCase().includes(query) ||
-				i.client_name.toLowerCase().includes(query) ||
 				i.color.toLowerCase().includes(query) ||
 				(i.sku || '').toLowerCase().includes(query)
 		);
@@ -153,7 +152,7 @@
 					<input
 						type="text"
 						bind:value={searchQuery}
-						placeholder="Buscar producto, cliente, color o SKU..."
+						placeholder="Buscar producto, color o SKU..."
 						class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 					/>
 				</div>
@@ -166,7 +165,6 @@
 						>
 							<tr>
 								<th class="px-6 py-4 font-bold uppercase">Producto</th>
-								<th class="px-6 py-4 font-bold uppercase">Cliente</th>
 								<th class="px-6 py-4 font-bold uppercase">Modelo</th>
 								<th class="px-6 py-4 font-bold uppercase">Color</th>
 								<th class="px-6 py-4 font-bold uppercase">SKU</th>
@@ -177,7 +175,7 @@
 						<tbody class="divide-y divide-[#ededed]">
 							{#if filteredItems.length === 0}
 								<tr>
-									<td colspan="7" class="px-6 py-12 text-center text-xs text-[#707070]">
+									<td colspan="6" class="px-6 py-12 text-center text-xs text-[#707070]">
 										No hay variantes disponibles.
 									</td>
 								</tr>
@@ -187,7 +185,6 @@
 										<td class="px-6 py-4 font-medium text-[#171717]"
 											>{capitalize(item.product_title)}</td
 										>
-										<td class="px-6 py-4 text-xs text-[#707070]">{item.client_name}</td>
 										<td class="px-6 py-4 text-xs text-[#707070]">{getModelName(item.model_id)}</td>
 										<td class="px-6 py-4 text-xs text-[#707070]"
 											>{formatInventoryColor(item.color)}</td

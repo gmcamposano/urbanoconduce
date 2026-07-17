@@ -24,10 +24,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		{ data: clients },
 		{ data: warehouses }
 	] = await Promise.all([
-		locals.supabase
-			.from('products')
-			.select('id, title, price_without_taxes, model, client_id')
-			.order('title', { ascending: true }),
+		locals.supabase.from('products').select('id, title, model').order('title', { ascending: true }),
 		locals.supabase.from('product_colors').select('id, color').order('color', { ascending: true }),
 		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
 		locals.supabase
@@ -91,7 +88,7 @@ export const actions: Actions = {
 
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')
-			.select('id, title, client_id')
+			.select('id, title')
 			.in('id', productIds);
 
 		if (productsError) {

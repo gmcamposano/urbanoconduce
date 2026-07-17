@@ -20,7 +20,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		const [
 			{ data: products, error: productsError },
 			{ data: models, error: modelsError },
-			{ data: clients, error: clientsError }
+			{ data: clients, error: clientsError },
+			{ data: clientPrices, error: clientPricesError }
 		] = await Promise.all([
 			locals.supabase
 				.from('products')
@@ -31,7 +32,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 				.from('clients')
 				.select('id, client_type, full_name, company_name, alias')
 				.order('company_name', { ascending: true })
-				.order('full_name', { ascending: true })
+				.order('full_name', { ascending: true }),
+			locals.supabase.from('client_product_prices').select('product_id, client_id, unit_price')
 		]);
 
 		if (productsError) {
@@ -46,14 +48,19 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			console.error('Supabase query error in clients load:', clientsError.message);
 		}
 
+		if (clientPricesError) {
+			console.error('Supabase query error in client_prices load:', clientPricesError.message);
+		}
+
 		return {
 			products: products || [],
 			models: models || [],
-			clients: clients || []
+			clients: clients || [],
+			clientPrices: clientPrices || []
 		};
 	} catch (e) {
 		console.error('Unexpected exception in products load:', e);
-		return { products: [], models: [], clients: [] };
+		return { products: [], models: [], clients: [], clientPrices: [] };
 	}
 };
 
@@ -75,10 +82,6 @@ export const actions: Actions = {
 		const priceWithoutTaxes = Number(formData.get('price_without_taxes') || 0);
 		const modelId = (formData.get('model') as string)?.trim()?.toLowerCase() || null;
 
-		if (!clientId) {
-			return fail(400, { error: 'El cliente es obligatorio.' });
-		}
-
 		if (!title) {
 			return fail(400, { error: 'El título del producto es obligatorio.' });
 		}
@@ -93,7 +96,7 @@ export const actions: Actions = {
 
 		try {
 			const { error } = await locals.supabase.from('products').insert({
-				client_id: clientId,
+				client_id: clientId || null,
 				title,
 				description: description || null,
 				price_without_taxes: priceWithoutTaxes,
@@ -132,10 +135,6 @@ export const actions: Actions = {
 			return fail(400, { error: 'El ID del producto es obligatorio.' });
 		}
 
-		if (!clientId) {
-			return fail(400, { error: 'El cliente es obligatorio.' });
-		}
-
 		if (!title) {
 			return fail(400, { error: 'El título del producto es obligatorio.' });
 		}
@@ -152,7 +151,7 @@ export const actions: Actions = {
 			const { error } = await locals.supabase
 				.from('products')
 				.update({
-					client_id: clientId,
+					client_id: clientId || null,
 					title,
 					description: description || null,
 					price_without_taxes: priceWithoutTaxes,
@@ -197,77 +196,6 @@ export const actions: Actions = {
 		}
 
 		return { success: true, message: 'Producto borrado.' };
-	},
-	duplicateProducts: async ({ request, locals }) => {
-		const { user } = await locals.safeGetUser();
-		if (!user) {
-			throw redirect(303, '/login');
-		}
-
-		if (!canManageCatalog(locals.role)) {
-			return fail(403, { error: 'No tienes permisos para duplicar productos.' });
-		}
-
-		const formData = await request.formData();
-		const productIdsRaw = (formData.get('product_ids') as string)?.trim() ?? '';
-		const destinationClientId = (formData.get('destination_client_id') as string)?.trim() ?? '';
-
-		if (!productIdsRaw) {
-			return fail(400, { error: 'No se seleccionaron productos.' });
-		}
-
-		if (!destinationClientId) {
-			return fail(400, { error: 'El cliente destino es obligatorio.' });
-		}
-
-		let productIds: string[];
-		try {
-			productIds = JSON.parse(productIdsRaw);
-			if (!Array.isArray(productIds) || productIds.length === 0) {
-				return fail(400, { error: 'No se seleccionaron productos.' });
-			}
-		} catch {
-			return fail(400, { error: 'Formato de productos inválido.' });
-		}
-
-		try {
-			const { data: productsToDuplicate, error: fetchError } = await locals.supabase
-				.from('products')
-				.select('*')
-				.in('id', productIds);
-
-			if (fetchError) {
-				return fail(400, { error: fetchError.message });
-			}
-
-			if (!productsToDuplicate || productsToDuplicate.length === 0) {
-				return fail(400, { error: 'No se encontraron los productos seleccionados.' });
-			}
-
-			const productsToInsert = productsToDuplicate.map((p) => ({
-				client_id: destinationClientId,
-				title: p.title.toLowerCase(),
-				description: p.description?.toLowerCase() || null,
-				price_without_taxes: p.price_without_taxes,
-				model: p.model?.toLowerCase() || null,
-				created_by: user.id
-			}));
-
-			const { error: insertError } = await locals.supabase
-				.from('products')
-				.insert(productsToInsert);
-
-			if (insertError) {
-				if (insertError.code === '23505') {
-					return fail(400, { error: 'Algunos productos ya existen para el cliente destino.' });
-				}
-				return fail(400, { error: insertError.message });
-			}
-
-			return { success: true, message: `${productsToInsert.length} producto(s) duplicado(s).` };
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
-		}
 	},
 	duplicateProductForModels: async ({ request, locals }) => {
 		const { user } = await locals.safeGetUser();
@@ -317,7 +245,6 @@ export const actions: Actions = {
 			}
 
 			const productsToInsert = modelIds.map((modelId) => ({
-				client_id: sourceProduct.client_id,
 				title: sourceProduct.title.toLowerCase(),
 				description: sourceProduct.description?.toLowerCase() || null,
 				price_without_taxes: sourceProduct.price_without_taxes,
@@ -333,7 +260,7 @@ export const actions: Actions = {
 				if (insertError.code === '23505') {
 					return fail(400, {
 						error:
-							'Ya existe un producto con el mismo nombre y modelo para este cliente. Elige un modelo diferente o cambia el nombre del producto.'
+							'Ya existe un producto con el mismo nombre y modelo. Elige un modelo diferente o cambia el nombre del producto.'
 					});
 				}
 				return fail(400, { error: insertError.message });

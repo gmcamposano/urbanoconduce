@@ -63,18 +63,11 @@
 				products: {
 					title: string;
 					model: string | null;
-					clients: { company_name: string | null; full_name: string | null; alias: string | null };
 				};
 			};
 			const product = variant?.products;
-			const clientName =
-				product?.clients?.company_name ||
-				product?.clients?.alias ||
-				product?.clients?.full_name ||
-				'';
 			return (
 				(product?.title || '').toLowerCase().includes(query) ||
-				clientName.toLowerCase().includes(query) ||
 				(variant?.color || '').toLowerCase().includes(query) ||
 				movementLabel(m.type).toLowerCase().includes(query)
 			);
@@ -111,7 +104,7 @@
 			<input
 				type="text"
 				bind:value={searchQuery}
-				placeholder="Buscar producto, cliente, color o tipo..."
+				placeholder="Buscar producto, color o tipo..."
 				class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 			/>
 		</div>
@@ -148,11 +141,6 @@
 									products: {
 										title: string;
 										model: string | null;
-										clients: {
-											company_name: string | null;
-											full_name: string | null;
-											alias: string | null;
-										};
 									};
 								}}
 								<tr class="transition-colors duration-150 hover:bg-[#fafafa]">

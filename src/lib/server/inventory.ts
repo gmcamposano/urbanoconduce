@@ -8,8 +8,6 @@ export type InventoryItem = {
 	product_id: string;
 	product_title: string;
 	product_description: string | null;
-	client_id: string;
-	client_name: string;
 	model_id: string | null;
 	model_name: string | null;
 	color: string;
@@ -38,9 +36,7 @@ export async function getInventoryStock(
 				id,
 				title,
 				description,
-				client_id,
-				model,
-				clients (client_type, full_name, company_name, alias)
+				model
 			)
 		`
 		)
@@ -71,28 +67,14 @@ export async function getInventoryStock(
 				id: string;
 				title: string;
 				description: string | null;
-				client_id: string;
 				model: string | null;
-				clients: {
-					client_type: string;
-					full_name: string | null;
-					company_name: string | null;
-					alias: string | null;
-				};
 			};
-			const client = product?.clients;
-			const clientName =
-				client?.client_type === 'company'
-					? client?.company_name || client?.alias || 'Empresa sin nombre'
-					: client?.full_name || 'Sin nombre';
 			const stock = stockByVariant[v.id] || 0;
 			return {
 				variant_id: v.id,
 				product_id: product?.id,
 				product_title: product?.title || '',
 				product_description: product?.description || null,
-				client_id: product?.client_id,
-				client_name: clientName,
 				model_id: product?.model,
 				model_name: product?.model,
 				color: v.color,
@@ -142,6 +124,25 @@ export async function resolveVariantIdForItem(
 		.single();
 	if (error || !data) return { id: null, error };
 	return { id: data.id, error: null };
+}
+
+export async function getClientProductPrices(
+	supabase: TypedSupabase,
+	clientId: string,
+	productIds: string[]
+) {
+	if (productIds.length === 0) return { prices: new Map<string, number>(), error: null as null };
+	const { data, error } = await supabase
+		.from('client_product_prices')
+		.select('product_id, unit_price')
+		.eq('client_id', clientId)
+		.in('product_id', productIds);
+	if (error) return { prices: new Map<string, number>(), error };
+	const prices = new Map<string, number>();
+	for (const row of data || []) {
+		prices.set(row.product_id, Number(row.unit_price));
+	}
+	return { prices, error: null };
 }
 
 export async function recordInventoryMovement(

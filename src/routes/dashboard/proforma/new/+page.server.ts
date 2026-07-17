@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
-		.select('id, title, price_without_taxes, model, client_id')
+		.select('id, title, price_without_taxes, model')
 		.order('title', { ascending: true });
 
 	const { data: colors, error: colorsError } = await locals.supabase
@@ -121,7 +121,7 @@ export const actions: Actions = {
 
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')
-			.select('id, title, price_without_taxes, client_id')
+			.select('id, title, price_without_taxes')
 			.in('id', productIds);
 
 		if (productsError) {
@@ -170,12 +170,6 @@ export const actions: Actions = {
 
 			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
-			}
-
-			if (product.client_id !== clientId) {
-				return fail(400, {
-					error: `El producto "${product.title}" no pertenece al cliente seleccionado.`
-				});
 			}
 
 			const model = (item.model || '').trim() || null;

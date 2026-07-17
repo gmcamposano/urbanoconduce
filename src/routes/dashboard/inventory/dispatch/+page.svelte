@@ -64,12 +64,9 @@
 	}
 
 	const clientProducts = $derived.by(() => {
-		if (!selectedClientId) return [];
-		return products
-			.filter((p) => p.client_id === selectedClientId)
-			.sort((a, b) =>
-				getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
-			);
+		return products.sort((a, b) =>
+			getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
+		);
 	});
 
 	function addItem() {

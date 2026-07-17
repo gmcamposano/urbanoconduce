@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveVariantIdForItem } from '$lib/server/inventory';
+import { resolveVariantIdForItem, getClientProductPrices } from '$lib/server/inventory';
 
 function generateInvoiceNumber() {
 	const year = new Date().getUTCFullYear();
@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
-		.select('id, title, price_without_taxes, model, client_id')
+		.select('id, title, price_without_taxes, model')
 		.order('title', { ascending: true });
 
 	const { data: colors, error: colorsError } = await locals.supabase
@@ -126,12 +126,18 @@ export const actions: Actions = {
 
 		const { data: products, error: productsError } = await locals.supabase
 			.from('products')
-			.select('id, title, price_without_taxes, client_id')
+			.select('id, title, price_without_taxes')
 			.in('id', productIds);
 
 		if (productsError) {
 			return fail(400, { error: productsError.message });
 		}
+
+		const { prices: clientPrices } = await getClientProductPrices(
+			locals.supabase,
+			clientId,
+			productIds
+		);
 
 		if (selectedColors.length > 0) {
 			const { data: colors, error: colorsError } = await locals.supabase
@@ -172,13 +178,7 @@ export const actions: Actions = {
 				});
 			}
 
-			if (product.client_id !== clientId) {
-				return fail(400, {
-					error: `El producto "${product.title}" no pertenece al cliente seleccionado.`
-				});
-			}
-
-			const unitPrice = Number(product.price_without_taxes);
+			const unitPrice = clientPrices.get(item.product_id) ?? Number(product.price_without_taxes);
 			const model = (item.model || '').trim() || null;
 			const { id: variantId } = await resolveVariantIdForItem(
 				locals.supabase,

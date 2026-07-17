@@ -17,7 +17,7 @@
 		title: string;
 		price_without_taxes: number | string;
 		model: string | null;
-		client_id: string;
+		client_id?: string | null;
 	};
 
 	type ClientOption = {
@@ -66,16 +66,16 @@
 		const usedColorsByOthers = items
 			.filter((i) => i.id !== itemId && i.product_id === productId && i.color)
 			.map((i) => i.color);
-		return colors.filter(
-			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
-		);
+		return colors.filter((c) => c.color === currentColor || !usedColorsByOthers.includes(c.color));
 	}
 
 	function getAvailableProducts(itemId: string): ProductOption[] {
 		const currentProductId = items.find((i) => i.id === itemId)?.product_id;
 		return clientProducts.filter((product) => {
 			if (product.id === currentProductId) return true;
-			const otherItemsWithProduct = items.filter((i) => i.id !== itemId && i.product_id === product.id);
+			const otherItemsWithProduct = items.filter(
+				(i) => i.id !== itemId && i.product_id === product.id
+			);
 			if (otherItemsWithProduct.length === 0) return true;
 			const hasColorSelected = otherItemsWithProduct.some((i) => i.color);
 			if (!hasColorSelected) return false;
@@ -96,11 +96,7 @@
 	let selectedClientId = $state('');
 
 	const clientProducts = $derived.by((): ProductOption[] => {
-		if (!selectedClientId) return [];
-
-		return [
-			...products.filter((product: ProductOption) => product.client_id === selectedClientId)
-		].sort((a, b) =>
+		return [...products].sort((a, b) =>
 			getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
 		);
 	});
@@ -212,7 +208,13 @@
 	// Helpers to add or remove line items
 
 	function applyProductToItem(
-		item: { id: string; product_id: string; model: string | null; unit_price: number; color: string },
+		item: {
+			id: string;
+			product_id: string;
+			model: string | null;
+			unit_price: number;
+			color: string;
+		},
 		productId: string
 	) {
 		item.product_id = productId;
@@ -414,9 +416,7 @@
 								<th class="w-1/4 px-3 py-2.5 font-semibold">Modelo</th>
 								<th class="w-1/5 px-3 py-2.5 font-semibold">Color</th>
 								<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
-							<th class="w-32 px-3 py-2.5 text-right font-semibold">
-								Precio unit.
-							</th>
+								<th class="w-32 px-3 py-2.5 text-right font-semibold"> Precio unit. </th>
 								<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
 								<th class="w-8 px-3 py-2.5"></th>
 							</tr>
@@ -584,25 +584,25 @@
 								<span
 									class="rounded-full border border-[#ededed] bg-[#fafafa] px-2.5 py-1 text-[10px] font-medium tracking-wider text-[#707070] uppercase"
 								>
-								{taxMode === 'none'
-									? 'Sin ITBIS'
-									: taxMode === 'included'
-										? 'Incluye impuestos'
-										: 'Incluir ITBIS'}
-							</span>
+									{taxMode === 'none'
+										? 'Sin ITBIS'
+										: taxMode === 'included'
+											? 'Incluye impuestos'
+											: 'Incluir ITBIS'}
+								</span>
 							</div>
 							<div
 								class="grid grid-cols-1 gap-2 rounded-lg border border-[#dfdfdf] bg-[#fafafa] p-1.5 sm:grid-cols-3"
 							>
 								<label class="cursor-pointer">
-								<input
-									type="radio"
-									name="tax_mode"
-									value="none"
-									bind:group={taxMode}
-									disabled={loading}
-									class="peer sr-only"
-								/>
+									<input
+										type="radio"
+										name="tax_mode"
+										value="none"
+										bind:group={taxMode}
+										disabled={loading}
+										class="peer sr-only"
+									/>
 									<div
 										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
 									>
@@ -610,14 +610,14 @@
 									</div>
 								</label>
 								<label class="cursor-pointer">
-								<input
-									type="radio"
-									name="tax_mode"
-									value="included"
-									bind:group={taxMode}
-									disabled={loading}
-									class="peer sr-only"
-								/>
+									<input
+										type="radio"
+										name="tax_mode"
+										value="included"
+										bind:group={taxMode}
+										disabled={loading}
+										class="peer sr-only"
+									/>
 									<div
 										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
 									>
@@ -625,14 +625,14 @@
 									</div>
 								</label>
 								<label class="cursor-pointer sm:col-start-3">
-								<input
-									type="radio"
-									name="tax_mode"
-									value="added"
-									bind:group={taxMode}
-									disabled={loading}
-									class="peer sr-only"
-								/>
+									<input
+										type="radio"
+										name="tax_mode"
+										value="added"
+										bind:group={taxMode}
+										disabled={loading}
+										class="peer sr-only"
+									/>
 									<div
 										class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
 									>
@@ -648,7 +648,7 @@
 										: 'Incluir ITBIS: suma 18% al total final.'}
 							</p>
 						</div>
-                    
+
 						<div class="flex justify-end">
 							<div class="w-full max-w-sm">
 								<Input

@@ -26,18 +26,8 @@
 	let searchQuery = $state('');
 
 	function getProductLabel(product: (typeof products)[number]): string {
-		const client = product.clients as unknown as {
-			client_type: string;
-			full_name: string | null;
-			company_name: string | null;
-			alias: string | null;
-		};
-		const clientName =
-			client?.client_type === 'company'
-				? client?.company_name || client?.alias || 'Empresa'
-				: client?.full_name || 'Persona';
 		const modelName = models.find((m) => m.id === product.model)?.model || '';
-		return `${clientName} — ${product.title}${modelName ? ` (${modelName})` : ''}`;
+		return `${product.title}${modelName ? ` (${modelName})` : ''}`;
 	}
 
 	function formatInventoryColor(color: string): string {

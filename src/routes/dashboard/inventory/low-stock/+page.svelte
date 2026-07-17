@@ -60,7 +60,6 @@
 					>
 						<tr>
 							<th class="px-6 py-4 font-bold uppercase">Producto</th>
-							<th class="px-6 py-4 font-bold uppercase">Cliente</th>
 							<th class="px-6 py-4 font-bold uppercase">Modelo</th>
 							<th class="px-6 py-4 font-bold uppercase">Color</th>
 							<th class="px-6 py-4 text-right font-bold uppercase">Stock</th>
@@ -70,7 +69,7 @@
 					<tbody class="divide-y divide-[#ededed]">
 						{#if items.length === 0}
 							<tr>
-								<td colspan="6" class="px-6 py-12 text-center text-xs text-[#707070]">
+								<td colspan="5" class="px-6 py-12 text-center text-xs text-[#707070]">
 									No hay variantes con stock bajo.
 								</td>
 							</tr>
@@ -80,7 +79,6 @@
 									<td class="px-6 py-4 font-medium text-[#171717]"
 										>{capitalize(item.product_title)}</td
 									>
-									<td class="px-6 py-4 text-xs text-[#707070]">{item.client_name}</td>
 									<td class="px-6 py-4 text-xs text-[#707070]">{getModelName(item.model_id)}</td>
 									<td class="px-6 py-4 text-xs text-[#707070]"
 										>{formatInventoryColor(item.color)}</td

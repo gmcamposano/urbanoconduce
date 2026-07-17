@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 				.order('created_at', { ascending: true }),
 			locals.supabase
 				.from('products')
-				.select('id, title, price_without_taxes, model, client_id')
+				.select('id, title, price_without_taxes, model')
 				.order('title', { ascending: true }),
 			locals.supabase
 				.from('product_colors')
@@ -177,7 +177,7 @@ export const actions: Actions = {
 		const [productsResult, colorsResult, invoiceResult, existingItemsResult] = await Promise.all([
 			locals.supabase
 				.from('products')
-				.select('id, title, price_without_taxes, client_id')
+				.select('id, title, price_without_taxes')
 				.in('id', productIds),
 			locals.supabase
 				.from('product_colors')
@@ -249,12 +249,6 @@ export const actions: Actions = {
 
 			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
-			}
-
-			if (product.client_id !== clientId) {
-				return fail(400, {
-					error: `El producto "${product.title}" no pertenece al cliente seleccionado.`
-				});
 			}
 
 			normalizedItems.push({

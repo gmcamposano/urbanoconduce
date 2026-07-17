@@ -28,7 +28,7 @@ export type InvoiceEditorData = {
 		title: string;
 		price_without_taxes: number | string;
 		model: string | null;
-		client_id: string;
+		client_id?: string | null;
 	}>;
 	colors: Array<{
 		id: string;
@@ -70,52 +70,35 @@ export function buildInvoiceEditorState(data: InvoiceEditorData): InvoiceEditorS
 
 	const items = data.items.length
 		? data.items.map((item) => {
-			let product = products.get(item.product_id);
-			if (!product && item.product_id) {
-				product = data.products.find((entry) => entry.id === item.product_id);
-			}
-			if (!product && item.description && invoiceClientId) {
-				product = data.products.find(
-					(entry) => entry.title === item.description && entry.client_id === invoiceClientId
-				);
-			}
-			if (!product && item.description) {
-				product = data.products.find((entry) => entry.title === item.description);
-			}
+				let product = products.get(item.product_id);
+				if (!product && item.product_id) {
+					product = data.products.find((entry) => entry.id === item.product_id);
+				}
+				if (!product && item.description) {
+					product = data.products.find((entry) => entry.title === item.description);
+				}
 
-			return {
-				id: item.id,
-				product_id: product?.id ?? item.product_id ?? '',
-				color: item.color || '',
-				model: product?.model ?? null,
-				quantity: Number(item.quantity),
-				unit_price: Number(item.unit_price)
-			};
-		})
+				return {
+					id: item.id,
+					product_id: product?.id ?? item.product_id ?? '',
+					color: item.color || '',
+					model: product?.model ?? null,
+					quantity: Number(item.quantity),
+					unit_price: Number(item.unit_price)
+				};
+			})
 		: [
-			{
-				id: crypto.randomUUID(),
-				product_id: '',
-				color: '',
-				model: null,
-				quantity: 1,
-				unit_price: 0
-			}
-		];
+				{
+					id: crypto.randomUUID(),
+					product_id: '',
+					color: '',
+					model: null,
+					quantity: 1,
+					unit_price: 0
+				}
+			];
 
-	let selectedClientId = invoiceClientId;
-
-	if (!selectedClientId && items.length) {
-		for (const item of items) {
-			if (!item.product_id) continue;
-
-			const product = products.get(item.product_id);
-			if (product) {
-				selectedClientId = product.client_id;
-				break;
-			}
-		}
-	}
+	const selectedClientId = invoiceClientId;
 
 	return {
 		invoiceNumber: data.invoice.invoice_number || '',

@@ -17,7 +17,6 @@
 	const products = $derived(data.products || []);
 	const models = $derived(data.models || []);
 	const clients = $derived(data.clients || []);
-	let selectedClientFilter = $state('');
 	let searchQuery = $state('');
 
 	let sortBy = $state<string>('title');
@@ -38,11 +37,6 @@
 
 		sorted.sort((a, b) => {
 			switch (sortBy) {
-				case 'client': {
-					const clientNameA = getClientName(a.client_id).toLowerCase();
-					const clientNameB = getClientName(b.client_id).toLowerCase();
-					return clientNameA.localeCompare(clientNameB) * dir;
-				}
 				case 'title':
 					return a.title.toLowerCase().localeCompare(b.title.toLowerCase()) * dir;
 				case 'model': {
@@ -62,9 +56,7 @@
 	});
 
 	const filteredProducts = $derived.by(() => {
-		let result = selectedClientFilter
-			? products.filter((p) => p.client_id === selectedClientFilter)
-			: products;
+		let result = products;
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
@@ -81,44 +73,24 @@
 		return result;
 	});
 
-	function getClientName(clientId: string | null): string {
-		if (!clientId) return '—';
-		const found = clients.find((c) => c.id === clientId);
-		if (!found) return '—';
-		const name =
-			found.client_type === 'company'
-				? found.company_name || found.alias || 'Empresa sin nombre'
-				: found.full_name || 'Sin nombre';
-		return capitalize(name);
-	}
-
 	let loading = $state(false);
 	let editingProduct = $state<{
 		id: string;
-		client_id: string;
 		title: string;
 		description: string | null;
 		price_without_taxes: number;
 		model: string | null;
 	} | null>(null);
 	let editLoading = $state(false);
-	let editClient = $state('');
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editPriceWithoutTaxes = $state('');
 	let editModel = $state('');
 	let productToDelete = $state<{ id: string; title: string } | null>(null);
 	let deleteLoading = $state(false);
-	let duplicateModalOpen = $state(false);
-	let selectedProductsForDuplicate = $state<string[]>([]);
-	let sourceClientForDuplicate = $state('');
-	let destinationClientForDuplicate = $state('');
-	let duplicateLoading = $state(false);
-	let duplicateError = $state('');
 	let singleDuplicateModalOpen = $state(false);
 	let productToDuplicateForModels = $state<{
 		id: string;
-		client_id: string;
 		title: string;
 		description: string | null;
 		price_without_taxes: number;
@@ -131,7 +103,6 @@
 
 	const availableModelsForSingleDuplicate = $derived.by(() => {
 		if (!productToDuplicateForModels) return [];
-		const clientId = productToDuplicateForModels.client_id;
 		const productTitle = productToDuplicateForModels.title;
 		const currentModelId = productToDuplicateForModels.model;
 		const search = singleDuplicateModelSearch.toLowerCase().trim();
@@ -139,14 +110,15 @@
 			if (m.id === currentModelId) return false;
 			const alreadyExistsWithThisModel = products.some(
 				(p) =>
-					p.client_id === clientId &&
 					p.title.toLowerCase() === productTitle.toLowerCase() &&
 					p.model === m.id &&
 					p.id !== productToDuplicateForModels?.id
 			);
 			return !alreadyExistsWithThisModel;
 		});
-		const sorted = filtered.sort((a, b) => a.model.toLowerCase().localeCompare(b.model.toLowerCase()));
+		const sorted = filtered.sort((a, b) =>
+			a.model.toLowerCase().localeCompare(b.model.toLowerCase())
+		);
 		if (!search) return sorted;
 		return sorted.filter((m) => m.model.toLowerCase().includes(search));
 	});
@@ -155,65 +127,13 @@
 		selectedModelsForDuplicate.length > 0 && productToDuplicateForModels !== null
 	);
 
-	const productsFromSourceClient = $derived(
-		sourceClientForDuplicate ? products.filter((p) => p.client_id === sourceClientForDuplicate) : []
-	);
-
-	const productsWithDuplicateStatus = $derived.by(() => {
-		if (!sourceClientForDuplicate) return [];
-		const sourceProducts = products.filter((p) => p.client_id === sourceClientForDuplicate);
-		const sorted = sourceProducts.sort((a, b) =>
-			a.title.toLowerCase().localeCompare(b.title.toLowerCase())
-		);
-		if (!destinationClientForDuplicate) return sorted;
-		return sorted.filter(
-			(p) =>
-				!products.some(
-					(existing) =>
-						existing.client_id === destinationClientForDuplicate &&
-						existing.title.toLowerCase() === p.title.toLowerCase()
-				)
-		);
-	});
-
-	const canDuplicate = $derived(
-		selectedProductsForDuplicate.length > 0 &&
-			sourceClientForDuplicate.trim() !== '' &&
-			destinationClientForDuplicate.trim() !== '' &&
-			sourceClientForDuplicate !== destinationClientForDuplicate
-	);
-
-	$effect(() => {
-		if (sourceClientForDuplicate) {
-			selectedProductsForDuplicate = [];
-		}
-	});
-
-	function toggleProductForDuplicate(productId: string) {
-		if (selectedProductsForDuplicate.includes(productId)) {
-			selectedProductsForDuplicate = selectedProductsForDuplicate.filter((id) => id !== productId);
-		} else {
-			selectedProductsForDuplicate = [...selectedProductsForDuplicate, productId];
-		}
-	}
-
-	function toggleAllProductsForDuplicate() {
-		const allProducts = productsWithDuplicateStatus;
-		if (selectedProductsForDuplicate.length === allProducts.length) {
-			selectedProductsForDuplicate = [];
-		} else {
-			selectedProductsForDuplicate = allProducts.map((p) => p.id);
-		}
-	}
-	let selectedClient = $state('');
 	let title = $state('');
 	let description = $state('');
 	let priceWithoutTaxes = $state('');
 	let selectedModel = $state('');
 
 	const isProductFormValid = $derived(
-		selectedClient.trim() !== '' &&
-			title.trim() !== '' &&
+		title.trim() !== '' &&
 			selectedModel.trim() !== '' &&
 			priceWithoutTaxes !== '' &&
 			Number(priceWithoutTaxes) >= 0
@@ -222,12 +142,7 @@
 	const availableModels = $derived(
 		models.filter(
 			(m) =>
-				!products.some(
-					(p) =>
-						p.client_id === selectedClient &&
-						p.title.toLowerCase() === title.toLowerCase() &&
-						p.model === m.id
-				)
+				!products.some((p) => p.title.toLowerCase() === title.toLowerCase() && p.model === m.id)
 		)
 	);
 
@@ -236,7 +151,6 @@
 			(m) =>
 				!products.some(
 					(p) =>
-						p.client_id === editClient &&
 						p.title.toLowerCase() === editTitle.toLowerCase() &&
 						p.model === m.id &&
 						p.id !== editingProduct?.id
@@ -244,9 +158,7 @@
 		)
 	);
 
-	const priceWithTax = $derived(
-		priceWithoutTaxes ? Number(priceWithoutTaxes) * 1.18 : 0
-	);
+	const priceWithTax = $derived(priceWithoutTaxes ? Number(priceWithoutTaxes) * 1.18 : 0);
 
 	const editPriceWithTax = $derived(
 		editPriceWithoutTaxes ? Number(editPriceWithoutTaxes) * 1.18 : 0
@@ -254,7 +166,6 @@
 
 	function startEditing(product: (typeof products)[number]) {
 		editingProduct = { ...product };
-		editClient = product.client_id || '';
 		editTitle = product.title;
 		editDescription = product.description || '';
 		editPriceWithoutTaxes = String(product.price_without_taxes ?? '');
@@ -264,7 +175,6 @@
 
 	function closeEditDialog() {
 		editingProduct = null;
-		editClient = '';
 		editTitle = '';
 		editDescription = '';
 		editPriceWithoutTaxes = '';
@@ -285,15 +195,6 @@
 		productToDelete = null;
 		deleteLoading = false;
 		document.body.style.overflow = '';
-	}
-
-	function openDuplicateModal() {
-		selectedProductsForDuplicate = [];
-		sourceClientForDuplicate = '';
-		destinationClientForDuplicate = '';
-		duplicateError = '';
-		duplicateModalOpen = true;
-		document.body.style.overflow = 'hidden';
 	}
 
 	function openSingleDuplicateModal(product: (typeof products)[number]) {
@@ -331,18 +232,7 @@
 		}
 	}
 
-	function closeDuplicateModal() {
-		duplicateModalOpen = false;
-		selectedProductsForDuplicate = [];
-		sourceClientForDuplicate = '';
-		destinationClientForDuplicate = '';
-		duplicateLoading = false;
-		duplicateError = '';
-		document.body.style.overflow = '';
-	}
-
 	function resetForm() {
-		selectedClient = '';
 		title = '';
 		description = '';
 		priceWithoutTaxes = '';
@@ -423,22 +313,6 @@
 						};
 					}}
 				>
-					<SearchableSelect
-						label="Cliente"
-						options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
-						bind:value={selectedClient}
-						placeholder="Selecciona un cliente"
-						disabled={loading || !clients.length}
-					/>
-
-					<input type="hidden" name="client_id" value={selectedClient} />
-
-					{#if !clients.length}
-						<p class="-mt-2 text-[11px] text-[#707070]">
-							No hay clientes registrados. Crea al menos uno en la sección Clientes.
-						</p>
-					{/if}
-
 					<Input
 						bind:value={title}
 						label="Producto"
@@ -462,7 +336,7 @@
 						</p>
 					{:else if availableModels.length === 0 && title.trim() !== ''}
 						<p class="-mt-2 text-[11px] font-medium text-red-600">
-							Ya existe un producto con este nombre y modelo para este cliente.
+							Ya existe un producto con este nombre y modelo.
 						</p>
 					{:else if availableModels.length === 0}
 						<p class="-mt-2 text-[11px] text-[#707070]">
@@ -503,7 +377,9 @@
 
 					{#if priceWithoutTaxes !== ''}
 						<p class="-mt-1 text-[11px] text-[#707070]">
-							Precio con impuesto (18%): <span class="font-medium">{formatCurrency(priceWithTax)}</span>
+							Precio con impuesto (18%): <span class="font-medium"
+								>{formatCurrency(priceWithTax)}</span
+							>
 						</p>
 					{/if}
 
@@ -519,22 +395,8 @@
 		<Card class="xl:col-span-2">
 			<CardHeader class="flex flex-row items-center justify-between">
 				<CardTitle>Catálogo de productos</CardTitle>
-				{#if canManage && filteredProducts.length > 0}
-					<Button variant="outline" size="sm" onclick={openDuplicateModal}>
-						<Copy class="mr-1.5 h-4 w-4" />
-						Duplicar
-					</Button>
-				{/if}
 			</CardHeader>
 			<CardContent class="p-0">
-				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
-					<SearchableSelect
-						label="Filtrar por cliente"
-						options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
-						bind:value={selectedClientFilter}
-						placeholder="Todos los clientes"
-					/>
-				</div>
 				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
 					<div class="flex items-center gap-3">
 						<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
@@ -542,7 +404,7 @@
 							type="text"
 							bind:value={searchQuery}
 							placeholder="Buscar por modelo, producto o descripción..."
-							class="flex-1 bg-transparent text-sm text-[#171717] placeholder:text-[#707070] outline-none"
+							class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 						/>
 					</div>
 				</div>
@@ -555,7 +417,7 @@
 								<th class="px-6 py-5 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
 										onclick={() => toggleSort('created_at')}
 									>
 										Fecha
@@ -571,23 +433,7 @@
 								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
-										onclick={() => toggleSort('client')}
-									>
-										Cliente
-										{#if sortBy === 'client'}
-											{#if sortOrder === 'asc'}
-												<ArrowUp class="h-3 w-3" />
-											{:else}
-												<ArrowDown class="h-3 w-3" />
-											{/if}
-										{/if}
-									</button>
-								</th>
-								<th class="px-6 py-4 font-bold">
-									<button
-										type="button"
-										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
 										onclick={() => toggleSort('title')}
 									>
 										Producto
@@ -603,7 +449,7 @@
 								<th class="px-6 py-4 font-bold">
 									<button
 										type="button"
-										class="flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
+										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
 										onclick={() => toggleSort('model')}
 									>
 										Modelo
@@ -620,7 +466,7 @@
 								<th class="px-6 py-4 text-right font-bold">
 									<button
 										type="button"
-										class="ml-auto flex items-center gap-1 uppercase hover:text-[#3ecf8e] transition-colors"
+										class="ml-auto flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
 										onclick={() => toggleSort('price')}
 									>
 										Precio
@@ -643,26 +489,22 @@
 							{#if sortedProducts.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 8 : 7}
+										colspan={canManage ? 7 : 6}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
-										>{selectedClientFilter
-											? 'Este cliente no tiene productos.'
-											: 'Aún no hay productos registrados.'}</td
+										>Aún no hay productos registrados.</td
 									>
 								</tr>
 							{:else}
 								{#each sortedProducts as product (product.id)}
 									<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
-										<td class="px-6 py-5 text-right font-mono text-xs text-[#707070] whitespace-nowrap"
+										<td
+											class="px-6 py-5 text-right font-mono text-xs whitespace-nowrap text-[#707070]"
 											>{new Date(product.created_at).toLocaleDateString('es-DO', {
 												year: 'numeric',
 												month: 'short',
 												day: 'numeric'
 											})}</td
 										>
-										<td class="px-6 py-4 text-xs text-[#707070]">
-											{getClientName(product.client_id)}
-										</td>
 										<td class="px-6 py-4 font-medium text-[#171717]">{capitalize(product.title)}</td
 										>
 										<td class="px-6 py-4 text-xs text-[#707070] capitalize">
@@ -676,7 +518,7 @@
 										<td class="px-6 py-4 text-right font-mono text-[#171717]"
 											>{formatCurrency(Number(product.price_without_taxes))}</td
 										>
-										<td class="px-6 py-4 text-right font-mono text-[#707070] text-xs"
+										<td class="px-6 py-4 text-right font-mono text-xs text-[#707070]"
 											>{formatCurrency(Number(product.price_without_taxes) * 1.18)}</td
 										>
 										{#if canManage}
@@ -749,22 +591,6 @@
 		>
 			<input type="hidden" name="id" value={editingProduct.id} />
 
-			<SearchableSelect
-				label="Cliente"
-				options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
-				bind:value={editClient}
-				placeholder="Selecciona un cliente"
-				disabled={editLoading || !clients.length}
-			/>
-
-			<input type="hidden" name="client_id" value={editClient} />
-
-			{#if !clients.length}
-				<p class="-mt-2 text-[11px] text-[#707070]">
-					No hay clientes. Crea al menos uno en la sección Clientes.
-				</p>
-			{/if}
-
 			<Input
 				bind:value={editTitle}
 				label="Título"
@@ -788,7 +614,7 @@
 				</p>
 			{:else if availableModelsEdit.length === 0 && editTitle.trim() !== ''}
 				<p class="-mt-2 text-[11px] font-medium text-red-600">
-					Ya existe un producto con este nombre y modelo para este cliente.
+					Ya existe un producto con este nombre y modelo.
 				</p>
 			{:else if availableModelsEdit.length === 0}
 				<p class="-mt-2 text-[11px] text-[#707070]">
@@ -829,7 +655,9 @@
 
 			{#if editPriceWithoutTaxes !== ''}
 				<p class="-mt-1 text-[11px] text-[#707070]">
-					Precio con impuesto (18%): <span class="font-medium">{formatCurrency(editPriceWithTax)}</span>
+					Precio con impuesto (18%): <span class="font-medium"
+						>{formatCurrency(editPriceWithTax)}</span
+					>
 				</p>
 			{/if}
 		</form>
@@ -903,175 +731,6 @@
 	</Dialog>
 {/if}
 
-{#if duplicateModalOpen}
-	<Dialog
-		open
-		title="Duplicar productos"
-		description="Selecciona el cliente de origen, elige los productos y el cliente destino."
-		class="max-w-2xl"
-		onClose={closeDuplicateModal}
-	>
-		<div class="space-y-4">
-			<SearchableSelect
-				label="Cliente de origen"
-				options={clients.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
-				bind:value={sourceClientForDuplicate}
-				placeholder="Selecciona el cliente de origen"
-				disabled={duplicateLoading || clients.length === 0}
-			/>
-
-			{#if clients.length === 0}
-				<p class="-mt-2 text-[11px] text-[#707070]">No hay clientes disponibles.</p>
-			{/if}
-
-			{#if sourceClientForDuplicate}
-				{@const productsWithStatus = productsWithDuplicateStatus}
-				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">
-					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
-								<th class="w-10 px-4 py-3 font-bold">
-									<input
-										type="checkbox"
-										checked={selectedProductsForDuplicate.length === productsWithStatus.length &&
-											productsWithStatus.length > 0}
-										onchange={toggleAllProductsForDuplicate}
-										class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
-									/>
-								</th>
-								<th class="px-4 py-3 font-bold">Producto</th>
-								<th class="px-4 py-3 font-bold">Modelo</th>
-								<th class="px-4 py-3 text-right font-bold">Precio</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[#ededed]">
-							{#each productsWithStatus as productWithStatus (productWithStatus.id)}
-								<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
-									<td class="px-4 py-3">
-										<input
-											type="checkbox"
-											checked={selectedProductsForDuplicate.includes(productWithStatus.id)}
-											onchange={() => toggleProductForDuplicate(productWithStatus.id)}
-											class="h-4 w-4 rounded border-[#dfdfdf] text-[#3ecf8e] focus:ring-[#3ecf8e]"
-										/>
-									</td>
-									<td class="px-4 py-3">
-										<div class="font-medium text-[#171717]">
-											{capitalize(productWithStatus.title)}
-										</div>
-									</td>
-									<td class="px-4 py-3 text-xs text-[#707070] capitalize">
-										{productWithStatus.model
-											? models.find((m) => m.id === productWithStatus.model)?.model || '—'
-											: '—'}
-									</td>
-									<td class="px-4 py-3 text-right font-mono text-[#171717]">
-										{formatCurrency(Number(productWithStatus.price_without_taxes))}
-									</td>
-								</tr>
-							{:else}
-								<tr>
-									<td colspan="4" class="px-4 py-8 text-center text-xs text-[#707070]">
-										Este cliente no tiene productos.
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-
-				<div class="flex items-center justify-between text-sm text-[#707070]">
-					<span
-						>{selectedProductsForDuplicate.length} de {productsWithStatus.length} productos seleccionados</span
-					>
-				</div>
-			{/if}
-
-			{#if selectedProductsForDuplicate.length > 0}
-				<SearchableSelect
-					label="Cliente destino"
-					options={clients
-						.filter((c) => c.id !== sourceClientForDuplicate)
-						.map((c) => ({ value: c.id, label: getClientName(c.id) }))}
-					bind:value={destinationClientForDuplicate}
-					placeholder="Selecciona el cliente destino"
-					disabled={duplicateLoading || clients.length === 0}
-				/>
-
-				{#if sourceClientForDuplicate && destinationClientForDuplicate && sourceClientForDuplicate === destinationClientForDuplicate}
-					<p class="-mt-2 text-[11px] text-red-600">
-						El cliente destino no puede ser el mismo que el de origen.
-					</p>
-				{/if}
-			{/if}
-
-			{#if duplicateError}
-				<div
-					class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
-				>
-					<Tags class="mt-0.5 h-5 w-5 shrink-0" />
-					<div>
-						<p class="font-medium">No se pudo duplicar el producto</p>
-						<p class="mt-0.5 text-xs text-[#707070]">{duplicateError}</p>
-					</div>
-				</div>
-			{/if}
-
-			<form
-				id="duplicate-products-form"
-				action="?/duplicateProducts"
-				method="POST"
-				use:enhance={() => {
-					duplicateLoading = true;
-					duplicateError = '';
-					return async ({ result, update }) => {
-						duplicateLoading = false;
-						if (result.type === 'success') {
-							closeDuplicateModal();
-						} else if (result.type === 'failure') {
-							const data = result.data as { error?: string } | undefined;
-							duplicateError = data?.error || 'Ocurrió un error.';
-						} else if (result.type === 'error') {
-							duplicateError = result.error?.message || 'Ocurrió un error.';
-						}
-						await update();
-					};
-				}}
-			>
-				<input
-					type="hidden"
-					name="product_ids"
-					value={JSON.stringify(selectedProductsForDuplicate)}
-				/>
-				<input type="hidden" name="destination_client_id" value={destinationClientForDuplicate} />
-			</form>
-		</div>
-
-		{#snippet footer()}
-			<Button
-				type="button"
-				variant="outline"
-				disabled={duplicateLoading}
-				onclick={closeDuplicateModal}>Cancelar</Button
-			>
-			<Button
-				type="submit"
-				form="duplicate-products-form"
-				disabled={duplicateLoading || !canDuplicate}
-			>
-				{#if duplicateLoading}
-					Duplicando...
-				{:else}
-					Duplicar {selectedProductsForDuplicate.length}
-					producto{selectedProductsForDuplicate.length !== 1 ? 's' : ''}
-				{/if}
-			</Button>
-		{/snippet}
-	</Dialog>
-{/if}
-
 {#if singleDuplicateModalOpen && productToDuplicateForModels}
 	<Dialog
 		open
@@ -1087,10 +746,8 @@
 						{capitalize(productToDuplicateForModels.title)}
 					</p>
 					<p class="text-xs text-[#707070]">
-						Cliente: {getClientName(productToDuplicateForModels.client_id)}
-					</p>
-					<p class="text-xs text-[#707070]">
-						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con impuesto: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes) * 1.18)})
+						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con impuesto:
+						{formatCurrency(Number(productToDuplicateForModels.price_without_taxes) * 1.18)})
 					</p>
 					{#if productToDuplicateForModels.description}
 						<p class="mt-1 text-xs text-[#707070]">
@@ -1109,7 +766,7 @@
 						type="text"
 						placeholder="Buscar modelo..."
 						bind:value={singleDuplicateModelSearch}
-						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus:border-[#24b47e] focus:outline-none focus:ring-2 focus:ring-[#3ecf8e]/35"
+						class="w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus:border-[#24b47e] focus:ring-2 focus:ring-[#3ecf8e]/35 focus:outline-none"
 					/>
 				</div>
 				<div class="overflow-hidden rounded-md border border-[#dfdfdf]">

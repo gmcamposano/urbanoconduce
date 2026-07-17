@@ -17,7 +17,7 @@
 		title: string;
 		price_without_taxes: number | string;
 		model: string | null;
-		client_id: string;
+		client_id?: string | null;
 	};
 
 	type ClientOption = {
@@ -62,12 +62,8 @@
 
 	function getAvailableColors(itemId: string): typeof colors {
 		const currentColor = items.find((i) => i.id === itemId)?.color;
-		const usedColorsByOthers = items
-			.filter((i) => i.id !== itemId && i.color)
-			.map((i) => i.color);
-		return colors.filter(
-			(c) => c.color === currentColor || !usedColorsByOthers.includes(c.color)
-		);
+		const usedColorsByOthers = items.filter((i) => i.id !== itemId && i.color).map((i) => i.color);
+		return colors.filter((c) => c.color === currentColor || !usedColorsByOthers.includes(c.color));
 	}
 
 	function getAvailableProducts(itemId: string) {
@@ -95,11 +91,7 @@
 	let ncf = $state('');
 
 	const clientProducts = $derived.by((): ProductOption[] => {
-		if (!selectedClientId) return [];
-
-		return [
-			...products.filter((product: ProductOption) => product.client_id === selectedClientId)
-		].sort((a, b) =>
+		return [...products].sort((a, b) =>
 			getProductLabel(a).localeCompare(getProductLabel(b), undefined, { sensitivity: 'base' })
 		);
 	});
@@ -301,7 +293,7 @@
 					bind:value={facturaTipo}
 					disabled={loading}
 				>
-										<option value="valor_fiscal">Valor fiscal</option>
+					<option value="valor_fiscal">Valor fiscal</option>
 					<option value="ninguna">Ninguna</option>
 				</Select>
 
