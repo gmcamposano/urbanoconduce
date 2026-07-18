@@ -8,7 +8,17 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { Copy, Edit3, Package, Tags, Trash2, ArrowUp, ArrowDown, Search } from '@lucide/svelte';
+	import {
+		Copy,
+		Edit3,
+		Package,
+		Tags,
+		Trash2,
+		ArrowUp,
+		ArrowDown,
+		Search,
+		Maximize2
+	} from '@lucide/svelte';
 	import ProductRow from './ProductRow.svelte';
 
 	let { data, form } = $props();
@@ -20,6 +30,7 @@
 	const clients = $derived(data.clients || []);
 	const clientPrices = $derived(data.clientPrices || []);
 	let searchQuery = $state('');
+	let tableExpanded = $state(false);
 
 	let sortBy = $state<string>('title');
 	let sortOrder = $state<'asc' | 'desc'>('asc');
@@ -253,6 +264,16 @@
 		if (!str) return str;
 		return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 	}
+
+	function openTableModal() {
+		tableExpanded = true;
+		document.body.style.overflow = 'hidden';
+	}
+
+	function closeTableModal() {
+		tableExpanded = false;
+		document.body.style.overflow = '';
+	}
 </script>
 
 <svelte:head>
@@ -397,122 +418,145 @@
 		<Card class="xl:col-span-2">
 			<CardHeader class="flex flex-row items-center justify-between">
 				<CardTitle>Catálogo de productos</CardTitle>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-8 w-8 text-[#707070] hover:text-[#171717]"
+					title="Ampliar catálogo"
+					onclick={openTableModal}
+				>
+					<Maximize2 class="h-4 w-4" />
+				</Button>
 			</CardHeader>
 			<CardContent class="p-0">
-				<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
-					<div class="flex items-center gap-3">
-						<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
-						<input
-							type="text"
-							bind:value={searchQuery}
-							placeholder="Buscar por modelo, producto o descripción..."
-							class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
-						/>
-					</div>
-				</div>
-				<div class="max-h-[60vh] w-full overflow-auto">
-					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
-								<th class="w-8 px-3 py-4"></th>
-								<th class="px-6 py-4 font-bold">
-									<button
-										type="button"
-										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
-										onclick={() => toggleSort('created_at')}
-									>
-										Fecha
-										{#if sortBy === 'created_at'}
-											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
-													class="h-3 w-3"
-												/>{/if}
-										{/if}
-									</button>
-								</th>
-								<th class="px-6 py-4 font-bold">
-									<button
-										type="button"
-										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
-										onclick={() => toggleSort('title')}
-									>
-										Producto
-										{#if sortBy === 'title'}
-											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
-													class="h-3 w-3"
-												/>{/if}
-										{/if}
-									</button>
-								</th>
-								<th class="px-6 py-4 font-bold">
-									<button
-										type="button"
-										class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
-										onclick={() => toggleSort('model')}
-									>
-										Modelo
-										{#if sortBy === 'model'}
-											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
-													class="h-3 w-3"
-												/>{/if}
-										{/if}
-									</button>
-								</th>
-								<th class="px-6 py-4 font-bold uppercase">Descripción</th>
-								<th class="px-6 py-4 text-right font-bold">
-									<button
-										type="button"
-										class="ml-auto flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
-										onclick={() => toggleSort('price')}
-									>
-										Precio
-										{#if sortBy === 'price'}
-											{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
-													class="h-3 w-3"
-												/>{/if}
-										{/if}
-									</button>
-								</th>
-								<th class="px-6 py-4 text-right font-bold uppercase">Precio con impuesto</th>
-								{#if canManage}
-									<th class="px-6 py-4 text-right font-bold uppercase">Acciones</th>
-								{/if}
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[#ededed]">
-							{#if sortedProducts.length === 0}
-								<tr>
-									<td
-										colspan={canManage ? 8 : 7}
-										class="px-6 py-12 text-center text-xs text-[#707070]"
-										>Aún no hay productos registrados.</td
-									>
-								</tr>
-							{:else}
-								{#each sortedProducts as product (product.id)}
-									<ProductRow
-										{product}
-										{models}
-										{clients}
-										overrides={clientPrices.filter((cp) => cp.product_id === product.id)}
-										{canManage}
-										{capitalize}
-										{sentenceCase}
-										{formatCurrency}
-										{openSingleDuplicateModal}
-										{startEditing}
-										{openDeleteDialog}
-									/>
-								{/each}
-							{/if}
-						</tbody>
-					</table>
-				</div>
+				{@render catalogTable()}
 			</CardContent>
 		</Card>
 	</div>
 </div>
+
+{#snippet catalogTable()}
+	<div class="border-b border-[#ededed] bg-[#fafafa] px-6 py-3">
+		<div class="flex items-center gap-3">
+			<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
+			<input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Buscar por modelo, producto o descripción..."
+				class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
+			/>
+		</div>
+	</div>
+	<div class="w-full overflow-auto {tableExpanded ? 'max-h-[70vh]' : 'max-h-[60vh]'}">
+		<table class="w-full text-left text-sm text-[#171717]">
+			<thead
+				class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+			>
+				<tr>
+					<th class="w-8 px-3 py-4"></th>
+					<th class="px-6 py-4 font-bold">
+						<button
+							type="button"
+							class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
+							onclick={() => toggleSort('created_at')}
+						>
+							Fecha
+							{#if sortBy === 'created_at'}
+								{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+										class="h-3 w-3"
+									/>{/if}
+							{/if}
+						</button>
+					</th>
+					<th class="px-6 py-4 font-bold">
+						<button
+							type="button"
+							class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
+							onclick={() => toggleSort('title')}
+						>
+							Producto
+							{#if sortBy === 'title'}
+								{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+										class="h-3 w-3"
+									/>{/if}
+							{/if}
+						</button>
+					</th>
+					<th class="px-6 py-4 font-bold">
+						<button
+							type="button"
+							class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
+							onclick={() => toggleSort('model')}
+						>
+							Modelo
+							{#if sortBy === 'model'}
+								{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+										class="h-3 w-3"
+									/>{/if}
+							{/if}
+						</button>
+					</th>
+					<th class="px-6 py-4 font-bold uppercase">Descripción</th>
+					<th class="px-6 py-4 text-right font-bold">
+						<button
+							type="button"
+							class="ml-auto flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
+							onclick={() => toggleSort('price')}
+						>
+							Precio
+							{#if sortBy === 'price'}
+								{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
+										class="h-3 w-3"
+									/>{/if}
+							{/if}
+						</button>
+					</th>
+					<th class="px-6 py-4 text-right font-bold uppercase">Precio con impuesto</th>
+					{#if canManage}
+						<th class="px-6 py-4 text-right font-bold uppercase">Acciones</th>
+					{/if}
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-[#ededed]">
+				{#if sortedProducts.length === 0}
+					<tr>
+						<td colspan={canManage ? 8 : 7} class="px-6 py-12 text-center text-xs text-[#707070]"
+							>Aún no hay productos registrados.</td
+						>
+					</tr>
+				{:else}
+					{#each sortedProducts as product (product.id)}
+						<ProductRow
+							{product}
+							{models}
+							{clients}
+							overrides={clientPrices.filter((cp) => cp.product_id === product.id)}
+							{canManage}
+							{capitalize}
+							{sentenceCase}
+							{formatCurrency}
+							{openSingleDuplicateModal}
+							{startEditing}
+							{openDeleteDialog}
+						/>
+					{/each}
+				{/if}
+			</tbody>
+		</table>
+	</div>
+{/snippet}
+
+{#if tableExpanded}
+	<Dialog
+		open
+		title="Catálogo de productos"
+		class="max-w-none"
+		style="width: calc(95vw - 2rem); max-width: calc(95vw - 2rem); max-height: 95vh;"
+		onClose={closeTableModal}
+	>
+		{@render catalogTable()}
+	</Dialog>
+{/if}
 
 {#if editingProduct}
 	<Dialog
