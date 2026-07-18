@@ -410,10 +410,10 @@
 						/>
 					</div>
 				</div>
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[60vh] w-full overflow-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
 						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
+							class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
 								<th class="w-8 px-3 py-4"></th>
@@ -500,9 +500,9 @@
 										{capitalize}
 										{sentenceCase}
 										{formatCurrency}
-										openSingleDuplicateModal={openSingleDuplicateModal}
-										startEditing={startEditing}
-										openDeleteDialog={openDeleteDialog}
+										{openSingleDuplicateModal}
+										{startEditing}
+										{openDeleteDialog}
 									/>
 								{/each}
 							{/if}
@@ -695,10 +695,8 @@
 						{capitalize(productToDuplicateForModels.title)}
 					</p>
 					<p class="text-xs text-[#707070]">
-						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con
-						impuesto: {formatCurrency(
-							Number(productToDuplicateForModels.price_without_taxes) * 1.18
-						)})
+						Precio: {formatCurrency(Number(productToDuplicateForModels.price_without_taxes))} (con impuesto:
+						{formatCurrency(Number(productToDuplicateForModels.price_without_taxes) * 1.18)})
 					</p>
 					{#if productToDuplicateForModels.description}
 						<p class="mt-1 text-xs text-[#707070]">
