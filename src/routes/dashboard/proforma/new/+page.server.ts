@@ -194,14 +194,14 @@ export const actions: Actions = {
 				color
 			);
 			if (!variantId) {
-				return fail(400, {
-					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`
-				});
+				console.warn(
+					`Proforma item without inventory variant: product="${product.title}" color="${color || 'sin color'}"`
+				);
 			}
 
 			normalizedItems.push({
 				product_id: item.product_id,
-				product_variant_id: variantId,
+				product_variant_id: variantId || null,
 				description: product.title,
 				color: color || null,
 				model,
