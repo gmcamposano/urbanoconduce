@@ -16,6 +16,7 @@ export type InventoryItem = {
 	purchase_price: number | null;
 	stock: number;
 	low_stock: boolean;
+	image_url: string | null;
 };
 
 export async function getInventoryStock(
@@ -31,6 +32,7 @@ export async function getInventoryStock(
 			sku,
 			min_stock,
 			purchase_price,
+			image_url,
 			created_at,
 			products (
 				id,
@@ -40,7 +42,8 @@ export async function getInventoryStock(
 			)
 		`
 		)
-		.order('created_at', { ascending: false });
+		.order('created_at', { ascending: false })
+		.order('id', { ascending: false });
 
 	if (error || !variants) {
 		return { data: [] as InventoryItem[], error };
@@ -82,7 +85,8 @@ export async function getInventoryStock(
 				min_stock: v.min_stock,
 				purchase_price: v.purchase_price,
 				stock,
-				low_stock: stock <= v.min_stock
+				low_stock: stock <= v.min_stock,
+				image_url: v.image_url
 			};
 		})
 		.filter((item) => (options?.lowStockOnly ? item.low_stock : true));
@@ -279,4 +283,164 @@ export function formatInventoryColor(color: string): string {
 
 export function formatCurrency(value: number): string {
 	return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(value);
+}
+
+export async function getOrCreateModelId(
+	supabase: TypedSupabase,
+	modelName: string,
+	userId: string
+) {
+	const normalized = modelName.trim().toLowerCase();
+	if (!normalized) {
+		return { id: null, error: new Error('El modelo es obligatorio.') };
+	}
+
+	const { data: existing } = await supabase
+		.from('product_models')
+		.select('id')
+		.eq('model', normalized)
+		.single();
+
+	if (existing) return { id: existing.id, error: null as null };
+
+	const { data: inserted, error } = await supabase
+		.from('product_models')
+		.insert({ model: normalized, created_by: userId })
+		.select('id')
+		.single();
+
+	if (error) {
+		if (error.code === '23505') {
+			const { data: retry } = await supabase
+				.from('product_models')
+				.select('id')
+				.eq('model', normalized)
+				.single();
+			if (retry) return { id: retry.id, error: null };
+		}
+		return { id: null, error };
+	}
+
+	return { id: inserted.id, error: null };
+}
+
+export async function resolveOrCreateProduct(
+	supabase: TypedSupabase,
+	params: {
+		title: string;
+		modelId: string;
+		catalogPrice: number | null;
+		userId: string;
+	}
+) {
+	const normalizedTitle = params.title.trim().toLowerCase();
+	if (!normalizedTitle) {
+		return { id: null, error: new Error('El producto es obligatorio.') };
+	}
+
+	const { data: existing } = await supabase
+		.from('products')
+		.select('id')
+		.eq('title', normalizedTitle)
+		.eq('model', params.modelId)
+		.single();
+
+	if (existing) return { id: existing.id, error: null as null };
+
+	const catalogPrice = params.catalogPrice ?? 0;
+
+	const { data: inserted, error } = await supabase
+		.from('products')
+		.insert({
+			title: normalizedTitle,
+			model: params.modelId,
+			price_without_taxes: catalogPrice,
+			created_by: params.userId
+		})
+		.select('id')
+		.single();
+
+	if (error) {
+		if (error.code === '23505') {
+			const { data: retry } = await supabase
+				.from('products')
+				.select('id')
+				.eq('title', normalizedTitle)
+				.eq('model', params.modelId)
+				.single();
+			if (retry) return { id: retry.id, error: null };
+		}
+		return { id: null, error };
+	}
+
+	return { id: inserted.id, error: null };
+}
+
+export async function resolveOrCreateVariant(
+	supabase: TypedSupabase,
+	params: {
+		productId: string;
+		color: string;
+		sku: string;
+		purchasePrice: number | null;
+		userId: string;
+	}
+) {
+	const normalizedColor = (params.color || '').trim().toLowerCase();
+	const sku = params.sku.trim() || null;
+
+	const { data: existing } = await supabase
+		.from('product_variants')
+		.select('id, purchase_price')
+		.eq('product_id', params.productId)
+		.eq('color', normalizedColor)
+		.single();
+
+	if (existing) {
+		if (params.purchasePrice !== null && params.purchasePrice >= 0) {
+			const { error } = await supabase
+				.from('product_variants')
+				.update({ purchase_price: params.purchasePrice })
+				.eq('id', existing.id);
+			if (error) return { id: null, error };
+		}
+		return { id: existing.id, error: null as null };
+	}
+
+	const { data: inserted, error } = await supabase
+		.from('product_variants')
+		.insert({
+			product_id: params.productId,
+			color: normalizedColor,
+			sku,
+			min_stock: 0,
+			purchase_price:
+				params.purchasePrice !== null && params.purchasePrice >= 0 ? params.purchasePrice : null,
+			created_by: params.userId
+		})
+		.select('id')
+		.single();
+
+	if (error) {
+		if (error.code === '23505') {
+			const { data: retry } = await supabase
+				.from('product_variants')
+				.select('id, purchase_price')
+				.eq('product_id', params.productId)
+				.eq('color', normalizedColor)
+				.single();
+			if (retry) {
+				if (params.purchasePrice !== null && params.purchasePrice >= 0) {
+					await supabase
+						.from('product_variants')
+						.update({ purchase_price: params.purchasePrice })
+						.eq('id', retry.id);
+				}
+				return { id: retry.id, error: null };
+			}
+		}
+		return { id: null, error };
+	}
+
+	return { id: inserted.id, error: null };
 }

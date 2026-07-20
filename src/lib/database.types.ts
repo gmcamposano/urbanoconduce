@@ -370,7 +370,6 @@ export type Database = {
 					{
 						foreignKeyName: 'invoice_items_product_id_fkey';
 						columns: ['product_id'];
-						isOneToOne: false;
 						referencedRelation: 'products';
 						referencedColumns: ['id'];
 					},
@@ -378,7 +377,7 @@ export type Database = {
 						foreignKeyName: 'invoice_items_product_variant_id_fkey';
 						columns: ['product_variant_id'];
 						isOneToOne: false;
-						referencedRelation: 'product_variants';
+						referencedRelation: '_variants';
 						referencedColumns: ['id'];
 					}
 				];
@@ -528,6 +527,7 @@ export type Database = {
 					created_at: string;
 					created_by: string | null;
 					id: string;
+					image_url: string | null;
 					min_stock: number;
 					product_id: string;
 					purchase_price: number | null;
@@ -539,6 +539,7 @@ export type Database = {
 					created_at?: string;
 					created_by?: string | null;
 					id?: string;
+					image_url?: string | null;
 					min_stock?: number;
 					product_id: string;
 					purchase_price?: number | null;
@@ -550,6 +551,7 @@ export type Database = {
 					created_at?: string;
 					created_by?: string | null;
 					id?: string;
+					image_url?: string | null;
 					min_stock?: number;
 					product_id?: string;
 					purchase_price?: number | null;

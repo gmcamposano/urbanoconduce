@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Dialog from '$lib/components/ui/Dialog.svelte';
+	import { compressImageFile } from '$lib/image';
 	import {
 		Warehouse,
 		ArrowUp,
@@ -12,10 +15,17 @@
 		Package,
 		History,
 		Plus,
-		ArrowDownToLine
+		ArrowDownToLine,
+		Image,
+		Upload,
+		Tags,
+		Trash2
 	} from '@lucide/svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	const profile = $derived(data.profile);
+	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 
 	function formatInventoryColor(color: string): string {
 		if (!color) return 'Sin color';
@@ -29,6 +39,59 @@
 	let searchQuery = $state('');
 	let sortBy = $state<string>('product');
 	let sortOrder = $state<'asc' | 'desc'>('asc');
+	let uploadingVariantId = $state<string | null>(null);
+	let preview = $state<{ url: string; title: string; variantId: string } | null>(null);
+	let deleteConfirm = $state<{ variantId: string; imageUrl: string; title: string } | null>(null);
+	let deleteLoading = $state(false);
+
+	function openImagePreview(url: string, title: string, variantId: string) {
+		preview = { url, title, variantId };
+	}
+
+	function closeImagePreview() {
+		preview = null;
+	}
+
+	function openDeleteConfirm(variantId: string, imageUrl: string, title: string) {
+		deleteConfirm = { variantId, imageUrl, title };
+	}
+
+	function closeDeleteConfirm() {
+		deleteConfirm = null;
+		deleteLoading = false;
+	}
+
+	async function handleImageSelect(event: Event, variantId: string) {
+		if (uploadingVariantId) return;
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		try {
+			uploadingVariantId = variantId;
+			const { blob, filename } = await compressImageFile(file, {
+				maxWidth: 1200,
+				maxHeight: 1200,
+				quality: 0.7
+			});
+
+			const compressed = new File([blob], filename, { type: blob.type });
+			const dataTransfer = new DataTransfer();
+			dataTransfer.items.add(compressed);
+			input.files = dataTransfer.files;
+
+			const form = input.form;
+			if (form) {
+				form.requestSubmit();
+			}
+		} catch (e: unknown) {
+			console.error('Image compression error:', e);
+			const message = e instanceof Error ? e.message : 'No se pudo procesar la imagen.';
+			alert(message);
+			uploadingVariantId = null;
+			input.value = '';
+		}
+	}
 
 	function toggleSort(column: string) {
 		if (sortBy === column) {
@@ -57,8 +120,7 @@
 				(i) =>
 					i.product_title.toLowerCase().includes(query) ||
 					getModelName(i.model_id).toLowerCase().includes(query) ||
-					i.color.toLowerCase().includes(query) ||
-					(i.sku || '').toLowerCase().includes(query)
+					i.color.toLowerCase().includes(query)
 			);
 		}
 		return result;
@@ -69,16 +131,22 @@
 		const dir = sortOrder === 'asc' ? 1 : -1;
 		sorted.sort((a, b) => {
 			switch (sortBy) {
-				case 'product':
-					return a.product_title.toLowerCase().localeCompare(b.product_title.toLowerCase()) * dir;
-				case 'model':
-					return getModelName(a.model_id).localeCompare(getModelName(b.model_id)) * dir;
+				case 'product': {
+					const byTitle = a.product_title
+						.toLowerCase()
+						.localeCompare(b.product_title.toLowerCase());
+					return (byTitle === 0 ? a.variant_id.localeCompare(b.variant_id) : byTitle) * dir;
+				}
+				case 'model': {
+					const byModel = getModelName(a.model_id).localeCompare(getModelName(b.model_id));
+					return (byModel === 0 ? a.variant_id.localeCompare(b.variant_id) : byModel) * dir;
+				}
 				case 'stock':
-					return (a.stock - b.stock) * dir;
+					return (a.stock - b.stock || a.variant_id.localeCompare(b.variant_id)) * dir;
 				case 'color':
-					return a.color.localeCompare(b.color) * dir;
+					return (a.color.localeCompare(b.color) || a.variant_id.localeCompare(b.variant_id)) * dir;
 				default:
-					return 0;
+					return a.variant_id.localeCompare(b.variant_id) * dir;
 			}
 		});
 		return sorted;
@@ -101,6 +169,29 @@
 		</h1>
 		<p class="mt-0.5 text-xs text-[#707070]">Stock actual por producto, modelo y color.</p>
 	</div>
+
+	{#if form?.error}
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
+		>
+			<Tags class="mt-0.5 h-5 w-5 shrink-0" />
+			<div>
+				<p class="font-medium">No se pudo subir la imagen</p>
+				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
+			</div>
+		</div>
+	{/if}
+
+	{#if form?.success}
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#3ecf8e]/25 bg-[#3ecf8e]/12 p-4 text-sm text-[#171717] shadow-sm"
+		>
+			<Tags class="mt-0.5 h-5 w-5 shrink-0 text-[#24b47e]" />
+			<div>
+				<p class="font-medium">{form.message || 'Imagen guardada'}</p>
+			</div>
+		</div>
+	{/if}
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 		<Card>
@@ -151,7 +242,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Buscar producto, modelo, color o SKU..."
+					placeholder="Buscar producto, modelo o color..."
 					class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 				/>
 			</div>
@@ -208,9 +299,9 @@
 									{/if}
 								</button>
 							</th>
+							<th class="px-6 py-4 font-bold uppercase">Imagen</th>
 							<th class="px-6 py-4 font-bold uppercase">Modelo</th>
 							<th class="px-6 py-4 font-bold uppercase">Color</th>
-							<th class="px-6 py-4 font-bold uppercase">SKU</th>
 							<th class="px-6 py-4 text-right font-bold">
 								<button
 									type="button"
@@ -243,11 +334,80 @@
 									<td class="px-6 py-4 font-medium text-[#171717]">
 										{capitalize(item.product_title)}
 									</td>
+									<td class="px-6 py-4">
+										<div class="relative h-14 w-14">
+											<button
+												type="button"
+												class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md border border-[#dfdfdf] bg-[#fafafa] hover:border-[#3ecf8e] disabled:cursor-default"
+												disabled={!item.image_url}
+												onclick={() =>
+													item.image_url &&
+													openImagePreview(item.image_url, item.product_title, item.variant_id)}
+											>
+												{#if item.image_url}
+													<img
+														src={item.image_url}
+														alt={item.product_title}
+														class="h-full w-full object-cover"
+													/>
+												{:else}
+													<Image class="h-5 w-5 text-[#707070]" />
+												{/if}
+											</button>
+
+											{#if canManage}
+												<form
+													action="?/uploadVariantImage"
+													method="POST"
+													enctype="multipart/form-data"
+													use:enhance={() => {
+														uploadingVariantId = item.variant_id;
+														return async ({ update }) => {
+															uploadingVariantId = null;
+															await update();
+														};
+													}}
+													class="absolute -right-1.5 -bottom-1.5"
+												>
+													<input type="hidden" name="variant_id" value={item.variant_id} />
+													<input type="hidden" name="old_image_url" value={item.image_url ?? ''} />
+													<input
+														type="file"
+														id="variant-image-{item.variant_id}"
+														name="image"
+														accept="image/*"
+														class="sr-only"
+														onchange={(e) => handleImageSelect(e, item.variant_id)}
+													/>
+													<button
+														type="button"
+														class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-[#dfdfdf] bg-white text-[#707070] shadow-sm hover:border-[#3ecf8e] hover:bg-[#3ecf8e] hover:text-[#171717] disabled:opacity-50"
+														disabled={uploadingVariantId === item.variant_id}
+														onclick={() =>
+															document.getElementById('variant-image-' + item.variant_id)?.click()}
+														aria-label="Subir imagen"
+													>
+														<Upload class="h-3 w-3" />
+													</button>
+												</form>
+											{/if}
+
+											{#if uploadingVariantId === item.variant_id}
+												<div
+													class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-md bg-white/80 text-center"
+												>
+													<Upload class="h-4 w-4 animate-pulse text-[#3ecf8e]" />
+													<span class="text-[9px] leading-tight font-medium text-[#3ecf8e]"
+														>Subiendo imagen</span
+													>
+												</div>
+											{/if}
+										</div>
+									</td>
 									<td class="px-6 py-4 text-xs text-[#707070]">{getModelName(item.model_id)}</td>
 									<td class="px-6 py-4 text-xs text-[#707070]"
 										>{formatInventoryColor(item.color)}</td
 									>
-									<td class="px-6 py-4 text-xs text-[#707070]">{item.sku || '—'}</td>
 									<td class="px-6 py-4 text-right font-mono text-[#171717]">{item.stock}</td>
 									<td class="px-6 py-4 text-right font-mono text-[#707070]">{item.min_stock}</td>
 									<td class="px-6 py-4 text-right font-mono text-[#707070]">
@@ -271,3 +431,101 @@
 		</CardContent>
 	</Card>
 </div>
+
+{#if preview}
+	{@const { url, title, variantId } = preview}
+	<Dialog
+		open
+		title={capitalize(title)}
+		class="max-w-3xl"
+		style="width: min(90vw, 48rem);"
+		onClose={closeImagePreview}
+	>
+		<img src={url} alt={title} class="max-h-[70vh] w-full rounded-md object-contain" />
+
+		{#snippet footer()}
+			<div class="flex w-full items-center justify-between">
+				{#if canManage}
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 rounded-[6px] px-3 py-2 text-sm font-medium text-[#e2005a] transition-colors hover:bg-[#e2005a]/10"
+						onclick={() => {
+							openDeleteConfirm(variantId, url, title);
+							closeImagePreview();
+						}}
+					>
+						<Trash2 class="h-4 w-4" />
+						Eliminar imagen
+					</button>
+				{:else}
+					<span></span>
+				{/if}
+				<button
+					type="button"
+					class="rounded-[6px] border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+					onclick={closeImagePreview}
+				>
+					Cerrar
+				</button>
+			</div>
+		{/snippet}
+	</Dialog>
+{/if}
+
+{#if deleteConfirm}
+	<Dialog
+		open
+		title="Eliminar imagen"
+		description="Esta acción no se puede deshacer. La imagen se borrará del almacenamiento."
+		class="max-w-md"
+		onClose={closeDeleteConfirm}
+	>
+		<p class="text-sm text-[#707070]">
+			¿Seguro que deseas eliminar la imagen de <strong class="text-[#171717]"
+				>{capitalize(deleteConfirm.title)}</strong
+			>?
+		</p>
+
+		<form
+			id="delete-image-form"
+			action="?/deleteVariantImage"
+			method="POST"
+			class="hidden"
+			use:enhance={() => {
+				deleteLoading = true;
+				return async ({ update }) => {
+					deleteLoading = false;
+					closeDeleteConfirm();
+					await update();
+				};
+			}}
+		>
+			<input type="hidden" name="variant_id" value={deleteConfirm.variantId} />
+			<input type="hidden" name="image_url" value={deleteConfirm.imageUrl} />
+		</form>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-[6px] border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				disabled={deleteLoading}
+				onclick={closeDeleteConfirm}
+			>
+				Cancelar
+			</button>
+			<button
+				type="submit"
+				form="delete-image-form"
+				class="inline-flex items-center gap-1.5 rounded-[6px] bg-[#e2005a] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#b8003c] disabled:opacity-50"
+				disabled={deleteLoading}
+			>
+				{#if deleteLoading}
+					Eliminando...
+				{:else}
+					<Trash2 class="h-4 w-4" />
+					Eliminar
+				{/if}
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}
