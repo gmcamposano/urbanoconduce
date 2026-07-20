@@ -9,8 +9,9 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
+	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import { SvelteDate } from 'svelte/reactivity';
-	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign } from '@lucide/svelte';
+	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign, AlertTriangle } from '@lucide/svelte';
 
 	type ProductOption = {
 		id: string;
@@ -159,6 +160,10 @@
 	>([createItem()]);
 
 	let loading = $state(false);
+	let createMissingVariants = $state(false);
+	let missingVariantConfirm = $state<Array<{ productId: string; productTitle: string; color: string }> | null>(null);
+	let createMissingDialogOpen = $state(false);
+	let formElement = $state<HTMLFormElement | null>(null);
 
 	const canAddItem = $derived(!!items[items.length - 1]?.product_id);
 
@@ -305,19 +310,34 @@
 
 	<!-- Create Form -->
 	<form
+		bind:this={formElement}
 		action="?/createInvoice"
 		method="POST"
 		use:enhance={() => {
 			loading = true;
-			return async ({ update }) => {
+			return async ({ result, update }) => {
+				if (result.type === 'failure' && result.data?.missingVariants) {
+					missingVariantConfirm = result.data.missingVariants as Array<{
+						productId: string;
+						productTitle: string;
+						color: string;
+					}>;
+					createMissingDialogOpen = true;
+					loading = false;
+					createMissingVariants = false;
+					await update({ reset: false });
+					return;
+				}
 				loading = false;
-				await update();
+				createMissingVariants = false;
+				await update({ reset: false });
 			};
 		}}
 		class="space-y-6"
 	>
 		<!-- Serialize items array as a JSON string to submit through standard formData -->
 		<input type="hidden" name="items" value={JSON.stringify(items)} />
+		<input type="hidden" name="create_missing_variants" value={createMissingVariants ? 'true' : 'false'} />
 
 		<Card>
 			<CardHeader>
@@ -737,3 +757,67 @@
 		</div>
 	</form>
 </div>
+
+{#if createMissingDialogOpen && missingVariantConfirm}
+	<Dialog
+		open
+		title="Crear variantes faltantes"
+		description="Algunos conceptos no tienen una variante de inventario. ¿Deseas crearlas ahora?"
+		class="max-w-md"
+		onClose={() => {
+			createMissingDialogOpen = false;
+			missingVariantConfirm = null;
+			createMissingVariants = false;
+		}}
+	>
+		<div class="space-y-3">
+			<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+				<p>Las siguientes variantes se crearán con stock 0:</p>
+			</div>
+			<ul class="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#ededed] bg-[#fafafa] p-3">
+				{#each missingVariantConfirm as variant}
+					<li class="text-sm text-[#171717]">
+						<span class="font-medium">{toTitleCase(variant.productTitle)}</span>
+						{#if variant.color}
+							<span class="text-[#707070]">· {toTitleCase(variant.color)}</span>
+						{:else}
+							<span class="text-[#707070]">· Sin color</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-[6px] border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				onclick={() => {
+					createMissingDialogOpen = false;
+					missingVariantConfirm = null;
+					createMissingVariants = false;
+				}}
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-[6px] bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e] disabled:opacity-50"
+				disabled={loading}
+				onclick={() => {
+					createMissingVariants = true;
+					createMissingDialogOpen = false;
+					formElement?.requestSubmit();
+				}}
+			>
+				{#if loading}
+					Creando...
+				{:else}
+					<Plus class="h-4 w-4" />
+					Crear variantes y guardar
+				{/if}
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}

@@ -159,7 +159,60 @@ export const actions: Actions = {
 			}
 		}
 
+		const shouldCreateMissing =
+			String(formData.get('create_missing_variants') ?? '').trim() === 'true';
+
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
+
+		// Detect items that still lack an inventory variant.
+		const missingVariantsByKey = new Map<
+			string,
+			{ productId: string; productTitle: string; color: string }
+		>();
+		for (const item of items) {
+			const product = productMap.get(item.product_id);
+			const color = (item.color || '').trim().toLowerCase();
+			if (!product) continue;
+			const { id: variantId } = await resolveVariantIdForItem(
+				locals.supabase,
+				item.product_id,
+				color
+			);
+			if (!variantId) {
+				const key = `${item.product_id}:${color}`;
+				missingVariantsByKey.set(key, {
+					productId: item.product_id,
+					productTitle: product.title,
+					color
+				});
+			}
+		}
+
+		if (missingVariantsByKey.size > 0 && !shouldCreateMissing) {
+			return fail(400, {
+				missingVariants: Array.from(missingVariantsByKey.values())
+			});
+		}
+
+		if (shouldCreateMissing && missingVariantsByKey.size > 0) {
+			const variantsToCreate = Array.from(missingVariantsByKey.values()).map((v) => ({
+				product_id: v.productId,
+				color: v.color,
+				min_stock: 0,
+				created_by: user.id
+			}));
+
+			const { error: createVariantsError } = await locals.supabase
+				.from('product_variants')
+				.insert(variantsToCreate);
+
+			if (createVariantsError) {
+				return fail(400, {
+					error: `No se pudieron crear las variantes: ${createVariantsError.message}`
+				});
+			}
+		}
+
 		const normalizedItems: Array<{
 			product_id: string;
 			product_variant_id: string | null;
@@ -194,14 +247,14 @@ export const actions: Actions = {
 				color
 			);
 			if (!variantId) {
-				console.warn(
-					`Proforma item without inventory variant: product="${product.title}" color="${color || 'sin color'}"`
-				);
+				return fail(400, {
+					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`
+				});
 			}
 
 			normalizedItems.push({
 				product_id: item.product_id,
-				product_variant_id: variantId || null,
+				product_variant_id: variantId,
 				description: product.title,
 				color: color || null,
 				model,
