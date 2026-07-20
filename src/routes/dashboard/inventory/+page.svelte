@@ -19,7 +19,8 @@
 		Image,
 		Upload,
 		Tags,
-		Trash2
+		Trash2,
+		Copy
 	} from '@lucide/svelte';
 
 	let { data, form } = $props();
@@ -43,6 +44,10 @@
 	let preview = $state<{ url: string; title: string; variantId: string } | null>(null);
 	let deleteConfirm = $state<{ variantId: string; imageUrl: string; title: string } | null>(null);
 	let deleteLoading = $state(false);
+	let copySource = $state<{ variantId: string; url: string; title: string } | null>(null);
+	let copyLoading = $state(false);
+	let copySearch = $state('');
+	let selectedTargetIds = $state<string[]>([]);
 
 	function openImagePreview(url: string, title: string, variantId: string) {
 		preview = { url, title, variantId };
@@ -60,6 +65,48 @@
 		deleteConfirm = null;
 		deleteLoading = false;
 	}
+
+	function openCopyDialog(variantId: string, url: string, title: string) {
+		copySource = { variantId, url, title };
+		selectedTargetIds = [];
+		copySearch = '';
+	}
+
+	function closeCopyDialog() {
+		copySource = null;
+		copyLoading = false;
+		copySearch = '';
+		selectedTargetIds = [];
+	}
+
+	function toggleCopyTarget(id: string) {
+		selectedTargetIds = selectedTargetIds.includes(id)
+			? selectedTargetIds.filter((v) => v !== id)
+			: [...selectedTargetIds, id];
+	}
+
+	function selectAllCopyTargets() {
+		selectedTargetIds = copyTargetItems.map((i) => i.variant_id);
+	}
+
+	function clearAllCopyTargets() {
+		selectedTargetIds = [];
+	}
+
+	const copyTargetItems = $derived.by(() => {
+		if (!copySource) return [];
+		const sourceId = copySource.variantId;
+		const query = copySearch.toLowerCase().trim();
+		return sortedItems.filter(
+			(i) =>
+				i.variant_id !== sourceId &&
+				!i.image_url &&
+				(!query ||
+					i.product_title.toLowerCase().includes(query) ||
+					getModelName(i.model_id).toLowerCase().includes(query) ||
+					i.color.toLowerCase().includes(query))
+		);
+	});
 
 	async function handleImageSelect(event: Event, variantId: string) {
 		if (uploadingVariantId) return;
@@ -176,7 +223,7 @@
 		>
 			<Tags class="mt-0.5 h-5 w-5 shrink-0" />
 			<div>
-				<p class="font-medium">No se pudo subir la imagen</p>
+				<p class="font-medium">{form.message || 'No se pudo completar la acción'}</p>
 				<p class="mt-0.5 text-xs text-[#707070]">{form.error}</p>
 			</div>
 		</div>
@@ -446,17 +493,30 @@
 		{#snippet footer()}
 			<div class="flex w-full items-center justify-between">
 				{#if canManage}
-					<button
-						type="button"
-						class="inline-flex items-center gap-1.5 rounded-[6px] px-3 py-2 text-sm font-medium text-[#e2005a] transition-colors hover:bg-[#e2005a]/10"
-						onclick={() => {
-							openDeleteConfirm(variantId, url, title);
-							closeImagePreview();
-						}}
-					>
-						<Trash2 class="h-4 w-4" />
-						Eliminar imagen
-					</button>
+					<div class="flex items-center gap-2">
+						<button
+							type="button"
+							class="inline-flex items-center gap-1.5 rounded-[6px] px-3 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#ededed]"
+							onclick={() => {
+								openCopyDialog(variantId, url, title);
+								closeImagePreview();
+							}}
+						>
+							<Copy class="h-4 w-4" />
+							Copiar imagen
+						</button>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1.5 rounded-[6px] px-3 py-2 text-sm font-medium text-[#e2005a] transition-colors hover:bg-[#e2005a]/10"
+							onclick={() => {
+								openDeleteConfirm(variantId, url, title);
+								closeImagePreview();
+							}}
+						>
+							<Trash2 class="h-4 w-4" />
+							Eliminar
+						</button>
+					</div>
 				{:else}
 					<span></span>
 				{/if}
@@ -524,6 +584,125 @@
 				{:else}
 					<Trash2 class="h-4 w-4" />
 					Eliminar
+				{/if}
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}
+
+{#if copySource}
+	<Dialog
+		open
+		title="Copiar imagen"
+		description="Selecciona las variantes a las que quieres copiar esta imagen."
+		class="max-w-lg"
+		onClose={closeCopyDialog}
+	>
+		<form
+			id="copy-image-form"
+			action="?/copyVariantImage"
+			method="POST"
+			class="hidden"
+			use:enhance={() => {
+				copyLoading = true;
+				return async ({ update }) => {
+					copyLoading = false;
+					closeCopyDialog();
+					await update();
+				};
+			}}
+		>
+			<input type="hidden" name="source_variant_id" value={copySource.variantId} />
+			<input type="hidden" name="target_variant_ids" value={JSON.stringify(selectedTargetIds)} />
+		</form>
+
+		<div class="space-y-4">
+			<div class="relative">
+				<div
+					class="flex items-center gap-3 rounded-md border border-[#dfdfdf] bg-white px-3 py-2"
+				>
+					<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
+					<input
+						type="text"
+						bind:value={copySearch}
+						placeholder="Buscar producto, modelo o color..."
+						class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
+					/>
+				</div>
+			</div>
+
+			{#if copyTargetItems.length === 0}
+				<p class="py-4 text-center text-xs text-[#707070]">
+					Las demás variantes ya tienen imagen.
+				</p>
+			{:else}
+				<div class="flex items-center justify-between">
+					<p class="text-xs text-[#707070]">
+						{selectedTargetIds.length} de {copyTargetItems.length} seleccionadas
+					</p>
+					<div class="flex items-center gap-2">
+						<button
+							type="button"
+							class="text-xs font-medium text-[#3ecf8e] hover:underline"
+							onclick={selectAllCopyTargets}
+						>
+							Seleccionar todo
+						</button>
+						<span class="text-[#dfdfdf]">|</span>
+						<button
+							type="button"
+							class="text-xs font-medium text-[#707070] hover:underline"
+							onclick={clearAllCopyTargets}
+						>
+							Limpiar
+						</button>
+					</div>
+				</div>
+				<div class="max-h-60 space-y-2 overflow-y-auto rounded-md border border-[#ededed] p-2">
+					{#each copyTargetItems as item (item.variant_id)}
+						<label
+							class="flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors hover:bg-[#fafafa]"
+						>
+							<input
+								type="checkbox"
+								class="h-4 w-4 accent-[#3ecf8e]"
+								checked={selectedTargetIds.includes(item.variant_id)}
+								onchange={() => toggleCopyTarget(item.variant_id)}
+							/>
+							<div class="flex flex-1 flex-col">
+								<span class="text-sm font-medium text-[#171717]">
+									{capitalize(item.product_title)}
+								</span>
+								<span class="text-xs text-[#707070]">
+									{getModelName(item.model_id)} · {formatInventoryColor(item.color)}
+								</span>
+							</div>
+						</label>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-[6px] border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				disabled={copyLoading}
+				onclick={closeCopyDialog}
+			>
+				Cancelar
+			</button>
+			<button
+				type="submit"
+				form="copy-image-form"
+				class="inline-flex items-center gap-1.5 rounded-[6px] bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e] disabled:opacity-50"
+				disabled={copyLoading || selectedTargetIds.length === 0}
+			>
+				{#if copyLoading}
+					Copiando...
+				{:else}
+					<Copy class="h-4 w-4" />
+					Copiar a {selectedTargetIds.length} variante{selectedTargetIds.length === 1 ? '' : 's'}
 				{/if}
 			</button>
 		{/snippet}
