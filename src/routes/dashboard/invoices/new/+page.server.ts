@@ -1,13 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { resolveVariantIdForItem, resolveUnitPrices } from '$lib/server/inventory';
-
-function generateInvoiceNumber() {
-	const year = new Date().getUTCFullYear();
-	const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-
-	return `INV-${year}-${randomSuffix}`;
-}
+import { generateUniqueInvoiceNumber, isInvoiceNumberTaken } from '$lib/server/invoiceNumber';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
@@ -16,7 +10,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		throw redirect(303, '/dashboard/proforma');
 	}
 
-	const invoiceNumberPreview = generateInvoiceNumber();
+	const invoiceNumberPreview = await generateUniqueInvoiceNumber(locals.supabase, 'INV');
 
 	const { data: products, error: productsError } = await locals.supabase
 		.from('products')
@@ -89,7 +83,10 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
-		const invoiceNumber = invoiceNumberInput || generateInvoiceNumber();
+		const invoiceNumber = invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
+		if (invoiceNumberInput && (await isInvoiceNumberTaken(locals.supabase, invoiceNumberInput))) {
+			return fail(400, { error: `El número de factura "${invoiceNumberInput}" ya está en uso.` });
+		}
 		const rawFacturaTipo = String(formData.get('factura_tipo') ?? 'ninguna').trim();
 		const facturaTipo = isAdmin && rawFacturaTipo === 'valor_fiscal' ? 'valor_fiscal' : 'ninguna';
 		const ncf = facturaTipo === 'valor_fiscal' ? String(formData.get('ncf') ?? '').trim() : '';

@@ -1,12 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { resolveVariantIdForItem } from '$lib/server/inventory';
-
-function generateInvoiceNumber() {
-	const year = new Date().getUTCFullYear();
-	const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-	return `DES-${year}-${randomSuffix}`;
-}
+import { generateUniqueInvoiceNumber, isInvoiceNumberTaken } from '$lib/server/invoiceNumber';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
@@ -15,7 +10,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		throw redirect(303, '/dashboard/inventory');
 	}
 
-	const invoiceNumberPreview = generateInvoiceNumber();
+	const invoiceNumberPreview = await generateUniqueInvoiceNumber(locals.supabase, 'DES');
 
 	const [
 		{ data: products },
@@ -57,8 +52,11 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const invoiceNumber =
-			String(formData.get('invoice_number') ?? '').trim() || generateInvoiceNumber();
+		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
+		const invoiceNumber = invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'DES'));
+		if (invoiceNumberInput && (await isInvoiceNumberTaken(locals.supabase, invoiceNumberInput))) {
+			return fail(400, { error: `El número de despacho "${invoiceNumberInput}" ya está en uso.` });
+		}
 		const clientId = String(formData.get('client_id') ?? '').trim();
 		const clientName = String(formData.get('client_name') ?? '').trim();
 		const clientEmail = String(formData.get('client_email') ?? '').trim();

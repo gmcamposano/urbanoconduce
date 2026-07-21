@@ -11,7 +11,16 @@
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import { SvelteDate } from 'svelte/reactivity';
-	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign, AlertTriangle } from '@lucide/svelte';
+	import {
+		Plus,
+		Trash2,
+		ArrowLeft,
+		Calculator,
+		FileText,
+		Save,
+		DollarSign,
+		AlertTriangle
+	} from '@lucide/svelte';
 
 	type ProductOption = {
 		id: string;
@@ -161,7 +170,11 @@
 
 	let loading = $state(false);
 	let createMissingVariants = $state(false);
-	let missingVariantConfirm = $state<Array<{ productId: string; productTitle: string; color: string }> | null>(null);
+	let missingVariantConfirm = $state<Array<{
+		productId: string;
+		productTitle: string;
+		color: string;
+	}> | null>(null);
 	let createMissingDialogOpen = $state(false);
 	let formElement = $state<HTMLFormElement | null>(null);
 
@@ -313,8 +326,9 @@
 		bind:this={formElement}
 		action="?/createInvoice"
 		method="POST"
-		use:enhance={() => {
+		use:enhance={({ formData }) => {
 			loading = true;
+			formData.set('create_missing_variants', createMissingVariants ? 'true' : 'false');
 			return async ({ result, update }) => {
 				if (result.type === 'failure' && result.data?.missingVariants) {
 					missingVariantConfirm = result.data.missingVariants as Array<{
@@ -337,7 +351,6 @@
 	>
 		<!-- Serialize items array as a JSON string to submit through standard formData -->
 		<input type="hidden" name="items" value={JSON.stringify(items)} />
-		<input type="hidden" name="create_missing_variants" value={createMissingVariants ? 'true' : 'false'} />
 
 		<Card>
 			<CardHeader>
@@ -775,8 +788,10 @@
 				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
 				<p>Las siguientes variantes se crearán con stock 0:</p>
 			</div>
-			<ul class="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#ededed] bg-[#fafafa] p-3">
-				{#each missingVariantConfirm as variant}
+			<ul
+				class="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#ededed] bg-[#fafafa] p-3"
+			>
+				{#each missingVariantConfirm as variant (variant.productId + ':' + (variant.color || 'none'))}
 					<li class="text-sm text-[#171717]">
 						<span class="font-medium">{toTitleCase(variant.productTitle)}</span>
 						{#if variant.color}
@@ -792,7 +807,7 @@
 		{#snippet footer()}
 			<button
 				type="button"
-				class="rounded-[6px] border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				class="rounded-md border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
 				onclick={() => {
 					createMissingDialogOpen = false;
 					missingVariantConfirm = null;
@@ -803,7 +818,7 @@
 			</button>
 			<button
 				type="button"
-				class="inline-flex items-center gap-1.5 rounded-[6px] bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e] disabled:opacity-50"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e] disabled:opacity-50"
 				disabled={loading}
 				onclick={() => {
 					createMissingVariants = true;
