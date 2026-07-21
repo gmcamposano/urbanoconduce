@@ -12,16 +12,8 @@ Precio por defecto de un producto en el catálogo global. Vive en `products.pric
 _Avoid_: precio base, precio sin impuestos (como concepto; es el nombre de la columna, no del término)
 
 **Precio por cliente**:
-Precio específico que un cliente paga por un producto. Vive en `client_product_prices.unit_price`. Es la capa más específica de pricing: si existe para (cliente, producto), se usa ese al facturar. No es un descuento relativo — es un precio absoluto. Su granularidad es (cliente, producto), no por variante ni color. Funciona como excepción encima de la tarifa asignada al cliente.
+Precio específico que un cliente paga por un producto. Vive en `client_product_prices.unit_price`. Reemplaza al precio de catálogo al facturar: si existe para (cliente, producto), se usa ese; si no, cae al precio de catálogo. No es un descuento relativo — es un precio absoluto. Su granularidad es (cliente, producto), no por variante ni color.
 _Avoid_: precio especial, precio personalizado, precio acordado
-
-**Tarifa**:
-Colección nombrable de precios por producto, asignable a uno o más clientes. Vive en `price_lists` (cabecera) y `price_list_entries` (precio por producto dentro de la tarifa). Permite que N clientes compartan la misma estructura de precios sin duplicar filas. Un cliente tiene asignada una tarifa vía `client_price_list_assignments` (con vigencia `valid_from`/`valid_to`). La granularidad de una entrada es (tarifa, producto), no por variante ni color. Cada entrada es EITHER un precio absoluto (`unit_price`) OR un % de descuento live sobre el catálogo (`discount_percentage`).
-_Avoid_: lista de precios, nivel de precios, price list, pricelist
-
-**Precio efectivo**:
-El precio que se aplica al facturar una línea a un cliente. Se resuelve en tres niveles, del más específico al más general: (1) precio por cliente si existe para (cliente, producto), si no (2) entrada de la tarifa asignada al cliente (asignación vigente: `valid_from <= hoy AND (valid_to IS NULL OR valid_to >= hoy)`) si existe para ese producto, si no (3) precio de catálogo. Para entradas de tarifa en modo % (descuento relativo), el precio efectivo se computa como `catalog * (1 - descuento/100)` al momento de facturar. Vive en la función `resolveUnitPrices` (server) y `resolveEffectivePrice` (client), y se snapshotan en `invoice_items.unit_price` al emitir.
-_Avoid_: precio final, precio calculado
 
 ### Catálogo
 
@@ -51,10 +43,8 @@ Documento comercial emitido a un cliente. Sus líneas (invoice*items) son snapsh
 
 - Un **Producto** tiene cero o más **Variantes** (una por color)
 - Un **Producto** tiene un **Precio de catálogo**
-- Una **Tarifa** tiene cero o más entradas, cada una referenciando un **Producto** con un precio absoluto o un % de descuento live
-- Un **Cliente** puede tener asignadas una o más **Tarifas** vía `client_price_list_assignments` (con vigencia `valid_from`/`valid_to`), pero solo una vigente a la vez
 - Un **Cliente** puede tener cero o más **Precios por cliente**, cada uno referenciando un **Producto**
-- Al facturar, el precio unitario de una línea = **Precio efectivo** = **Precio por cliente** si existe para (cliente, producto), si no entrada de la **Tarifa** vigente asignada si existe para ese producto, si no **Precio de catálogo**
+- Al facturar, el precio unitario de una línea = **Precio por cliente** si existe para (cliente, producto), si no **Precio de catálogo**
 - Una **Factura** pertenece a un **Cliente** y tiene una o más líneas que referencian **Variantes**
 - Las líneas de factura snapshotan el precio al emitir; cambios posteriores a precios no afectan facturas emitidas
 
@@ -68,6 +58,5 @@ Documento comercial emitido a un cliente. Sus líneas (invoice*items) son snapsh
 
 ## Flagged ambiguities
 
-- "precio" sin calificador era ambiguo: podía referirse al precio de catálogo (`products.price_without_taxes`) o al precio por cliente (`client_product_prices.unit_price`). Resuelto: siempre calificar como "precio de catálogo", "precio por cliente", "precio de tarifa" o "precio efectivo".
+- "precio" sin calificador era ambiguo: podía referirse al precio de catálogo (`products.price_without_taxes`) o al precio por cliente (`client_product_prices.unit_price`). Resuelto: siempre calificar como "precio de catálogo" o "precio por cliente".
 - Tras la migración de consolidación de catálogo (`20260717000000_consolidate_product_catalog.sql`), los productos dejaron de pertenecer a un cliente. `products.client_id` existe pero es legacy/nullable y no debe usarse para lógica de pricing — el pricing por cliente vive en `client_product_prices`.
-- Antes de las tarifas (`20260721000000_create_price_lists.sql`), la resolución era binaria (precio por cliente > catálogo). Con tarifas es ternaria (precio por cliente > entrada de tarifa > catálogo). Los 12 overrides preexistentes en `client_product_prices` se dejaron como excepciones — no se migraron a tarifas.

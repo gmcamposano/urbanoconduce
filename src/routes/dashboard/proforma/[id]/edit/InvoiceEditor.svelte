@@ -11,7 +11,6 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { ArrowLeft, Calculator, DollarSign, FileText, Plus, Save, Trash2 } from '@lucide/svelte';
-	import { resolveEffectivePrice } from '$lib/pricing';
 	import type { InvoiceEditorData } from '$lib/invoiceEditor';
 	import type { ActionData } from './$types';
 
@@ -59,26 +58,12 @@
 		models,
 		clients,
 		clientPrices,
-		priceListEntries,
-		assignments,
 		initial,
 		form: actionForm,
 		isAdmin
 	}: Pick<InvoiceEditorData, 'invoice' | 'products' | 'colors' | 'models'> & {
 		clients: ClientOption[];
 		clientPrices: { product_id: string; client_id: string; unit_price: number }[];
-		priceListEntries: {
-			price_list_id: string;
-			product_id: string;
-			unit_price: number | null;
-			discount_percentage: number | null;
-		}[];
-		assignments: {
-			client_id: string;
-			price_list_id: string;
-			valid_from: string;
-			valid_to: string | null;
-		}[];
 		initial: EditorState;
 		form: ActionData;
 		isAdmin?: boolean;
@@ -250,14 +235,12 @@
 	function applyProductToItem(item: InvoiceFormItem, productId: string) {
 		item.product_id = productId;
 		const product = clientProducts.find((entry) => entry.id === productId);
-		item.unit_price = resolveEffectivePrice({
-			productId,
-			catalogPrice: Number(product?.price_without_taxes || 0),
-			clientId: editor.selectedClientId,
-			clientPrices,
-			priceListEntries,
-			assignments
-		});
+		const clientPrice = clientPrices.find(
+			(cp) => cp.client_id === editor.selectedClientId && cp.product_id === productId
+		);
+		item.unit_price = clientPrice
+			? Number(clientPrice.unit_price)
+			: Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
 		if (item.color) {
 			const availableColors = getAvailableColors(item.id, productId);

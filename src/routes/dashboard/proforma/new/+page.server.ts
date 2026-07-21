@@ -37,14 +37,6 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		.from('client_product_prices')
 		.select('product_id, client_id, unit_price');
 
-	const { data: priceListEntries, error: priceListEntriesError } = await locals.supabase
-		.from('price_list_entries')
-		.select('price_list_id, product_id, unit_price, discount_percentage');
-
-	const { data: assignments, error: assignmentsError } = await locals.supabase
-		.from('client_price_list_assignments')
-		.select('client_id, price_list_id, valid_from, valid_to');
-
 	if (productsError) {
 		console.error('Supabase query error in invoice load products:', productsError.message);
 	}
@@ -65,17 +57,6 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Supabase query error in client_prices load:', clientPricesError.message);
 	}
 
-	if (priceListEntriesError) {
-		console.error(
-			'Supabase query error in price_list_entries load:',
-			priceListEntriesError.message
-		);
-	}
-
-	if (assignmentsError) {
-		console.error('Supabase query error in assignments load:', assignmentsError.message);
-	}
-
 	return {
 		invoiceNumberPreview,
 		products: products || [],
@@ -83,8 +64,6 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		models: models || [],
 		clients: clients || [],
 		clientPrices: clientPrices || [],
-		priceListEntries: priceListEntries || [],
-		assignments: assignments || [],
 		isAdmin: profile?.role === 'admin'
 	};
 };
@@ -98,8 +77,7 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
-		const invoiceNumber =
-			invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
+		const invoiceNumber = invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
 		if (invoiceNumberInput && (await isInvoiceNumberTaken(locals.supabase, invoiceNumberInput))) {
 			return fail(400, { error: `El número de proforma "${invoiceNumberInput}" ya está en uso.` });
 		}

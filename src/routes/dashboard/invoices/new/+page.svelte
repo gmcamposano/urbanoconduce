@@ -11,7 +11,6 @@
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import { SvelteDate } from 'svelte/reactivity';
 	import { Plus, Trash2, ArrowLeft, Calculator, FileText, Save, DollarSign } from '@lucide/svelte';
-	import { resolveEffectivePrice } from '$lib/pricing';
 
 	type ProductOption = {
 		id: string;
@@ -102,8 +101,6 @@
 
 	const clients = $derived((data.clients || []) as ClientOption[]);
 	const clientPrices = $derived(data.clientPrices || []);
-	const priceListEntries = $derived(data.priceListEntries || []);
-	const assignments = $derived(data.assignments || []);
 
 	const selectedClient = $derived(clients.find((c) => c.id === selectedClientId) || null);
 	const clientEmail = $derived(selectedClient?.email || '');
@@ -115,16 +112,14 @@
 				return { ...item, product_id: '', model: null, unit_price: 0 };
 			}
 			if (item.product_id) {
+				const cp = clientPrices.find(
+					(p) => p.client_id === selectedClientId && p.product_id === item.product_id
+				);
 				const product = clientProducts.find((p) => p.id === item.product_id);
-				const effectivePrice = resolveEffectivePrice({
-					productId: item.product_id,
-					catalogPrice: Number(product?.price_without_taxes || 0),
-					clientId: selectedClientId,
-					clientPrices,
-					priceListEntries,
-					assignments
-				});
-				return { ...item, unit_price: effectivePrice };
+				return {
+					...item,
+					unit_price: cp ? Number(cp.unit_price) : Number(product?.price_without_taxes || 0)
+				};
 			}
 			return item;
 		});
@@ -211,14 +206,12 @@
 	) {
 		item.product_id = productId;
 		const product = clientProducts.find((entry) => entry.id === productId);
-		item.unit_price = resolveEffectivePrice({
-			productId,
-			catalogPrice: Number(product?.price_without_taxes || 0),
-			clientId: selectedClientId,
-			clientPrices,
-			priceListEntries,
-			assignments
-		});
+		const clientPrice = clientPrices.find(
+			(cp) => cp.client_id === selectedClientId && cp.product_id === productId
+		);
+		item.unit_price = clientPrice
+			? Number(clientPrice.unit_price)
+			: Number(product?.price_without_taxes || 0);
 		item.model = product?.model ?? null;
 	}
 

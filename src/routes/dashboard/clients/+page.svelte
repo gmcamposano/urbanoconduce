@@ -8,7 +8,6 @@
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import { Contact, Edit3, Trash2, Users } from '@lucide/svelte';
 
@@ -17,35 +16,6 @@
 	const profile = $derived(data.profile);
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
 	const clients = $derived(data.clients || []);
-	const priceLists = $derived(data.priceLists || []);
-	const assignments = $derived(data.assignments || []);
-
-	const priceListOptions = $derived(
-		priceLists.map((l) => ({
-			value: l.id,
-			label: l.name.charAt(0).toUpperCase() + l.name.slice(1).toLowerCase()
-		}))
-	);
-
-	function priceListNameById(id: string | null): string {
-		if (!id) return '';
-		const list = priceLists.find((l) => l.id === id);
-		if (!list) return '';
-		return list.name.charAt(0).toUpperCase() + list.name.slice(1).toLowerCase();
-	}
-
-	function vigentePriceListId(clientId: string): string | null {
-		const today = new Date().toISOString().slice(0, 10);
-		const vigente = assignments
-			.filter(
-				(a) =>
-					a.client_id === clientId &&
-					a.valid_from <= today &&
-					(a.valid_to === null || a.valid_to >= today)
-			)
-			.sort((a, b) => b.valid_from.localeCompare(a.valid_from))[0];
-		return vigente?.price_list_id ?? null;
-	}
 
 	let loading = $state(false);
 	let editingClient = $state<{
@@ -63,8 +33,6 @@
 	let alias = $state('');
 	let rnc = $state('');
 	let companyName = $state('');
-	let defaultPriceListId = $state('');
-	let editDefaultPriceListId = $state('');
 	let clientToDelete = $state<{ id: string; name: string } | null>(null);
 	let deleteLoading = $state(false);
 
@@ -108,7 +76,6 @@
 		alias = client.alias || '';
 		rnc = client.rnc || '';
 		companyName = client.company_name || '';
-		editDefaultPriceListId = vigentePriceListId(client.id) || '';
 	}
 
 	function closeEditDialog() {
@@ -118,7 +85,6 @@
 		alias = '';
 		rnc = '';
 		companyName = '';
-		editDefaultPriceListId = '';
 		editLoading = false;
 	}
 
@@ -154,7 +120,6 @@
 		alias = '';
 		rnc = '';
 		companyName = '';
-		defaultPriceListId = '';
 	}
 </script>
 
@@ -262,22 +227,6 @@
 						/>
 					{/if}
 
-					<div class="space-y-1.5">
-						<SearchableSelect
-							label="Tarifa asignada"
-							options={priceListOptions}
-							bind:value={defaultPriceListId}
-							placeholder="Sin tarifa (usa precio de catálogo)"
-							disabled={loading || priceListOptions.length === 0}
-						/>
-						<input type="hidden" name="default_price_list_id" value={defaultPriceListId} />
-						{#if priceListOptions.length === 0}
-							<p class="text-[11px] text-[#707070]">
-								No hay tarifas registradas. Crea una en la sección Tarifas.
-							</p>
-						{/if}
-					</div>
-
 					<div
 						class="flex items-center gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"
 					>
@@ -310,7 +259,6 @@
 								<th class="px-6 py-4 font-bold">Tipo</th>
 								<th class="px-6 py-4 font-bold">Nombre / Empresa</th>
 								<th class="px-6 py-4 font-bold">Alias / RNC</th>
-								<th class="px-6 py-4 font-bold">Tarifa</th>
 								{#if canManage}
 									<th class="px-6 py-4 text-right font-bold">Acciones</th>
 								{/if}
@@ -320,7 +268,7 @@
 							{#if clients.length === 0}
 								<tr>
 									<td
-										colspan={canManage ? 5 : 4}
+										colspan={canManage ? 4 : 3}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
 										>Aún no hay clientes registrados.</td
 									>
@@ -352,13 +300,6 @@
 												? `${client.alias?.toUpperCase()} / ${client.rnc}`
 												: '—'}
 										</td>
-								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
-									{#if vigentePriceListId(client.id)}
-										<span class="capitalize">{priceListNameById(vigentePriceListId(client.id))}</span>
-									{:else}
-										<span class="text-[#b2b2b2]">Catálogo</span>
-									{/if}
-								</td>
 										{#if canManage}
 											<td class="px-6 py-4 text-right whitespace-nowrap">
 												<div class="flex items-center justify-end gap-1.5">
@@ -463,22 +404,6 @@
 					disabled={editLoading}
 				/>
 			{/if}
-
-			<div class="space-y-1.5">
-				<SearchableSelect
-					label="Tarifa asignada"
-					options={priceListOptions}
-					bind:value={editDefaultPriceListId}
-					placeholder="Sin tarifa (usa precio de catálogo)"
-					disabled={editLoading || priceListOptions.length === 0}
-				/>
-				<input type="hidden" name="default_price_list_id" value={editDefaultPriceListId} />
-				{#if priceListOptions.length === 0}
-					<p class="text-[11px] text-[#707070]">
-						No hay tarifas registradas. Crea una en la sección Tarifas.
-					</p>
-				{/if}
-			</div>
 
 			<div
 				class="flex items-center gap-2 rounded-lg border border-[#ededed] bg-[#fafafa] p-3 text-[11px] text-[#707070]"

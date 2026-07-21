@@ -22,9 +22,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		colorsResult,
 		modelsResult,
 		clientsResult,
-		clientPricesResult,
-		priceListEntriesResult,
-		assignmentsResult
+		clientPricesResult
 	] = await Promise.all([
 		locals.supabase
 			.from('invoices')
@@ -47,13 +45,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			.select('id, client_type, full_name, company_name, alias, email')
 			.order('company_name', { ascending: true })
 			.order('full_name', { ascending: true }),
-		locals.supabase.from('client_product_prices').select('product_id, client_id, unit_price'),
-		locals.supabase
-			.from('price_list_entries')
-			.select('price_list_id, product_id, unit_price, discount_percentage'),
-		locals.supabase
-			.from('client_price_list_assignments')
-			.select('client_id, price_list_id, valid_from, valid_to')
+		locals.supabase.from('client_product_prices').select('product_id, client_id, unit_price')
 	]);
 
 	if (invoiceResult.error || !invoiceResult.data) {
@@ -89,13 +81,6 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		console.error('Error fetching client prices for edit:', clientPricesResult.error.message);
 	}
 
-	if (priceListEntriesResult.error) {
-		console.error(
-			'Error fetching price list entries for edit:',
-			priceListEntriesResult.error.message
-		);
-	}
-
 	const products = productsResult.data || [];
 	const colors = colorsResult.data || [];
 	const models = modelsResult.data || [];
@@ -128,8 +113,6 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		models,
 		clients,
 		clientPrices: clientPricesResult.data || [],
-		priceListEntries: priceListEntriesResult.data || [],
-		assignments: assignmentsResult.data || [],
 		isAdmin: profile?.role === 'admin'
 	};
 };
