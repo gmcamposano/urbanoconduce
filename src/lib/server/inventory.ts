@@ -150,9 +150,65 @@ export async function getClientProductPrices(
 }
 
 /**
+ * Fetch the entries of the price list currently assigned to a client
+ * (vigente assignment: valid_from <= today AND (valid_to IS NULL OR valid_to >= today)).
+ * Resolves % entries against catalog prices at read time.
+ * Returns an empty map if the client has no vigente assignment.
+ */
+export async function getClientPriceListEntries(
+	supabase: TypedSupabase,
+	clientId: string,
+	productIds: string[],
+	catalogPrices: Map<string, number>
+) {
+	if (productIds.length === 0) {
+		return { prices: new Map<string, number>(), error: null as null };
+	}
+	const today = new Date().toISOString().slice(0, 10);
+	const { data: assignment, error: assignmentError } = await supabase
+		.from('client_price_list_assignments')
+		.select('price_list_id')
+		.eq('client_id', clientId)
+		.lte('valid_from', today)
+		.or('valid_to.is.null,valid_to.gte.' + today)
+		.order('valid_from', { ascending: false })
+		.limit(1)
+		.single();
+	if (assignmentError) {
+		if (assignmentError.code === 'PGRST116')
+			return { prices: new Map<string, number>(), error: null as null };
+		return { prices: new Map<string, number>(), error: assignmentError };
+	}
+	if (!assignment?.price_list_id) {
+		return { prices: new Map<string, number>(), error: null as null };
+	}
+	const { data, error } = await supabase
+		.from('price_list_entries')
+		.select('product_id, unit_price, discount_percentage')
+		.eq('price_list_id', assignment.price_list_id)
+		.in('product_id', productIds);
+	if (error) return { prices: new Map<string, number>(), error };
+	const prices = new Map<string, number>();
+	for (const row of data || []) {
+		if (row.unit_price !== null) {
+			prices.set(row.product_id, Number(row.unit_price));
+		} else if (row.discount_percentage !== null) {
+			const catalog = catalogPrices.get(row.product_id) ?? 0;
+			prices.set(
+				row.product_id,
+				Math.round(catalog * (1 - Number(row.discount_percentage) / 100) * 100) / 100
+			);
+		}
+	}
+	return { prices, error: null };
+}
+
+/**
  * Resolve the effective unit price for every product for a given client.
- * Uses the client-specific price (precio por cliente) when it exists,
- * otherwise falls back to the catalog price (products.price_without_taxes).
+ * Three-level resolution (most specific wins):
+ *   1. client_product_prices (precio por cliente) — per-(client, product) exception
+ *   2. price_list_entries      (entrada de tarifa) — per-(assigned list, product)
+ *   3. products.price_without_taxes (precio de catálogo) — global default
  */
 export async function resolveUnitPrices(
 	supabase: TypedSupabase,
@@ -160,12 +216,29 @@ export async function resolveUnitPrices(
 	products: { id: string; price_without_taxes: number | string }[]
 ) {
 	const ids = products.map((p) => p.id);
-	const { prices, error } = await getClientProductPrices(supabase, clientId, ids);
+	const catalogMap = new Map<string, number>();
+	for (const p of products) {
+		catalogMap.set(p.id, Number(p.price_without_taxes));
+	}
+	const [overrideResult, listResult] = await Promise.all([
+		getClientProductPrices(supabase, clientId, ids),
+		getClientPriceListEntries(supabase, clientId, ids, catalogMap)
+	]);
 	const resolved = new Map<string, number>();
 	for (const p of products) {
-		resolved.set(p.id, prices.get(p.id) ?? Number(p.price_without_taxes));
+		const override = overrideResult.prices.get(p.id);
+		if (override !== undefined) {
+			resolved.set(p.id, override);
+			continue;
+		}
+		const listPrice = listResult.prices.get(p.id);
+		if (listPrice !== undefined) {
+			resolved.set(p.id, listPrice);
+			continue;
+		}
+		resolved.set(p.id, Number(p.price_without_taxes));
 	}
-	return { prices: resolved, error };
+	return { prices: resolved, error: overrideResult.error ?? listResult.error };
 }
 
 export async function recordInventoryMovement(

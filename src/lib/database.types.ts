@@ -149,6 +149,61 @@ export type Database = {
 					}
 				];
 			};
+			client_price_list_assignments: {
+				Row: {
+					client_id: string;
+					created_at: string;
+					created_by: string | null;
+					id: string;
+					price_list_id: string;
+					updated_at: string;
+					valid_from: string;
+					valid_to: string | null;
+				};
+				Insert: {
+					client_id: string;
+					created_at?: string;
+					created_by?: string | null;
+					id?: string;
+					price_list_id: string;
+					updated_at?: string;
+					valid_from?: string;
+					valid_to?: string | null;
+				};
+				Update: {
+					client_id?: string;
+					created_at?: string;
+					created_by?: string | null;
+					id?: string;
+					price_list_id?: string;
+					updated_at?: string;
+					valid_from?: string;
+					valid_to?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'client_price_list_assignments_client_id_fkey';
+						columns: ['client_id'];
+						isOneToOne: false;
+						referencedRelation: 'clients';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'client_price_list_assignments_created_by_fkey';
+						columns: ['created_by'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'client_price_list_assignments_price_list_id_fkey';
+						columns: ['price_list_id'];
+						isOneToOne: false;
+						referencedRelation: 'price_lists';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			client_product_prices: {
 				Row: {
 					client_id: string;
@@ -370,6 +425,7 @@ export type Database = {
 					{
 						foreignKeyName: 'invoice_items_product_id_fkey';
 						columns: ['product_id'];
+						isOneToOne: false;
 						referencedRelation: 'products';
 						referencedColumns: ['id'];
 					},
@@ -377,7 +433,7 @@ export type Database = {
 						foreignKeyName: 'invoice_items_product_variant_id_fkey';
 						columns: ['product_variant_id'];
 						isOneToOne: false;
-						referencedRelation: '_variants';
+						referencedRelation: 'product_variants';
 						referencedColumns: ['id'];
 					}
 				];
@@ -450,6 +506,96 @@ export type Database = {
 					},
 					{
 						foreignKeyName: 'invoices_created_by_fkey';
+						columns: ['created_by'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			price_list_entries: {
+				Row: {
+					created_at: string;
+					created_by: string | null;
+					discount_percentage: number | null;
+					id: string;
+					price_list_id: string;
+					product_id: string;
+					unit_price: number | null;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					created_by?: string | null;
+					discount_percentage?: number | null;
+					id?: string;
+					price_list_id: string;
+					product_id: string;
+					unit_price?: number | null;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					created_by?: string | null;
+					discount_percentage?: number | null;
+					id?: string;
+					price_list_id?: string;
+					product_id?: string;
+					unit_price?: number | null;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'price_list_entries_created_by_fkey';
+						columns: ['created_by'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'price_list_entries_price_list_id_fkey';
+						columns: ['price_list_id'];
+						isOneToOne: false;
+						referencedRelation: 'price_lists';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'price_list_entries_product_id_fkey';
+						columns: ['product_id'];
+						isOneToOne: false;
+						referencedRelation: 'products';
+						referencedColumns: ['id'];
+					}
+				];
+			};
+			price_lists: {
+				Row: {
+					created_at: string;
+					created_by: string | null;
+					description: string | null;
+					id: string;
+					name: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					created_by?: string | null;
+					description?: string | null;
+					id?: string;
+					name: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					created_by?: string | null;
+					description?: string | null;
+					id?: string;
+					name?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'price_lists_created_by_fkey';
 						columns: ['created_by'];
 						isOneToOne: false;
 						referencedRelation: 'profiles';
@@ -722,6 +868,7 @@ export type Database = {
 				Args: {
 					p_amount: number;
 					p_client_id: string;
+					p_created_by?: string;
 					p_notes?: string;
 					p_payment_date: string;
 					p_payment_id: string;

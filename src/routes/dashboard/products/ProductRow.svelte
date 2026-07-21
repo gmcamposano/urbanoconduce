@@ -348,6 +348,7 @@
 							class="mt-3 flex flex-wrap items-end gap-2 border-t border-[#ededed] pt-3"
 						>
 							<input type="hidden" name="product_id" value={product.id} />
+							<input type="hidden" name="client_id" value={addClientSelection} />
 							<div class="min-w-[180px] flex-1">
 								<SearchableSelect
 									options={addableClients.map((c) => ({

@@ -12,7 +12,8 @@
 		Palette,
 		Boxes,
 		Calculator,
-		Warehouse
+		Warehouse,
+		Tags
 	} from '@lucide/svelte';
 
 	let {
@@ -47,6 +48,11 @@
 		if (path === '/dashboard/inventory') {
 			return (
 				activePath === '/dashboard/inventory' || activePath.startsWith('/dashboard/inventory/')
+			);
+		}
+		if (path === '/dashboard/price-lists') {
+			return (
+				activePath === '/dashboard/price-lists' || activePath.startsWith('/dashboard/price-lists/')
 			);
 		}
 		return activePath === path;
@@ -128,6 +134,19 @@
 				<Package class="h-4.5 w-4.5" />
 				Productos
 			</a>
+
+			{#if profile?.role === 'admin' || profile?.role === 'editor'}
+				<a
+					href={resolve('/dashboard/price-lists')}
+					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+						'/dashboard/price-lists'
+					)}"
+					onclick={onNavigate}
+				>
+					<Tags class="h-4.5 w-4.5" />
+					Tarifas
+				</a>
+			{/if}
 
 			<a
 				href={resolve('/dashboard/inventory')}

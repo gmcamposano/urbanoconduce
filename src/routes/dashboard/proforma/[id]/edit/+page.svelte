@@ -25,6 +25,8 @@
 		models={data.models || []}
 		clients={data.clients || []}
 		clientPrices={data.clientPrices || []}
+		priceListEntries={data.priceListEntries || []}
+		assignments={data.assignments || []}
 		{initial}
 		{form}
 		isAdmin={data.isAdmin}

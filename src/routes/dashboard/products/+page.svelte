@@ -280,17 +280,7 @@
 	<title>Productos - magikalInvoice</title>
 </svelte:head>
 
-<div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">
-	<div class="border-b border-[#ededed] pb-5">
-		<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
-			<Package class="h-6 w-6 text-[#3ecf8e]" />
-			Productos
-		</h1>
-		<p class="mt-0.5 text-xs text-[#707070]">
-			Crea tu catálogo de servicios o productos con su precio sin impuestos.
-		</p>
-	</div>
-
+{#snippet formAlerts()}
 	{#if form?.error}
 		<div
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
@@ -314,6 +304,20 @@
 			</div>
 		</div>
 	{/if}
+{/snippet}
+
+<div class="flex flex-1 flex-col justify-start space-y-6 text-[#171717]">
+	<div class="border-b border-[#ededed] pb-5">
+		<h1 class="flex items-center gap-2 text-2xl font-medium tracking-tight text-[#171717]">
+			<Package class="h-6 w-6 text-[#3ecf8e]" />
+			Productos
+		</h1>
+		<p class="mt-0.5 text-xs text-[#707070]">
+			Crea tu catálogo de servicios o productos con su precio sin impuestos.
+		</p>
+	</div>
+
+	{@render formAlerts()}
 
 	<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 		<Card class="xl:col-span-1">
@@ -554,6 +558,9 @@
 		style="width: calc(95vw - 2rem); max-width: calc(95vw - 2rem); max-height: 95vh;"
 		onClose={closeTableModal}
 	>
+		<div class="mb-4 space-y-3">
+			{@render formAlerts()}
+		</div>
 		{@render catalogTable()}
 	</Dialog>
 {/if}
