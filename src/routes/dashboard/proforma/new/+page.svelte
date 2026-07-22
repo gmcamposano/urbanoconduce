@@ -19,8 +19,10 @@
 		FileText,
 		Save,
 		DollarSign,
-		AlertTriangle
+		AlertTriangle,
+		Zap
 	} from '@lucide/svelte';
+	import QuickAddDialog from './QuickAddDialog.svelte';
 
 	type ProductOption = {
 		id: string;
@@ -170,6 +172,7 @@
 
 	let loading = $state(false);
 	let createMissingVariants = $state(false);
+	let quickAddOpen = $state(false);
 	let missingVariantConfirm = $state<Array<{
 		productId: string;
 		productTitle: string;
@@ -207,6 +210,18 @@
 			items = items.filter((item) => item.id !== id);
 			cleanupItems();
 		}
+	}
+
+	function handleQuickAdd(rows: Array<{ productId: string; color: string }>) {
+		items = items.filter((i) => i.product_id);
+		for (const row of rows) {
+			const item = createItem();
+			applyProductToItem(item, row.productId);
+			item.color = row.color;
+			items.push(item);
+		}
+		if (items.length === 0) items = [createItem()];
+		quickAddOpen = false;
 	}
 
 	// Totals calculations (derived)
@@ -427,17 +442,30 @@
 		<Card>
 			<CardHeader class="flex flex-row items-center justify-between">
 				<CardTitle>2. Conceptos de cobro</CardTitle>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					class="flex items-center gap-1"
-					onclick={addItem}
-					disabled={loading || !canAddItem}
-				>
-					<Plus class="h-3.5 w-3.5" />
-					Añadir fila
-				</Button>
+				<div class="flex items-center gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="flex items-center gap-1"
+						onclick={() => (quickAddOpen = true)}
+						disabled={loading || !selectedClientId || !clientProducts.length}
+					>
+						<Zap class="h-3.5 w-3.5" />
+						Añadir rápido
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="flex items-center gap-1"
+						onclick={addItem}
+						disabled={loading || !canAddItem}
+					>
+						<Plus class="h-3.5 w-3.5" />
+						Añadir fila
+					</Button>
+				</div>
 			</CardHeader>
 			<CardContent class="p-0">
 				{#if !selectedClientId}
@@ -835,6 +863,18 @@
 			</button>
 		{/snippet}
 	</Dialog>
+{/if}
+
+{#if quickAddOpen}
+	<QuickAddDialog
+		open
+		products={clientProducts}
+		{models}
+		{colors}
+		existingItems={items}
+		onClose={() => (quickAddOpen = false)}
+		onAdd={handleQuickAdd}
+	/>
 {/if}
 
 {#if loading}
