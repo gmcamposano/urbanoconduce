@@ -57,7 +57,7 @@
 
 	let selectedTitles = $state<Record<string, boolean>>({});
 	let selectedModels = $state<Record<string, boolean>>({});
-	let selectedColors = $state<Record<string, Record<string, boolean>>>({});
+	let selectedColors = $state<Record<string, boolean>>({});
 
 	const selectedTitleSet = $derived(
 		new SvelteSet(
@@ -65,6 +65,18 @@
 				.filter(([, v]) => v)
 				.map(([k]) => k)
 		)
+	);
+
+	const selectedModelIds = $derived(
+		Object.entries(selectedModels)
+			.filter(([, v]) => v)
+			.map(([k]) => k)
+	);
+
+	const selectedColorValues = $derived(
+		Object.entries(selectedColors)
+			.filter(([, v]) => v)
+			.map(([k]) => k)
 	);
 
 	const eligibleModels = $derived(
@@ -75,12 +87,6 @@
 					sensitivity: 'base'
 				})
 			)
-	);
-
-	const selectedModelIds = $derived(
-		Object.entries(selectedModels)
-			.filter(([, v]) => v)
-			.map(([k]) => k)
 	);
 
 	const existingPairs = $derived.by(() => {
@@ -102,16 +108,14 @@
 		let skipped = 0;
 		for (const modelId of selectedModelIds) {
 			const prods = productsForModel(modelId);
-			const colorMap = selectedColors[modelId] ?? {};
-			const chosenColors = colors.filter((c) => colorMap[c.color]);
 			for (const prod of prods) {
-				for (const col of chosenColors) {
-					const key = `${prod.id}|${col.color.trim().toLowerCase()}`;
+				for (const color of selectedColorValues) {
+					const key = `${prod.id}|${color.trim().toLowerCase()}`;
 					if (existingPairs.has(key)) {
 						skipped++;
 						continue;
 					}
-					rows.push({ productId: prod.id, color: col.color });
+					rows.push({ productId: prod.id, color });
 				}
 			}
 		}
@@ -130,19 +134,9 @@
 					);
 					if (!stillEligible) {
 						selectedModels[m.id] = false;
-						selectedColors[m.id] = {};
 					}
 				}
 			}
-		}
-	}
-
-	function toggleModel(modelId: string, checked: boolean) {
-		selectedModels[modelId] = checked;
-		if (checked && !selectedColors[modelId]) {
-			selectedColors[modelId] = {};
-		} else if (!checked) {
-			selectedColors[modelId] = {};
 		}
 	}
 
@@ -155,7 +149,7 @@
 <Dialog
 	{open}
 	title="Añadir rápido"
-	description="Selecciona productos, luego los modelos y los colores para cada modelo."
+	description="Selecciona productos, luego los modelos y los colores que aplican a todos."
 	{onClose}
 	class="max-w-lg"
 >
@@ -200,8 +194,7 @@
 									<input
 										type="checkbox"
 										class="h-4 w-4 accent-[#3ecf8e]"
-										checked={selectedModels[m.id] ?? false}
-										onchange={(e) => toggleModel(m.id, e.currentTarget.checked)}
+										bind:checked={selectedModels[m.id]}
 									/>
 									<span class="text-[#171717]">{toTitleCase(m.model)}</span>
 								</label>
@@ -211,21 +204,10 @@
 				</div>
 			{/if}
 
-			{#each selectedModelIds as modelId (modelId)}
-				{@const model = models.find((m) => m.id === modelId)}
-				{@const prods = productsForModel(modelId)}
-				<div class="rounded-lg border border-[#ededed] bg-[#fafafa] p-3">
-					<div class="mb-1 flex items-center justify-between">
-						<p class="text-sm font-medium text-[#171717]">
-							{model ? toTitleCase(model.model) : '-'}
-						</p>
-						<span class="text-xs text-[#707070]">{prods.length} producto(s)</span>
-					</div>
-					<p class="mb-2 text-xs text-[#707070]">
-						{prods.map((p) => toTitleCase(p.title)).join(', ')}
-					</p>
+			{#if selectedModelIds.length > 0}
+				<div class="border-t border-[#ededed] pt-4">
 					<p class="mb-2 text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase">
-						Colores
+						Colores (aplican a todos los modelos seleccionados)
 					</p>
 					{#if colors.length === 0}
 						<p class="text-xs text-[#707070]">No hay colores disponibles.</p>
@@ -238,7 +220,7 @@
 									<input
 										type="checkbox"
 										class="h-3.5 w-3.5 accent-[#3ecf8e]"
-										bind:checked={selectedColors[modelId][c.color]}
+										bind:checked={selectedColors[c.color]}
 									/>
 									<span class="text-[#171717] capitalize">{c.color}</span>
 								</label>
@@ -246,7 +228,7 @@
 						</div>
 					{/if}
 				</div>
-			{/each}
+			{/if}
 		</div>
 	{/if}
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Search, ChevronDown, Check, X } from '@lucide/svelte';
+	import Tooltip from './Tooltip.svelte';
 
 	interface Option {
 		value: string;
@@ -191,9 +192,11 @@
 			class="flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] transition-colors duration-200 focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 			class:bg-[#fafafa]={isOpen}
 		>
-			<span class="truncate" class:text-[#9a9a9a]={!selectedOption}>
-				{selectedOption ? selectedOption.label : placeholder}
-			</span>
+			<Tooltip content={selectedOption?.label} placement="top" triggerClass="flex min-w-0">
+				<span class="truncate" class:text-[#9a9a9a]={!selectedOption}>
+					{selectedOption ? selectedOption.label : placeholder}
+				</span>
+			</Tooltip>
 			<div class="flex items-center gap-1">
 				{#if value && !disabled}
 					<span

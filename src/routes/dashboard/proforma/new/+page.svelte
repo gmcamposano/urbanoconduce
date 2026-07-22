@@ -22,7 +22,7 @@
 		AlertTriangle,
 		Zap
 	} from '@lucide/svelte';
-	import QuickAddDialog from './QuickAddDialog.svelte';
+	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
 
 	type ProductOption = {
 		id: string;

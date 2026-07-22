@@ -10,7 +10,17 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { ArrowLeft, Calculator, DollarSign, FileText, Plus, Save, Trash2 } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		Calculator,
+		DollarSign,
+		FileText,
+		Plus,
+		Save,
+		Trash2,
+		Zap
+	} from '@lucide/svelte';
+	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
 	import type { InvoiceEditorData } from '$lib/invoiceEditor';
 	import type { ActionData } from './$types';
 
@@ -196,6 +206,7 @@
 
 	let loading = $state(false);
 	let taxMode = $state<TaxMode>('none');
+	let quickAddOpen = $state(false);
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -230,6 +241,18 @@
 			editor.items = editor.items.filter((item) => item.id !== id);
 			cleanupItems();
 		}
+	}
+
+	function handleQuickAdd(rows: Array<{ productId: string; color: string }>) {
+		editor.items = editor.items.filter((i) => i.product_id);
+		for (const row of rows) {
+			const item = createItem();
+			applyProductToItem(item, row.productId);
+			item.color = row.color;
+			editor.items.push(item);
+		}
+		if (editor.items.length === 0) editor.items = [createItem()];
+		quickAddOpen = false;
 	}
 
 	function applyProductToItem(item: InvoiceFormItem, productId: string) {
@@ -407,17 +430,30 @@
 			<Card>
 				<CardHeader class="flex flex-row items-center justify-between">
 					<CardTitle>2. Conceptos de cobro</CardTitle>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						class="flex items-center gap-1"
-						onclick={addItem}
-						disabled={loading || !canAddItem}
-					>
-						<Plus class="h-3.5 w-3.5" />
-						Añadir fila
-					</Button>
+					<div class="flex items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="flex items-center gap-1"
+							onclick={() => (quickAddOpen = true)}
+							disabled={loading || !editor.selectedClientId || !clientProducts.length}
+						>
+							<Zap class="h-3.5 w-3.5" />
+							Añadir rápido
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="flex items-center gap-1"
+							onclick={addItem}
+							disabled={loading || !canAddItem}
+						>
+							<Plus class="h-3.5 w-3.5" />
+							Añadir fila
+						</Button>
+					</div>
 				</CardHeader>
 				<CardContent class="p-0">
 					{#if !editor.selectedClientId}
@@ -754,4 +790,16 @@
 			</div>
 		</form>
 	</div>
+{/if}
+
+{#if quickAddOpen}
+	<QuickAddDialog
+		open
+		products={clientProducts}
+		{models}
+		{colors}
+		existingItems={editor.items}
+		onClose={() => (quickAddOpen = false)}
+		onAdd={handleQuickAdd}
+	/>
 {/if}
