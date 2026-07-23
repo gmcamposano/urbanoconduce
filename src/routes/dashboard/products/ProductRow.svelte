@@ -86,11 +86,7 @@
 	let addPriceLoading = $state(false);
 
 	function canAddClientPrice(): boolean {
-		return (
-			addClientSelection.trim() !== '' &&
-			addPriceInput !== '' &&
-			Number(addPriceInput) >= 0
-		);
+		return addClientSelection.trim() !== '' && addPriceInput !== '' && Number(addPriceInput) >= 0;
 	}
 
 	let editingPrices = $state<Record<string, string>>({});
@@ -209,7 +205,9 @@
 	<Dialog
 		open
 		title="Precios por cliente — {capitalize(product.title)}"
-		description="Catálogo: {formatCurrency(catalogPrice)} sin ITBIS — {formatCurrency(catalogPrice * 1.18)} con ITBIS"
+		description="Catálogo: {formatCurrency(catalogPrice)} sin ITBIS — {formatCurrency(
+			catalogPrice * 1.18
+		)} con ITBIS"
 		class="max-w-3xl"
 		onClose={closePricesModal}
 	>
@@ -234,7 +232,7 @@
 						{@const editKey = priceEditKey(cp.client_id)}
 						{@const currentEditVal = editingPrices[editKey]}
 						{@const displayPrice =
-								currentEditVal !== undefined ? Number(currentEditVal) : Number(cp.unit_price)}
+							currentEditVal !== undefined ? Number(currentEditVal) : Number(cp.unit_price)}
 						{@const diff = displayPrice - catalogPrice}
 						<tr>
 							<td class="py-2.5 pr-3 text-sm text-[#171717]">
@@ -300,7 +298,7 @@
 								{formatCurrency(displayPrice * 1.18)}
 							</td>
 							<td
-								class="py-2.5 pr-3 text-right font-mono text-xs {diff < 0
+								class="py-2.5 pr-3 text-right font-mono text-xs whitespace-nowrap {diff < 0
 									? 'text-[#24b47e]'
 									: diff > 0
 										? 'text-[#e2005a]'
@@ -327,8 +325,7 @@
 			</table>
 		{:else}
 			<p class="text-xs text-[#707070]">
-				Este producto no tiene precios por cliente. Todos los clientes pagan el precio de
-				catálogo.
+				Este producto no tiene precios por cliente. Todos los clientes pagan el precio de catálogo.
 			</p>
 		{/if}
 
@@ -379,10 +376,8 @@
 							class="h-9 w-28 rounded-md border border-[#dfdfdf] bg-white py-1 pr-2 pl-9 text-right font-mono text-xs text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:opacity-50"
 						/>
 					</div>
-					<Button
-						type="submit"
-						size="sm"
-						disabled={addPriceLoading || !canAddClientPrice()}>Agregar</Button
+					<Button type="submit" size="sm" disabled={addPriceLoading || !canAddClientPrice()}
+						>Agregar</Button
 					>
 				</form>
 			{:else}
