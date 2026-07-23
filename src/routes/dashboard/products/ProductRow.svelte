@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/ui/Button.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import { ChevronRight, ChevronDown, Copy, Edit3, Trash2 } from '@lucide/svelte';
+	import { Tags, Copy, Edit3, Trash2 } from '@lucide/svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 
 	type ClientPrice = { client_id: string; product_id: string; unit_price: number };
@@ -49,7 +49,17 @@
 		openDeleteDialog: (p: Product) => void;
 	} = $props();
 
-	let expanded = $state(false);
+	let showPricesModal = $state(false);
+
+	function openPricesModal() {
+		showPricesModal = true;
+		document.body.style.overflow = 'hidden';
+	}
+
+	function closePricesModal() {
+		showPricesModal = false;
+		document.body.style.overflow = '';
+	}
 
 	const catalogPrice = $derived(Number(product.price_without_taxes));
 
@@ -124,15 +134,11 @@
 		<button
 			type="button"
 			class="flex h-6 w-6 items-center justify-center rounded text-[#707070] transition-colors hover:bg-[#ededed] hover:text-[#171717]"
-			onclick={() => (expanded = !expanded)}
-			aria-label={expanded ? 'Contraer' : 'Expandir precios por cliente'}
-			aria-expanded={expanded}
+			onclick={openPricesModal}
+			aria-label="Precios por cliente"
+			title="Precios por cliente"
 		>
-			{#if expanded}
-				<ChevronDown class="h-4 w-4" />
-			{:else}
-				<ChevronRight class="h-4 w-4" />
-			{/if}
+			<Tags class="h-4 w-4" />
 		</button>
 	</td>
 	<td class="px-6 py-5 text-right font-mono text-xs whitespace-nowrap text-[#707070]"
@@ -198,199 +204,190 @@
 		</td>
 	{/if}
 </tr>
-{#if expanded}
+{#if showPricesModal}
 	{@const addableClients = availableClientsForAdd()}
-	<tr class="bg-[#fafafa]">
-		<td></td>
-		<td colspan={canManage ? 7 : 6} class="px-6 py-4">
-			<div class="rounded-lg border border-[#ededed] bg-white p-4">
-				<div class="mb-3 flex items-center justify-between">
-					<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">
-						Precios por cliente
-					</p>
-					<p class="text-[11px] text-[#707070]">
-						Precio de catálogo:
-						<span class="font-mono font-medium text-[#171717]">{formatCurrency(catalogPrice)}</span>
-					</p>
-				</div>
-
-				{#if overrides.length > 0}
-					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] text-[10px] tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
-								<th class="py-2 pr-3 font-semibold">Cliente</th>
-								<th class="py-2 pr-3 text-right font-semibold">Precio por cliente</th>
-								<th class="py-2 text-right font-semibold">Diferencia</th>
+	<Dialog
+		open
+		title="Precios por cliente — {capitalize(product.title)}"
+		description="Precio de catálogo: {formatCurrency(catalogPrice)}"
+		class="max-w-3xl"
+		onClose={closePricesModal}
+	>
+		{#if overrides.length > 0}
+			<table class="w-full text-left text-sm text-[#171717]">
+				<thead
+					class="border-b border-[#ededed] text-[10px] tracking-wider text-[#707070] uppercase"
+				>
+					<tr>
+						<th class="py-2 pr-3 font-semibold">Cliente</th>
+						<th class="py-2 pr-3 text-right font-semibold">Precio por cliente</th>
+						<th class="py-2 text-right font-semibold">Diferencia</th>
+						{#if canManage}
+							<th class="w-10 py-2 text-right font-semibold"></th>
+						{/if}
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-[#ededed]">
+					{#each overrides as cp (cp.client_id)}
+						{@const client = getClientById(cp.client_id)}
+						{@const editKey = priceEditKey(cp.client_id)}
+						{@const currentEditVal = editingPrices[editKey]}
+						{@const displayPrice =
+								currentEditVal !== undefined ? Number(currentEditVal) : Number(cp.unit_price)}
+						{@const diff = displayPrice - catalogPrice}
+						<tr>
+							<td class="py-2.5 pr-3 text-sm text-[#171717]">
+								{client ? getClientLabel(client) : 'Cliente eliminado'}
+							</td>
+							<td class="py-2.5 pr-3 text-right">
 								{#if canManage}
-									<th class="w-10 py-2 text-right font-semibold"></th>
-								{/if}
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[#ededed]">
-							{#each overrides as cp (cp.client_id)}
-								{@const client = getClientById(cp.client_id)}
-								{@const editKey = priceEditKey(cp.client_id)}
-								{@const currentEditVal = editingPrices[editKey]}
-								{@const displayPrice =
-										currentEditVal !== undefined ? Number(currentEditVal) : Number(cp.unit_price)}
-								{@const diff = displayPrice - catalogPrice}
-								<tr>
-									<td class="py-2.5 pr-3 text-sm text-[#171717]">
-										{client ? getClientLabel(client) : 'Cliente eliminado'}
-									</td>
-									<td class="py-2.5 pr-3 text-right">
-										{#if canManage}
-											<form
-												action="?/upsertClientPrice"
-												method="POST"
-												use:enhance={() => {
-													priceSaveLoading[editKey] = true;
-													return async ({ result, update }) => {
-														priceSaveLoading[editKey] = false;
-														if (result.type === 'success') {
-															delete editingPrices[editKey];
-														}
-														await update();
-													};
-												}}
-												class="relative inline-block"
-											>
-												<input type="hidden" name="product_id" value={product.id} />
-												<input type="hidden" name="client_id" value={cp.client_id} />
-												<span
-													class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 font-mono text-xs text-[#707070]"
-													>RD$</span
-												>
-												<input
-													type="number"
-													name="unit_price"
-													min="0"
-													step="any"
-													value={currentEditVal ?? String(cp.unit_price)}
-													onfocus={() => initPriceEdit(cp.client_id, Number(cp.unit_price))}
-													onblur={(e) => {
-														if (
-															e.currentTarget.form &&
-															Number(e.currentTarget.value) !== Number(cp.unit_price)
-														) {
-															e.currentTarget.form.requestSubmit();
-														} else {
-															delete editingPrices[editKey];
-														}
-													}}
-													onkeydown={(e) => {
-														if (e.key === 'Enter') {
-															e.preventDefault();
-															e.currentTarget.blur();
-														}
-													}}
-													disabled={priceSaveLoading[editKey]}
-													class="h-8 w-28 rounded-md border border-[#dfdfdf] bg-white py-1 pr-2 pl-8 text-right font-mono text-xs text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:opacity-50"
-												/>
-											</form>
-										{:else}
-											<span class="font-mono text-sm text-[#171717]"
-												>{formatCurrency(Number(cp.unit_price))}</span
-											>
-										{/if}
-									</td>
-									<td
-										class="py-2.5 pr-3 text-right font-mono text-xs {diff < 0
-											? 'text-[#24b47e]'
-											: diff > 0
-												? 'text-[#e2005a]'
-												: 'text-[#707070]'}"
+									<form
+										action="?/upsertClientPrice"
+										method="POST"
+										use:enhance={() => {
+											priceSaveLoading[editKey] = true;
+											return async ({ result, update }) => {
+												priceSaveLoading[editKey] = false;
+												if (result.type === 'success') {
+													delete editingPrices[editKey];
+												}
+												await update();
+											};
+										}}
+										class="relative inline-block"
 									>
-										{diff > 0 ? '+' : ''}{formatCurrency(diff)}
-									</td>
-									{#if canManage}
-										<td class="py-2.5 text-right">
-											<Button
-												variant="ghost"
-												size="icon"
-												class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
-												title="Eliminar precio por cliente"
-												onclick={() => openDeletePriceDialog(cp.client_id)}
-											>
-												<Trash2 class="h-3.5 w-3.5" />
-											</Button>
-										</td>
-									{/if}
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{:else}
-					<p class="mb-3 text-xs text-[#707070]">
-						Este producto no tiene precios por cliente. Todos los clientes pagan el precio de
-						catálogo.
-					</p>
-				{/if}
-
-				{#if canManage}
-					{#if addableClients.length > 0}
-						<form
-							action="?/upsertClientPrice"
-							method="POST"
-							use:enhance={() => {
-								addPriceLoading = true;
-								return async ({ result, update }) => {
-									addPriceLoading = false;
-									if (result.type === 'success') {
-										addClientSelection = '';
-										addPriceInput = '';
-									}
-									await update();
-								};
-							}}
-							class="mt-3 flex flex-wrap items-end gap-2 border-t border-[#ededed] pt-3"
-						>
-							<input type="hidden" name="product_id" value={product.id} />
-							<input type="hidden" name="client_id" value={addClientSelection} />
-							<div class="min-w-[180px] flex-1">
-								<SearchableSelect
-									options={addableClients.map((c) => ({
-										value: c.id,
-										label: getClientLabel(c)
-									}))}
-									bind:value={addClientSelection}
-									placeholder="Agregar cliente..."
-									disabled={addPriceLoading}
-								/>
-							</div>
-							<div class="relative">
-								<span
-									class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 font-mono text-xs text-[#707070]"
-									>RD$</span
-								>
-								<input
-									type="number"
-									name="unit_price"
-									min="0"
-									step="any"
-									bind:value={addPriceInput}
-									placeholder="Precio"
-									disabled={addPriceLoading}
-									class="h-9 w-28 rounded-md border border-[#dfdfdf] bg-white py-1 pr-2 pl-9 text-right font-mono text-xs text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:opacity-50"
-								/>
-							</div>
-							<Button
-								type="submit"
-								size="sm"
-								disabled={addPriceLoading || !canAddClientPrice()}>Agregar</Button
+										<input type="hidden" name="product_id" value={product.id} />
+										<input type="hidden" name="client_id" value={cp.client_id} />
+										<span
+											class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 font-mono text-xs text-[#707070]"
+											>RD$</span
+										>
+										<input
+											type="number"
+											name="unit_price"
+											min="0"
+											step="any"
+											value={currentEditVal ?? String(cp.unit_price)}
+											onfocus={() => initPriceEdit(cp.client_id, Number(cp.unit_price))}
+											onblur={(e) => {
+												if (
+													e.currentTarget.form &&
+													Number(e.currentTarget.value) !== Number(cp.unit_price)
+												) {
+													e.currentTarget.form.requestSubmit();
+												} else {
+													delete editingPrices[editKey];
+												}
+											}}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													e.currentTarget.blur();
+												}
+											}}
+											disabled={priceSaveLoading[editKey]}
+											class="h-8 w-28 rounded-md border border-[#dfdfdf] bg-white py-1 pr-2 pl-8 text-right font-mono text-xs text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:opacity-50"
+										/>
+									</form>
+								{:else}
+									<span class="font-mono text-sm text-[#171717]"
+										>{formatCurrency(Number(cp.unit_price))}</span
+									>
+								{/if}
+							</td>
+							<td
+								class="py-2.5 pr-3 text-right font-mono text-xs {diff < 0
+									? 'text-[#24b47e]'
+									: diff > 0
+										? 'text-[#e2005a]'
+										: 'text-[#707070]'}"
 							>
-						</form>
-					{:else}
-						<p class="mt-3 border-t border-[#ededed] pt-3 text-[11px] text-[#707070]">
-							Todos los clientes ya tienen precio por cliente para este producto.
-						</p>
-					{/if}
-				{/if}
-			</div>
-		</td>
-	</tr>
+								{diff > 0 ? '+' : ''}{formatCurrency(diff)}
+							</td>
+							{#if canManage}
+								<td class="py-2.5 text-right">
+									<Button
+										variant="ghost"
+										size="icon"
+										class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
+										title="Eliminar precio por cliente"
+										onclick={() => openDeletePriceDialog(cp.client_id)}
+									>
+										<Trash2 class="h-3.5 w-3.5" />
+									</Button>
+								</td>
+							{/if}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{:else}
+			<p class="text-xs text-[#707070]">
+				Este producto no tiene precios por cliente. Todos los clientes pagan el precio de
+				catálogo.
+			</p>
+		{/if}
+
+		{#if canManage}
+			{#if addableClients.length > 0}
+				<form
+					action="?/upsertClientPrice"
+					method="POST"
+					use:enhance={() => {
+						addPriceLoading = true;
+						return async ({ result, update }) => {
+							addPriceLoading = false;
+							if (result.type === 'success') {
+								addClientSelection = '';
+								addPriceInput = '';
+							}
+							await update();
+						};
+					}}
+					class="mt-3 flex flex-wrap items-end gap-2 border-t border-[#ededed] pt-3"
+				>
+					<input type="hidden" name="product_id" value={product.id} />
+					<input type="hidden" name="client_id" value={addClientSelection} />
+					<div class="min-w-[180px] flex-1">
+						<SearchableSelect
+							options={addableClients.map((c) => ({
+								value: c.id,
+								label: getClientLabel(c)
+							}))}
+							bind:value={addClientSelection}
+							placeholder="Agregar cliente..."
+							disabled={addPriceLoading}
+						/>
+					</div>
+					<div class="relative">
+						<span
+							class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 font-mono text-xs text-[#707070]"
+							>RD$</span
+						>
+						<input
+							type="number"
+							name="unit_price"
+							min="0"
+							step="any"
+							bind:value={addPriceInput}
+							placeholder="Precio"
+							disabled={addPriceLoading}
+							class="h-9 w-28 rounded-md border border-[#dfdfdf] bg-white py-1 pr-2 pl-9 text-right font-mono text-xs text-[#171717] focus-visible:border-[#24b47e] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:opacity-50"
+						/>
+					</div>
+					<Button
+						type="submit"
+						size="sm"
+						disabled={addPriceLoading || !canAddClientPrice()}>Agregar</Button
+					>
+				</form>
+			{:else}
+				<p class="mt-3 border-t border-[#ededed] pt-3 text-[11px] text-[#707070]">
+					Todos los clientes ya tienen precio por cliente para este producto.
+				</p>
+			{/if}
+		{/if}
+	</Dialog>
 {/if}
 
 {#if priceToDelete}
