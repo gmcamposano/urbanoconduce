@@ -209,7 +209,7 @@
 	<Dialog
 		open
 		title="Precios por cliente — {capitalize(product.title)}"
-		description="Precio de catálogo: {formatCurrency(catalogPrice)}"
+		description="Catálogo: {formatCurrency(catalogPrice)} sin ITBIS — {formatCurrency(catalogPrice * 1.18)} con ITBIS"
 		class="max-w-3xl"
 		onClose={closePricesModal}
 	>
@@ -220,7 +220,8 @@
 				>
 					<tr>
 						<th class="py-2 pr-3 font-semibold">Cliente</th>
-						<th class="py-2 pr-3 text-right font-semibold">Precio por cliente</th>
+						<th class="py-2 pr-3 text-right font-semibold">Sin ITBIS</th>
+						<th class="py-2 pr-3 text-right font-semibold">Con ITBIS</th>
 						<th class="py-2 text-right font-semibold">Diferencia</th>
 						{#if canManage}
 							<th class="w-10 py-2 text-right font-semibold"></th>
@@ -294,6 +295,9 @@
 										>{formatCurrency(Number(cp.unit_price))}</span
 									>
 								{/if}
+							</td>
+							<td class="py-2.5 pr-3 text-right font-mono text-xs text-[#707070]">
+								{formatCurrency(displayPrice * 1.18)}
 							</td>
 							<td
 								class="py-2.5 pr-3 text-right font-mono text-xs {diff < 0

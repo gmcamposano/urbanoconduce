@@ -44,18 +44,23 @@
 		}
 	}
 
+	function fuzzyMatch(text: string, query: string): boolean {
+		let qi = 0;
+		for (let i = 0; i < text.length && qi < query.length; i++) {
+			if (text[i] === query[qi]) qi++;
+		}
+		return qi === query.length;
+	}
+
 	const filteredProducts = $derived.by(() => {
 		let result = products;
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
 			result = result.filter((p) => {
-				const modelName = models.find((m) => m.id === p.model)?.model?.toLowerCase() || '';
-				return (
-					p.title.toLowerCase().includes(query) ||
-					modelName.includes(query) ||
-					(p.description && p.description.toLowerCase().includes(query))
-				);
+				const modelName = models.find((m) => m.id === p.model)?.model || '';
+				const combined = `${p.title} ${modelName} ${p.description || ''}`.toLowerCase();
+				return fuzzyMatch(combined, query);
 			});
 		}
 
