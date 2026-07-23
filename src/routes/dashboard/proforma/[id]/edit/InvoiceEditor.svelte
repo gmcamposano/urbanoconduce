@@ -212,6 +212,7 @@
 	let taxMode = $state<TaxMode>('none');
 	let quickAddOpen = $state(false);
 	let refreshDialogOpen = $state(false);
+	let showPricesAlreadyAlert = $state(false);
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -471,7 +472,25 @@
 							variant="outline"
 							size="sm"
 							class="flex items-center gap-1"
-							onclick={() => (refreshDialogOpen = true)}
+							onclick={() => {
+								const allMatch = editor.items.every((item) => {
+									if (!item.product_id) return true;
+									const product = clientProducts.find((entry) => entry.id === item.product_id);
+									const clientPrice = clientPrices.find(
+										(cp) =>
+											cp.client_id === editor.selectedClientId && cp.product_id === item.product_id
+									);
+									const expectedPrice = clientPrice
+										? Number(clientPrice.unit_price)
+										: Number(product?.price_without_taxes || 0);
+									return item.unit_price === expectedPrice;
+								});
+								if (allMatch) {
+									showPricesAlreadyAlert = true;
+								} else {
+									refreshDialogOpen = true;
+								}
+							}}
 							disabled={loading ||
 								!editor.selectedClientId ||
 								!editor.items.some((i) => i.product_id)}
@@ -892,6 +911,26 @@
 			>
 				<RefreshCw class="h-4 w-4" />
 				Actualizar
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}
+
+{#if showPricesAlreadyAlert}
+	<Dialog
+		open
+		title="Actualizar precios"
+		description="Todos los precios ya están actualizados con el precio actual del cliente."
+		class="max-w-md"
+		onClose={() => (showPricesAlreadyAlert = false)}
+	>
+		{#snippet footer()}
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e]"
+				onclick={() => (showPricesAlreadyAlert = false)}
+			>
+				OK
 			</button>
 		{/snippet}
 	</Dialog>
