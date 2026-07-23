@@ -14,6 +14,7 @@
 		value?: string;
 		placeholder?: string;
 		searchable?: boolean;
+		fuzzy?: boolean;
 		disabled?: boolean;
 		onchange?: (value: string) => void;
 		children?: Snippet;
@@ -25,6 +26,7 @@
 		value = $bindable(''),
 		placeholder = 'Selecciona una opción',
 		searchable = true,
+		fuzzy = false,
 		disabled = false,
 		onchange,
 		children
@@ -42,11 +44,31 @@
 
 	const uid = $props.id();
 
-	const filteredOptions = $derived(
-		searchQuery.trim() === ''
-			? options
-			: options.filter((opt) => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
-	);
+	const filteredOptions = $derived.by((): Option[] => {
+		const query = searchQuery.trim().toLowerCase();
+		if (query === '') return options;
+
+		if (fuzzy) {
+			const tokens = query.split(/\s+/).filter(Boolean);
+			const scored = options
+				.map((opt) => {
+					const label = opt.label.toLowerCase();
+					let score = 0;
+					for (const token of tokens) {
+						const idx = label.indexOf(token);
+						if (idx === -1) return null;
+						const prev = label[idx - 1];
+						score += idx === 0 || !/[a-z0-9]/.test(prev) ? 2 : 1;
+					}
+					return { opt, score };
+				})
+				.filter((entry): entry is { opt: Option; score: number } => entry !== null)
+				.sort((a, b) => b.score - a.score || a.opt.label.localeCompare(b.opt.label));
+			return scored.map((entry) => entry.opt);
+		}
+
+		return options.filter((opt) => opt.label.toLowerCase().includes(query));
+	});
 
 	const selectedOption = $derived(options.find((opt) => opt.value === value) || null);
 

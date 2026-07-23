@@ -511,6 +511,7 @@
 											bind:value={item.product_id}
 											placeholder={selectedClientId ? 'Selecciona' : 'Primero elige un cliente'}
 											disabled={loading || !selectedClientId || availableProducts.length === 0}
+											fuzzy
 											onchange={(value) => applyProductToItem(item, value)}
 										/>
 									</td>

@@ -503,6 +503,7 @@
 												disabled={loading ||
 													!editor.selectedClientId ||
 													availableProducts.length === 0}
+												fuzzy
 												onchange={(value) => applyProductToItem(item, value)}
 											/>
 										</td>
