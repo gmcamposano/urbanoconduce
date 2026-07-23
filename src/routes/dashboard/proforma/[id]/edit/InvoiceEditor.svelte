@@ -498,13 +498,13 @@
 								class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
 							>
 								<tr>
-									<th class="w-1/4 px-3 py-2.5 font-semibold">Producto</th>
-									<th class="w-1/4 px-3 py-2.5 font-semibold">Modelo</th>
-									<th class="w-1/5 px-3 py-2.5 font-semibold">Color</th>
-									<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
-									<th class="w-32 px-3 py-2.5 text-right font-semibold">Precio unit.</th>
-									<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
-									<th class="w-24 px-3 py-2.5"></th>
+									<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Producto</th>
+									<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Modelo</th>
+									<th class="w-1/5 px-3 py-2.5 text-left font-semibold">Color</th>
+									<th class="w-24 px-3 py-2.5 text-left font-semibold">Cant.</th>
+									<th class="w-32 px-3 py-2.5 text-left font-semibold">Precio unit.</th>
+									<th class="w-1/6 px-3 py-2.5 text-left font-semibold">Total</th>
+									<th class="w-20 px-2 py-2.5 text-left font-semibold">Acciones</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-[#ededed]">
@@ -562,7 +562,7 @@
 												step="any"
 												bind:value={item.quantity}
 												disabled={loading}
-												class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-center font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+												class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white px-3 py-2 text-left font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 											/>
 										</td>
 										<td class="px-3 py-2">
@@ -579,45 +579,44 @@
 													bind:value={item.unit_price}
 													readonly
 													disabled={loading}
-													class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-right font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
+													class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-left font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 												/>
 											</div>
 										</td>
-										<td class="px-3 py-2">
-											<div class="flex h-9 items-center justify-end px-3">
-												<span class="font-mono text-sm text-[#707070]">
+									<td class="px-3 py-2">
+										<div class="flex h-9 items-center justify-start">
+											<span class="font-mono text-sm text-[#707070]">
 													{formatCurrency(
 														(Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
 													)}
 												</span>
 											</div>
 										</td>
-										<td class="px-1 py-2">
-											<div class="flex h-9 items-center justify-end gap-1">
-												<Button
-													type="button"
-													variant="ghost"
-													size="icon"
-													class="h-9 w-9 text-[#707070] hover:text-[#3ecf8e]"
-													disabled={loading || !canDuplicateItem(item.id)}
-													onclick={() => duplicateItem(item.id)}
-													title="Duplicar fila"
-												>
-													<Copy class="h-4 w-4" />
-												</Button>
-												<Button
-													type="button"
-													variant="ghost"
-													size="icon"
-													class="h-9 w-9 text-[#707070] hover:text-[#e2005a]"
-													disabled={editor.items.length <= 1 || loading}
-													onclick={() => removeItem(item.id)}
-													title="Eliminar fila"
-												>
-													<Trash2 class="h-4 w-4" />
-												</Button>
-											</div>
-										</td>
+									<td class="px-0.5 py-2">
+										<div class="flex h-9 items-center justify-start gap-0">
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												class="h-7 w-7 text-[#707070] hover:text-[#3ecf8e]"
+												disabled={loading || !canDuplicateItem(item.id)}
+												onclick={() => duplicateItem(item.id)}
+												title="Duplicar fila"
+											>
+												<Copy class="h-3.5 w-3.5" />
+											</Button><Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
+												disabled={editor.items.length <= 1 || loading}
+												onclick={() => removeItem(item.id)}
+												title="Eliminar fila"
+											>
+												<Trash2 class="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									</td>
 									</tr>
 								{/each}
 								<tr class="hover:bg-transparent">
