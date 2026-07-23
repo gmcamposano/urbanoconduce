@@ -13,6 +13,7 @@
 	import {
 		ArrowLeft,
 		Calculator,
+		Copy,
 		DollarSign,
 		FileText,
 		Plus,
@@ -243,6 +244,27 @@
 		}
 	}
 
+	function canDuplicateItem(itemId: string): boolean {
+		const item = editor.items.find((i) => i.id === itemId);
+		if (!item?.product_id) return false;
+		const usedColors = editor.items
+			.filter((i) => i.product_id === item.product_id && i.color)
+			.map((i) => i.color);
+		return colors.some((c) => !usedColors.includes(c.color));
+	}
+
+	function duplicateItem(itemId: string) {
+		const item = editor.items.find((i) => i.id === itemId);
+		if (!item?.product_id || !canDuplicateItem(itemId)) return;
+
+		const duplicated = createItem();
+		duplicated.product_id = item.product_id;
+		duplicated.model = item.model;
+		duplicated.unit_price = item.unit_price;
+		duplicated.quantity = item.quantity;
+		editor.items.push(duplicated);
+	}
+
 	function handleQuickAdd(rows: Array<{ productId: string; color: string }>) {
 		editor.items = editor.items.filter((i) => i.product_id);
 		for (const row of rows) {
@@ -309,7 +331,7 @@
 				class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 			>
 				<svg
-					class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#e2005a]"
+					class="mt-0.5 h-5 w-5 shrink-0 text-[#e2005a]"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -482,7 +504,7 @@
 									<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
 									<th class="w-32 px-3 py-2.5 text-right font-semibold">Precio unit.</th>
 									<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
-									<th class="w-8 px-3 py-2.5"></th>
+									<th class="w-24 px-3 py-2.5"></th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-[#ededed]">
@@ -570,8 +592,19 @@
 												</span>
 											</div>
 										</td>
-										<td class="px-3 py-2">
-											<div class="flex h-9 items-center justify-end">
+										<td class="px-1 py-2">
+											<div class="flex h-9 items-center justify-end gap-1">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													class="h-9 w-9 text-[#707070] hover:text-[#3ecf8e]"
+													disabled={loading || !canDuplicateItem(item.id)}
+													onclick={() => duplicateItem(item.id)}
+													title="Duplicar fila"
+												>
+													<Copy class="h-4 w-4" />
+												</Button>
 												<Button
 													type="button"
 													variant="ghost"
@@ -579,6 +612,7 @@
 													class="h-9 w-9 text-[#707070] hover:text-[#e2005a]"
 													disabled={editor.items.length <= 1 || loading}
 													onclick={() => removeItem(item.id)}
+													title="Eliminar fila"
 												>
 													<Trash2 class="h-4 w-4" />
 												</Button>

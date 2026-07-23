@@ -14,6 +14,7 @@
 	import {
 		Plus,
 		Trash2,
+		Copy,
 		ArrowLeft,
 		Calculator,
 		FileText,
@@ -210,6 +211,27 @@
 			items = items.filter((item) => item.id !== id);
 			cleanupItems();
 		}
+	}
+
+	function canDuplicateItem(itemId: string): boolean {
+		const item = items.find((i) => i.id === itemId);
+		if (!item?.product_id) return false;
+		const usedColors = items
+			.filter((i) => i.product_id === item.product_id && i.color)
+			.map((i) => i.color);
+		return colors.some((c) => !usedColors.includes(c.color));
+	}
+
+	function duplicateItem(itemId: string) {
+		const item = items.find((i) => i.id === itemId);
+		if (!item?.product_id || !canDuplicateItem(itemId)) return;
+
+		const duplicated = createItem();
+		duplicated.product_id = item.product_id;
+		duplicated.model = item.model;
+		duplicated.unit_price = item.unit_price;
+		duplicated.quantity = item.quantity;
+		items.push(duplicated);
 	}
 
 	function handleQuickAdd(rows: Array<{ productId: string; color: string }>) {
@@ -494,7 +516,7 @@
 								<th class="w-24 px-3 py-2.5 text-center font-semibold">Cant.</th>
 								<th class="w-32 px-3 py-2.5 text-right font-semibold"> Precio unit. </th>
 								<th class="w-1/6 px-3 py-2.5 text-right font-semibold">Total</th>
-								<th class="w-8 px-3 py-2.5"></th>
+								<th class="w-24 px-3 py-2.5"></th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[#ededed]">
@@ -577,8 +599,19 @@
 											</span>
 										</div>
 									</td>
-									<td class="px-3 py-2">
-										<div class="flex h-9 items-center justify-end">
+									<td class="px-1 py-2">
+										<div class="flex h-9 items-center justify-end gap-1">
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												class="h-9 w-9 text-[#707070] hover:text-[#3ecf8e]"
+												disabled={loading || !canDuplicateItem(item.id)}
+												onclick={() => duplicateItem(item.id)}
+												title="Duplicar fila"
+											>
+												<Copy class="h-4 w-4" />
+											</Button>
 											<Button
 												type="button"
 												variant="ghost"
@@ -586,6 +619,7 @@
 												class="h-9 w-9 text-[#707070] hover:text-[#e2005a]"
 												disabled={items.length <= 1 || loading}
 												onclick={() => removeItem(item.id)}
+												title="Eliminar fila"
 											>
 												<Trash2 class="h-4 w-4" />
 											</Button>
