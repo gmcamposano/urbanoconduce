@@ -72,12 +72,17 @@
 		items.reduce((sum: number, item: { amount: number | string }) => sum + Number(item.amount), 0)
 	);
 
-	const taxAmount = $derived(subtotal * (Number(invoice?.tax_rate || 0) / 100));
+	const taxRate = $derived(Number(invoice?.tax_rate || 0));
+	const taxAmount = $derived(subtotal * (taxRate / 100));
 	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
 	const showDiscount = $derived(discountAmount > 0);
 	const collectionState = $derived(
 		invoice ? getCollectionState(invoice) : ('draft' as CollectionState)
 	);
+
+	function itemTotalWithTax(amount: number): number {
+		return amount * (1 + taxRate / 100);
+	}
 
 	function getCollectionState(source: {
 		status: string;
@@ -533,25 +538,29 @@
 					<div class="space-y-4">
 						<table class="w-full table-fixed border-collapse text-left text-sm">
 							<thead>
-								<tr
-									class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
-								>
-									<th class="w-[38%] px-3 py-3 align-middle font-semibold">Descripción</th>
-									<th class="w-[14%] px-3 py-3 text-left align-middle font-semibold">Modelo</th>
-									<th class="w-[14%] px-3 py-3 text-left align-middle font-semibold">Color</th>
-									<th
-										class="w-[8%] px-3 py-3 text-center align-middle font-semibold whitespace-nowrap"
-										>Cant.</th
+									<tr
+										class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
 									>
-									<th
-										class="w-[16%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
-										>Precio unitario</th
-									>
-									<th
-										class="w-[10%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
-										>Total</th
-									>
-								</tr>
+										<th class="w-[30%] px-3 py-3 align-middle font-semibold">Descripción</th>
+										<th class="w-[13%] px-3 py-3 text-left align-middle font-semibold">Modelo</th>
+										<th class="w-[13%] px-3 py-3 text-left align-middle font-semibold">Color</th>
+										<th
+											class="w-[8%] px-3 py-3 text-center align-middle font-semibold whitespace-nowrap"
+											>Cant.</th
+										>
+										<th
+											class="w-[14%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
+											>Precio unitario</th
+										>
+										<th
+											class="w-[10%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
+											>Total</th
+										>
+										<th
+											class="w-[12%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
+											>Total/Imp</th
+										>
+									</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each sortedItems as item (item.id ?? item.description)}
@@ -584,17 +593,21 @@
 											class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
 											>{formatCurrency(Number(item.amount))}</td
 										>
+										<td
+											class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
+											>{formatCurrency(itemTotalWithTax(Number(item.amount)))}</td
+										>
 									</tr>
 								{/each}
 							</tbody>
 							<tfoot>
-								<tr class="border-t-2 border-[#171717] font-medium text-[#171717]">
-									<td colspan="3" class="px-3 py-2.5 text-right align-middle text-sm"
-										>Cantidad de artículos</td
-									>
-									<td class="px-3 py-2.5 text-center align-middle font-mono">{totalQuantity}</td>
-									<td colspan="2" class="px-3 py-2.5"></td>
-								</tr>
+									<tr class="border-t-2 border-[#171717] font-medium text-[#171717]">
+										<td colspan="3" class="px-3 py-2.5 text-right align-middle text-sm"
+											>Cantidad de artículos</td
+										>
+										<td class="px-3 py-2.5 text-center align-middle font-mono">{totalQuantity}</td>
+										<td colspan="3" class="px-3 py-2.5"></td>
+									</tr>
 							</tfoot>
 						</table>
 					</div>
