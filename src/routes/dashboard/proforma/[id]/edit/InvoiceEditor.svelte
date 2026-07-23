@@ -10,13 +10,16 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
+	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import {
+		AlertTriangle,
 		ArrowLeft,
 		Calculator,
 		Copy,
 		DollarSign,
 		FileText,
 		Plus,
+		RefreshCw,
 		Save,
 		Trash2,
 		Zap
@@ -208,6 +211,7 @@
 	let loading = $state(false);
 	let taxMode = $state<TaxMode>('none');
 	let quickAddOpen = $state(false);
+	let refreshDialogOpen = $state(false);
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -292,6 +296,15 @@
 			const colorStillAvailable = availableColors.some((c) => c.color === item.color);
 			if (!colorStillAvailable) item.color = '';
 		}
+	}
+
+	function refreshPrices() {
+		for (const item of editor.items) {
+			if (item.product_id) {
+				applyProductToItem(item, item.product_id);
+			}
+		}
+		refreshDialogOpen = false;
 	}
 
 	function formatCurrency(val: number) {
@@ -458,6 +471,19 @@
 							variant="outline"
 							size="sm"
 							class="flex items-center gap-1"
+							onclick={() => (refreshDialogOpen = true)}
+							disabled={loading ||
+								!editor.selectedClientId ||
+								!editor.items.some((i) => i.product_id)}
+						>
+							<RefreshCw class="h-3.5 w-3.5" />
+							Actualizar precios
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="flex items-center gap-1"
 							onclick={() => (quickAddOpen = true)}
 							disabled={loading || !editor.selectedClientId || !clientProducts.length}
 						>
@@ -583,40 +609,40 @@
 												/>
 											</div>
 										</td>
-									<td class="px-3 py-2">
-										<div class="flex h-9 items-center justify-start">
-											<span class="font-mono text-sm text-[#707070]">
+										<td class="px-3 py-2">
+											<div class="flex h-9 items-center justify-start">
+												<span class="font-mono text-sm text-[#707070]">
 													{formatCurrency(
 														(Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
 													)}
 												</span>
 											</div>
 										</td>
-									<td class="px-0.5 py-2">
-										<div class="flex h-9 items-center justify-start gap-0">
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon"
-												class="h-7 w-7 text-[#707070] hover:text-[#3ecf8e]"
-												disabled={loading || !canDuplicateItem(item.id)}
-												onclick={() => duplicateItem(item.id)}
-												title="Duplicar fila"
-											>
-												<Copy class="h-3.5 w-3.5" />
-											</Button><Button
-												type="button"
-												variant="ghost"
-												size="icon"
-												class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
-												disabled={editor.items.length <= 1 || loading}
-												onclick={() => removeItem(item.id)}
-												title="Eliminar fila"
-											>
-												<Trash2 class="h-3.5 w-3.5" />
-											</Button>
-										</div>
-									</td>
+										<td class="px-0.5 py-2">
+											<div class="flex h-9 items-center justify-start gap-0">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													class="h-7 w-7 text-[#707070] hover:text-[#3ecf8e]"
+													disabled={loading || !canDuplicateItem(item.id)}
+													onclick={() => duplicateItem(item.id)}
+													title="Duplicar fila"
+												>
+													<Copy class="h-3.5 w-3.5" />
+												</Button><Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													class="h-7 w-7 text-[#707070] hover:text-[#e2005a]"
+													disabled={editor.items.length <= 1 || loading}
+													onclick={() => removeItem(item.id)}
+													title="Eliminar fila"
+												>
+													<Trash2 class="h-3.5 w-3.5" />
+												</Button>
+											</div>
+										</td>
 									</tr>
 								{/each}
 								<tr class="hover:bg-transparent">
@@ -836,4 +862,37 @@
 		onClose={() => (quickAddOpen = false)}
 		onAdd={handleQuickAdd}
 	/>
+{/if}
+
+{#if refreshDialogOpen}
+	<Dialog
+		open
+		title="Actualizar precios"
+		description="Se sincronizarán los precios de todos los conceptos con el precio actual del cliente seleccionado."
+		class="max-w-md"
+		onClose={() => (refreshDialogOpen = false)}
+	>
+		<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+			<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+			<p>Los precios manuales que hayas editado se sobrescribirán.</p>
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-md border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				onclick={() => (refreshDialogOpen = false)}
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e]"
+				onclick={refreshPrices}
+			>
+				<RefreshCw class="h-4 w-4" />
+				Actualizar
+			</button>
+		{/snippet}
+	</Dialog>
 {/if}

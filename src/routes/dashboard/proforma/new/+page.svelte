@@ -21,7 +21,8 @@
 		Save,
 		DollarSign,
 		AlertTriangle,
-		Zap
+		Zap,
+		RefreshCw
 	} from '@lucide/svelte';
 	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
 
@@ -174,6 +175,7 @@
 	let loading = $state(false);
 	let createMissingVariants = $state(false);
 	let quickAddOpen = $state(false);
+	let refreshDialogOpen = $state(false);
 	let missingVariantConfirm = $state<Array<{
 		productId: string;
 		productTitle: string;
@@ -297,6 +299,15 @@
 			const colorStillAvailable = availableColors.some((c) => c.color === item.color);
 			if (!colorStillAvailable) item.color = '';
 		}
+	}
+
+	function refreshPrices() {
+		for (const item of items) {
+			if (item.product_id) {
+				applyProductToItem(item, item.product_id);
+			}
+		}
+		refreshDialogOpen = false;
 	}
 
 	// Formatter helper
@@ -470,6 +481,17 @@
 						variant="outline"
 						size="sm"
 						class="flex items-center gap-1"
+						onclick={() => (refreshDialogOpen = true)}
+						disabled={loading || !selectedClientId || !items.some((i) => i.product_id)}
+					>
+						<RefreshCw class="h-3.5 w-3.5" />
+						Actualizar precios
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="flex items-center gap-1"
 						onclick={() => (quickAddOpen = true)}
 						disabled={loading || !selectedClientId || !clientProducts.length}
 					>
@@ -510,15 +532,15 @@
 							class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-									<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Producto</th>
-									<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Modelo</th>
-									<th class="w-1/5 px-3 py-2.5 text-left font-semibold">Color</th>
-									<th class="w-24 px-3 py-2.5 text-left font-semibold">Cant.</th>
-									<th class="w-32 px-3 py-2.5 text-left font-semibold">Precio unit.</th>
-									<th class="w-1/6 px-3 py-2.5 text-left font-semibold">Total</th>
-									<th class="w-20 px-2 py-2.5 text-left font-semibold">Acciones</th>
-								</tr>
-							</thead>
+								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Producto</th>
+								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Modelo</th>
+								<th class="w-1/5 px-3 py-2.5 text-left font-semibold">Color</th>
+								<th class="w-24 px-3 py-2.5 text-left font-semibold">Cant.</th>
+								<th class="w-32 px-3 py-2.5 text-left font-semibold">Precio unit.</th>
+								<th class="w-1/6 px-3 py-2.5 text-left font-semibold">Total</th>
+								<th class="w-20 px-2 py-2.5 text-left font-semibold">Acciones</th>
+							</tr>
+						</thead>
 						<tbody class="divide-y divide-[#ededed]">
 							{#each items as item (item.id)}
 								{@const availableProducts = getAvailableProducts(item.id) ?? []}
@@ -909,6 +931,39 @@
 		onClose={() => (quickAddOpen = false)}
 		onAdd={handleQuickAdd}
 	/>
+{/if}
+
+{#if refreshDialogOpen}
+	<Dialog
+		open
+		title="Actualizar precios"
+		description="Se sincronizarán los precios de todos los conceptos con el precio actual del cliente seleccionado."
+		class="max-w-md"
+		onClose={() => (refreshDialogOpen = false)}
+	>
+		<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+			<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+			<p>Los precios manuales que hayas editado se sobrescribirán.</p>
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-md border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				onclick={() => (refreshDialogOpen = false)}
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e]"
+				onclick={refreshPrices}
+			>
+				<RefreshCw class="h-4 w-4" />
+				Actualizar
+			</button>
+		{/snippet}
+	</Dialog>
 {/if}
 
 {#if loading}
