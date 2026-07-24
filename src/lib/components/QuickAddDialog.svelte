@@ -39,12 +39,17 @@
 			.join(' ');
 	}
 
+	function normalizeTitle(title: string): string {
+		return title.trim().toLowerCase();
+	}
+
 	const productsByTitle = $derived.by(() => {
 		const map = new SvelteMap<string, ProductOption[]>();
 		for (const p of products) {
-			const arr = map.get(p.title) ?? [];
+			const key = normalizeTitle(p.title);
+			const arr = map.get(key) ?? [];
 			arr.push(p);
-			map.set(p.title, arr);
+			map.set(key, arr);
 		}
 		return map;
 	});
@@ -81,7 +86,9 @@
 
 	const eligibleModels = $derived(
 		models
-			.filter((m) => products.some((p) => p.model === m.id && selectedTitleSet.has(p.title)))
+			.filter((m) =>
+				products.some((p) => p.model === m.id && selectedTitleSet.has(normalizeTitle(p.title)))
+			)
 			.sort((a, b) =>
 				toTitleCase(a.model).localeCompare(toTitleCase(b.model), undefined, {
 					sensitivity: 'base'
@@ -100,7 +107,9 @@
 	});
 
 	function productsForModel(modelId: string): ProductOption[] {
-		return products.filter((p) => p.model === modelId && selectedTitleSet.has(p.title));
+		return products.filter(
+			(p) => p.model === modelId && selectedTitleSet.has(normalizeTitle(p.title))
+		);
 	}
 
 	const preview = $derived.by(() => {
@@ -130,7 +139,7 @@
 			for (const m of eligibleModels) {
 				if (selectedModels[m.id]) {
 					const stillEligible = products.some(
-						(p) => p.model === m.id && selectedTitleSet.has(p.title)
+						(p) => p.model === m.id && selectedTitleSet.has(normalizeTitle(p.title))
 					);
 					if (!stillEligible) {
 						selectedModels[m.id] = false;
