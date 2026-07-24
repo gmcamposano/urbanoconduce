@@ -50,7 +50,7 @@
 		<MobileMenu {profile} {activePath} onClose={() => (mobileMenuOpen = false)} />
 	{/if}
 
-	<main class="flex flex-1 flex-col bg-[#fafafa] p-6 md:p-10">
+	<main class="flex flex-1 flex-col bg-[#fafafa] p-6 md:p-10 min-w-0">
 		{@render children()}
 	</main>
 </div>
