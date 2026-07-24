@@ -114,7 +114,7 @@
 				margin: 0.5,
 				filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
 				image: { type: 'jpeg' as const, quality: 0.98 },
-				pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
+				pagebreak: { mode: ['css', 'legacy'] as const },
 				html2canvas: {
 					scale: 2,
 					useCORS: true,
@@ -125,9 +125,14 @@
 						breakStyle.textContent = `
 							#invoice-printable p,
 							#invoice-printable tr,
-							#invoice-printable li {
+							#invoice-printable li,
+							#invoice-printable .avoid-break {
 								break-inside: avoid;
 								page-break-inside: avoid;
+							}
+							#invoice-printable > div > div.print-card.print-text-dark {
+								display: block !important;
+								min-height: auto !important;
 							}
 						`;
 						clonedDoc.head.appendChild(breakStyle);
@@ -589,6 +594,10 @@
 		.print-card {
 			box-shadow: none !important;
 			border: none !important;
+		}
+		.print-card.print-text-dark {
+			display: block !important;
+			min-height: auto !important;
 		}
 		.print-card p,
 		.print-card tr {
