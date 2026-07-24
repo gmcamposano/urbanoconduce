@@ -399,7 +399,7 @@
 				<div class="space-y-12">
 					<!-- Header Section -->
 					<div
-						class="print-border flex flex-col items-start justify-between gap-6 border-b border-[#ededed] pb-8 sm:flex-row"
+						class="avoid-break print-border flex flex-col items-start justify-between gap-6 border-b border-[#ededed] pb-8 sm:flex-row"
 					>
 						<!-- Company Details -->
 						<div>
@@ -465,7 +465,7 @@
 					</div>
 
 					<!-- Billing Address / Information Grid -->
-					<div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+					<div class="avoid-break grid grid-cols-1 gap-8 sm:grid-cols-2">
 						<!-- Client -->
 						<div class="space-y-2">
 							<h3 class="text-xs font-medium tracking-wider text-[#707070] uppercase">
@@ -630,7 +630,7 @@
 
 					<!-- Summary block -->
 					<div class="flex justify-end pt-6">
-						<div class="w-full space-y-0.5 text-sm text-[#707070] sm:w-80">
+						<div class="avoid-break w-full space-y-0.5 text-sm text-[#707070] sm:w-80">
 							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
 								<span class="font-medium">Subtotal</span>
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
@@ -659,7 +659,7 @@
 
 					<div class="space-y-4 pt-8">
 						<div
-							class="flex flex-col gap-1 border-t border-[#ededed] pt-6 sm:flex-row sm:items-end sm:justify-between"
+							class="avoid-break flex flex-col gap-1 border-t border-[#ededed] pt-6 sm:flex-row sm:items-end sm:justify-between"
 						>
 							<div>
 								<h3 class="text-sm font-medium tracking-wide text-[#171717] uppercase">
@@ -676,7 +676,7 @@
 
 						{#if paymentBreakdown.length === 0}
 							<div
-								class="rounded-lg border border-[#ededed] bg-[#fafafa] px-4 py-5 text-sm text-[#707070]"
+								class="avoid-break rounded-lg border border-[#ededed] bg-[#fafafa] px-4 py-5 text-sm text-[#707070]"
 							>
 								No hay abonos registrados todavia.
 							</div>
@@ -732,7 +732,7 @@
 				</div>
 
 				<!-- Footer Notes -->
-				<div class="print-border mt-4 space-y-2 border-t border-[#ededed] pt-4">
+				<div class="avoid-break print-border mt-4 space-y-2 border-t border-[#ededed] pt-4">
 					{#if invoice.notes}
 						<div class="space-y-1">
 							<h4 class="text-xs font-medium tracking-wider text-[#707070] uppercase">
