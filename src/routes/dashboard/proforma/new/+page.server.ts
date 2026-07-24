@@ -77,7 +77,8 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
-		const invoiceNumber = invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
+		const invoiceNumber =
+			invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
 		if (invoiceNumberInput && (await isInvoiceNumberTaken(locals.supabase, invoiceNumberInput))) {
 			return fail(400, { error: `El número de proforma "${invoiceNumberInput}" ya está en uso.` });
 		}
@@ -225,13 +226,18 @@ export const actions: Actions = {
 			const quantity = Number(item.quantity);
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
-			const unitPrice = resolvedPrices.get(item.product_id) ?? Number(item.unit_price);
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
 					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
 				});
 			}
+
+			const submittedPrice = Number(item.unit_price);
+			const unitPrice =
+				Number.isFinite(submittedPrice) && submittedPrice > 0
+					? submittedPrice
+					: (resolvedPrices.get(item.product_id) ?? Number(product.price_without_taxes));
 
 			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });

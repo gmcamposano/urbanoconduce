@@ -622,7 +622,6 @@
 													min="0"
 													step="any"
 													bind:value={item.unit_price}
-													readonly
 													disabled={loading}
 													class="h-9 w-full rounded-md border border-[#dfdfdf] bg-white py-2 pr-3 pl-10 text-left font-mono text-sm text-[#171717] focus-visible:ring-1 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 												/>

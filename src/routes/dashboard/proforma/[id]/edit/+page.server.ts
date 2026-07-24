@@ -162,6 +162,7 @@ export const actions: Actions = {
 			color: string;
 			model: string | null;
 			quantity: number;
+			unit_price: number;
 		}>;
 		try {
 			items = JSON.parse(itemsJson);
@@ -248,14 +249,18 @@ export const actions: Actions = {
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
 			const model = (item.model || '').trim() || null;
-			const unitPrice =
-				resolvedPrices.get(item.product_id) ?? Number((item as { unit_price?: number }).unit_price);
 
 			if (!product || quantity <= 0) {
 				return fail(400, {
 					error: 'Los conceptos deben tener un producto válido y cantidad mayor que cero.'
 				});
 			}
+
+			const submittedPrice = Number(item.unit_price);
+			const unitPrice =
+				Number.isFinite(submittedPrice) && submittedPrice > 0
+					? submittedPrice
+					: (resolvedPrices.get(item.product_id) ?? Number(product.price_without_taxes));
 
 			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
