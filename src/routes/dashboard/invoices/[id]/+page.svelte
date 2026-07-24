@@ -114,12 +114,23 @@
 				margin: 0.5,
 				filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
 				image: { type: 'jpeg' as const, quality: 0.98 },
+				pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
 				html2canvas: {
 					scale: 2,
 					useCORS: true,
 					logging: false,
 					onclone: (clonedDoc: Document) => {
 						inlineLoadedStyles(clonedDoc);
+						const breakStyle = clonedDoc.createElement('style');
+						breakStyle.textContent = `
+							#invoice-printable p,
+							#invoice-printable tr,
+							#invoice-printable li {
+								break-inside: avoid;
+								page-break-inside: avoid;
+							}
+						`;
+						clonedDoc.head.appendChild(breakStyle);
 						clonedDoc.documentElement.style.fontSize = '90%';
 						clonedDoc.body.style.fontSize = '90%';
 						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
@@ -578,6 +589,11 @@
 		.print-card {
 			box-shadow: none !important;
 			border: none !important;
+		}
+		.print-card p,
+		.print-card tr {
+			break-inside: avoid;
+			page-break-inside: avoid;
 		}
 		.print-badge span {
 			print-color-adjust: exact;
