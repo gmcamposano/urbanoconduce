@@ -299,9 +299,9 @@
 							</td>
 							<td
 								class="py-2.5 pr-3 text-right font-mono text-xs whitespace-nowrap {diff < 0
-									? 'text-[#24b47e]'
+									? 'text-[#e2005a]'
 									: diff > 0
-										? 'text-[#e2005a]'
+										? 'text-[#24b47e]'
 										: 'text-[#707070]'}"
 							>
 								{diff > 0 ? '+' : ''}{formatCurrency(diff)}
