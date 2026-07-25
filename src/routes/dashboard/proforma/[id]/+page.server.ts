@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { buildInvoiceBalances, toAmount } from '$lib/server/accounting';
+import { clonePaidProformaToInvoice } from '$lib/server/proformaToInvoice';
 
 const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
@@ -29,22 +30,22 @@ function firstPaymentRelation(payment: unknown): PaymentRelation | null {
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { id } = params;
 
+	const { data: invoice, error: invoiceError } = await locals.supabase
+		.from('invoices')
+		.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
+		.eq('id', id)
+		.single();
+
+	if (invoiceError || !invoice) {
+		console.error('Error fetching invoice details:', invoiceError?.message);
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	if (invoice.factura_tipo !== 'proforma') {
+		throw redirect(303, `/dashboard/invoices/${id}`);
+	}
+
 	try {
-		const { data: invoice, error: invoiceError } = await locals.supabase
-			.from('invoices')
-			.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
-			.eq('id', id)
-			.single();
-
-		if (invoiceError || !invoice) {
-			console.error('Error fetching invoice details:', invoiceError?.message);
-			throw redirect(303, '/dashboard/proforma');
-		}
-
-		if (invoice.factura_tipo !== 'proforma') {
-			throw redirect(303, `/dashboard/invoices/${id}`);
-		}
-
 		const [itemsResult, productsResult, modelsResult, allocationsResult] = await Promise.all([
 			locals.supabase
 				.from('invoice_items')
@@ -229,5 +230,27 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, '/dashboard/proforma');
+	},
+
+	createInvoice: async ({ params, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (locals.role !== 'admin') {
+			return fail(403, { error: 'Solo un administrador puede emitir facturas.' });
+		}
+
+		const result = await clonePaidProformaToInvoice(locals.supabase, {
+			proformaId: params.id,
+			createdBy: user.id
+		});
+
+		if (!result.ok) {
+			return fail(400, { error: result.error });
+		}
+
+		throw redirect(303, `/dashboard/invoices/${result.invoiceId}`);
 	}
 };

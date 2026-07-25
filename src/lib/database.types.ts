@@ -395,16 +395,17 @@ export type Database = {
 					discount_amount: number;
 					document_type: string;
 					due_date: string;
-					factura_tipo: string;
-					id: string;
-					invoice_date: string;
-					invoice_number: string;
-					ncf: string | null;
-					notes: string | null;
-					status: string;
-					tax_rate: number;
-					total_amount: number;
-				};
+						factura_tipo: string;
+						id: string;
+						invoice_date: string;
+						invoice_number: string;
+						ncf: string | null;
+						notes: string | null;
+						source_proforma_id: string | null;
+						status: string;
+						tax_rate: number;
+						total_amount: number;
+					};
 				Insert: {
 					client_email: string;
 					client_id?: string | null;
@@ -417,13 +418,14 @@ export type Database = {
 					factura_tipo?: string;
 					id?: string;
 					invoice_date?: string;
-					invoice_number: string;
-					ncf?: string | null;
-					notes?: string | null;
-					status?: string;
-					tax_rate?: number;
-					total_amount?: number;
-				};
+						invoice_number: string;
+						ncf?: string | null;
+						notes?: string | null;
+						source_proforma_id?: string | null;
+						status?: string;
+						tax_rate?: number;
+						total_amount?: number;
+					};
 				Update: {
 					client_email?: string;
 					client_id?: string | null;
@@ -436,13 +438,14 @@ export type Database = {
 					factura_tipo?: string;
 					id?: string;
 					invoice_date?: string;
-					invoice_number?: string;
-					ncf?: string | null;
-					notes?: string | null;
-					status?: string;
-					tax_rate?: number;
-					total_amount?: number;
-				};
+						invoice_number?: string;
+						ncf?: string | null;
+						notes?: string | null;
+						source_proforma_id?: string | null;
+						status?: string;
+						tax_rate?: number;
+						total_amount?: number;
+					};
 				Relationships: [
 					{
 						foreignKeyName: 'invoices_client_id_fkey';

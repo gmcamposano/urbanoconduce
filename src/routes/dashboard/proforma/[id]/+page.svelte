@@ -7,11 +7,11 @@
 	import {
 		ArrowLeft,
 		Edit3,
+		FileText,
 		Printer,
 		Download,
 		Trash2,
 		AlertTriangle,
-		FileText,
 		Check
 	} from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
@@ -54,6 +54,7 @@
 	const currentStatus = $derived(selectedStatus || invoice?.status || '');
 
 	let statusUpdating = $state(false);
+	let invoiceCreating = $state(false);
 	let showDeleteModal = $state(false);
 	let deleteLoading = $state(false);
 	let confirmText = $state('');
@@ -322,10 +323,37 @@
 					</form>
 				{/if}
 
-				<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3 sm:pl-4">
-					<!-- Print Button -->
-					<Button
-						variant="outline"
+			<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3 sm:pl-4">
+				{#if isAdmin && collectionState === 'paid'}
+					<form
+						method="POST"
+						action="?/createInvoice"
+						class="inline-flex"
+						use:enhance={() => {
+							invoiceCreating = true;
+							return async ({ update }) => {
+								invoiceCreating = false;
+								await update();
+							};
+						}}
+					>
+						<Button
+							type="submit"
+							variant="default"
+							size="sm"
+							class="flex items-center gap-1.5"
+							disabled={invoiceCreating}
+						>
+							<FileText class="h-4 w-4" />
+							<span class="hidden sm:inline">Emitir factura</span>
+							<span class="sm:hidden">Factura</span>
+						</Button>
+					</form>
+				{/if}
+
+				<!-- Print Button -->
+				<Button
+					variant="outline"
 						size="sm"
 						class="flex items-center gap-1.5"
 						onclick={handlePrint}
