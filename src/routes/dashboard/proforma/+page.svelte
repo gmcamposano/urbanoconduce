@@ -328,7 +328,7 @@
 					class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
 				>
 					<tr>
-						<th class="px-6 py-4 font-bold">Factura</th>
+						<th class="w-[16rem] px-6 py-4 font-bold">Factura</th>
 						<th class="px-6 py-4 font-bold capitalize">Cliente</th>
 						<th class="px-6 py-4 font-bold">Creada</th>
 						<th class="px-6 py-4 font-bold">Vence</th>
@@ -349,13 +349,13 @@
 						{#each filteredInvoices as inv (inv.id)}
 							{@const collectionState = getCollectionState(inv)}
 							<tr class="transition-colors duration-150 hover:bg-[#fafafa]">
-								<td class="px-6 py-4 font-medium whitespace-nowrap text-[#171717]">
+								<td class="w-[16rem] px-6 py-4 font-medium text-[#171717]">
 									<a
 										href={resolve(`/dashboard/proforma/${inv.id}`)}
-										class="flex items-center gap-1.5 transition-colors hover:text-[#24b47e]"
+										class="flex min-w-0 items-center gap-1.5 transition-colors hover:text-[#24b47e]"
 									>
 										<FileText class="h-4 w-4 text-[#9a9a9a]" />
-										{inv.invoice_number}
+										<span class="min-w-0 truncate">{inv.invoice_number}</span>
 									</a>
 								</td>
 								<td class="px-6 py-4">
