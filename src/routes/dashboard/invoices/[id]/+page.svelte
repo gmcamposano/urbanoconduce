@@ -586,26 +586,71 @@
 		<section class="office-printable" aria-hidden={!isOfficePrint}>
 			<div class="office-print-sheet">
 				<header class="office-print-header">
-					<h2>IMPRIMIR OFICINA</h2>
+					<div class="office-print-document-header">
+						<div class="office-print-company">
+							<strong class="office-print-wordmark">magikalInvoice</strong>
+							<p>
+								Xtracto SRL<br />
+								131758495<br />
+								Santo Domingo, República Dominicana
+							</p>
+						</div>
+
+						<div class="office-print-document">
+							<h2>
+								{invoice.factura_tipo === 'proforma'
+									? 'PROFORMA'
+									: invoice.factura_tipo === 'valor_fiscal'
+										? 'FACTURA VALOR FISCAL'
+										: 'FACTURA COMERCIAL'}
+							</h2>
+							{#if invoice.factura_tipo === 'valor_fiscal' && invoice.ncf}
+								<strong class="office-print-ncf">NCF: {invoice.ncf}</strong>
+							{/if}
+							<span class="office-print-invoice-label">Número de factura:</span>
+							<strong class="office-print-invoice-number">{invoice.invoice_number}</strong>
+							<div class="office-print-dates">
+								<div>
+									<span>Fecha de emisión:</span>
+									<strong
+										>{new Date(invoice.invoice_date).toLocaleDateString('es-ES', {
+											month: 'long',
+											day: 'numeric',
+											year: 'numeric',
+											timeZone: 'UTC'
+										})}</strong
+									>
+								</div>
+								{#if invoice.status !== 'paid'}
+									<div>
+										<span>Fecha de vencimiento:</span>
+										<strong
+											>{new Date(invoice.due_date).toLocaleDateString('es-ES', {
+												month: 'long',
+												day: 'numeric',
+												year: 'numeric',
+												timeZone: 'UTC'
+											})}</strong
+										>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+
 					<div class="office-print-meta">
 						<div>
-							<span>Factura</span>
-							<strong>{invoice.invoice_number}</strong>
-						</div>
-						<div>
-							<span>Cliente</span>
+							<span>Facturar a:</span>
 							<strong>{invoice.client_name}</strong>
+							{#if invoice.clients?.client_type === 'company' && invoice.clients?.rnc}
+								<small>RNC: {invoice.clients.rnc}</small>
+							{/if}
 						</div>
-						<div>
-							<span>Fecha de emisión</span>
-							<strong
-								>{new Date(invoice.invoice_date).toLocaleDateString('es-ES', {
-									month: 'long',
-									day: 'numeric',
-									year: 'numeric',
-									timeZone: 'UTC'
-								})}</strong
-							>
+						<div class="office-print-payment">
+							<span>Estado del pago:</span>
+							<strong class={`office-print-status office-print-status-${invoice.status}`}>
+								{getStatusLabel(invoice.status)}
+							</strong>
 						</div>
 					</div>
 				</header>
@@ -803,26 +848,102 @@
 		}
 		.office-print-header {
 			border-bottom: 2px solid #171717;
-			padding-bottom: 12px;
+			padding-bottom: 11px;
 		}
-		.office-print-header h2 {
-			margin: 0 0 12px;
+		.office-print-document-header {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 24px;
+			padding-bottom: 11px;
+		}
+		.office-print-company {
+			min-width: 0;
+		}
+		.office-print-wordmark {
+			display: block;
 			font-size: 20px;
 			font-weight: 500;
+			letter-spacing: -0.42px;
+			line-height: 1.2;
+		}
+		.office-print-company p {
+			margin: 7px 0 0;
+			font-size: 11px;
+			font-weight: 500;
+			line-height: 1.45;
+			color: #707070;
+		}
+		.office-print-document {
+			min-width: 245px;
+			text-align: right;
+		}
+		.office-print-document h2 {
+			margin: 0 0 5px;
+			font-size: 19px;
+			font-weight: 500;
 			letter-spacing: -0.2px;
+			line-height: 1.15;
+		}
+		.office-print-ncf,
+		.office-print-invoice-number {
+			display: block;
+			font-family: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+			font-size: 11px;
+			font-weight: 500;
+			line-height: 1.45;
+		}
+		.office-print-ncf {
+			color: #24b47e;
+		}
+		.office-print-invoice-label {
+			display: block;
+			margin-top: 4px;
+			font-size: 9px;
+			font-weight: 500;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: #707070;
+		}
+		.office-print-invoice-number {
+			color: #171717;
+		}
+		.office-print-dates {
+			display: flex;
+			flex-direction: column;
+			gap: 3px;
+			margin-top: 7px;
+			font-size: 10px;
+			line-height: 1.35;
+			color: #707070;
+		}
+		.office-print-dates div {
+			display: flex;
+			justify-content: flex-end;
+			gap: 4px;
+		}
+		.office-print-dates span {
+			font-weight: 500;
+			color: #171717;
+		}
+		.office-print-dates strong {
+			font-family: ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+			font-weight: 400;
 		}
 		.office-print-meta {
 			display: grid;
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: 16px;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 24px;
+			border-top: 1px solid #ededed;
+			padding-top: 10px;
 		}
 		.office-print-meta div {
 			display: flex;
 			flex-direction: column;
-			gap: 3px;
+			gap: 2px;
 		}
 		.office-print-meta span {
-			font-size: 10px;
+			font-size: 9px;
 			font-weight: 500;
 			letter-spacing: 0.04em;
 			text-transform: uppercase;
@@ -833,9 +954,31 @@
 			font-weight: 500;
 			overflow-wrap: anywhere;
 		}
+		.office-print-meta small {
+			font-size: 10px;
+			color: #707070;
+		}
+		.office-print-payment {
+			text-align: right;
+		}
+		.office-print-payment strong {
+			font-size: 11px;
+		}
+		.office-print-status-paid {
+			color: #24b47e;
+		}
+		.office-print-status-pending {
+			color: #a16207;
+		}
+		.office-print-status-overdue {
+			color: #be185d;
+		}
+		.office-print-status-draft {
+			color: #707070;
+		}
 		.office-print-table {
 			width: 100%;
-			margin-top: 18px;
+			margin-top: 14px;
 			border-collapse: collapse;
 			font-size: 12px;
 			text-align: left;
