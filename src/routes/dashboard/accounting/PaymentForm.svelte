@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { applyAction, enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
@@ -48,6 +49,8 @@
 	type FormState = {
 		error?: string;
 		warning?: string;
+		warningCount?: number;
+		warningInvoiceCount?: number;
 	};
 
 	let {
@@ -218,8 +221,22 @@
 			<div>
 				<p class="font-medium">Pago registrado</p>
 				<p class="mt-0.5 text-xs text-[#707070]">
-					El pago fue registrado, pero el inventario es insuficiente. {form.warning}
+					La proforma tiene productos pendientes de inventario.
 				</p>
+				{#if form.warningInvoiceCount !== undefined && form.warningCount !== undefined}
+					<p class="mt-1 text-xs text-[#707070]">
+						{form.warningInvoiceCount} {form.warningInvoiceCount === 1 ? 'proforma' : 'proformas'} · {form.warningCount} {form.warningCount === 1 ? 'variante' : 'variantes'} sin existencias.
+					</p>
+				{/if}
+				{#if form.warning}
+					<p class="mt-1 text-xs text-[#707070]">{form.warning}</p>
+				{/if}
+				<a
+					href={resolve('/dashboard/inventory')}
+					class="mt-2 inline-flex text-xs font-medium text-[#171717] underline underline-offset-2 transition-colors hover:text-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#24b47e]/40 focus-visible:outline-none"
+				>
+					Ver inventario
+				</a>
 			</div>
 		</div>
 	{/if}

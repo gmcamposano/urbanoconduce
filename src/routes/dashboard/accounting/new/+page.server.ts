@@ -212,15 +212,11 @@ export const actions: Actions = {
 				? await getStockWarningsForPayment(locals.supabase, paymentId)
 				: [];
 			if (stockWarnings.length > 0) {
-				const warningText = stockWarnings
-					.map(
-						(warning) =>
-							`${warning.invoiceNumber}: ${warning.title} (${warning.color}), disponible ${warning.available}, requerido ${warning.requested}`
-					)
-					.join('; ');
 				return {
 					success: true,
-					warning: `Alerta de inventario: ${warningText}.`
+					warning: 'Registra la entrada de mercancía desde Inventario para completar la salida.',
+					warningCount: stockWarnings.length,
+					warningInvoiceCount: new Set(stockWarnings.map((warning) => warning.invoiceNumber)).size
 				};
 			}
 		} catch (e: unknown) {
