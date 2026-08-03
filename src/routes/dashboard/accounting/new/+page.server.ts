@@ -1,6 +1,108 @@
 import { fail, redirect } from '@sveltejs/kit';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Actions, PageServerLoad } from './$types';
+import type { Database } from '$lib/database.types';
 import { buildClientCreditSummary, buildInvoiceBalances } from '$lib/server/accounting';
+
+type StockWarning = {
+	invoiceNumber: string;
+	title: string;
+	color: string;
+	available: number;
+	requested: number;
+};
+
+async function getStockWarningsForPayment(
+	supabase: SupabaseClient<Database>,
+	paymentId: string
+): Promise<StockWarning[]> {
+	const { data: allocations, error: allocationsError } = await supabase
+		.from('accounting_allocations')
+		.select('invoice_id')
+		.eq('payment_id', paymentId);
+
+	if (allocationsError || !allocations?.length) return [];
+
+	const invoiceIds = [...new Set(allocations.map((allocation) => allocation.invoice_id))];
+	const { data: items, error: itemsError } = await supabase
+		.from('invoice_items')
+		.select('invoice_id, product_variant_id, quantity')
+		.in('invoice_id', invoiceIds)
+		.not('product_variant_id', 'is', null);
+
+	if (itemsError || !items?.length) return [];
+
+	const variantIds = [
+		...new Set(items.map((item) => item.product_variant_id).filter(Boolean))
+	] as string[];
+	const [
+		{ data: movements, error: movementsError },
+		{ data: invoices, error: invoicesError },
+		{ data: variants, error: variantsError }
+	] = await Promise.all([
+		supabase
+			.from('inventory_movements')
+			.select('product_variant_id, quantity, reference_type, reference_id')
+			.in('product_variant_id', variantIds),
+		supabase.from('invoices').select('id, invoice_number').in('id', invoiceIds),
+		supabase.from('product_variants').select('id, color, products(title)').in('id', variantIds)
+	]);
+
+	if (movementsError || invoicesError || variantsError) return [];
+
+	const movedByInvoiceVariant = new Set(
+		(movements || [])
+			.filter((movement) => movement.reference_type === 'invoice' && movement.reference_id)
+			.map((movement) => `${movement.reference_id}:${movement.product_variant_id}`)
+	);
+	const stockByVariant = new Map<string, number>();
+	for (const movement of movements || []) {
+		stockByVariant.set(
+			movement.product_variant_id,
+			(stockByVariant.get(movement.product_variant_id) || 0) + movement.quantity
+		);
+	}
+	const invoiceNumbers = new Map(
+		(invoices || []).map((invoice) => [invoice.id, invoice.invoice_number])
+	);
+	const variantDetails = new Map(
+		(variants || []).map((variant) => {
+			const product = Array.isArray(variant.products) ? variant.products[0] : variant.products;
+			return [
+				variant.id,
+				{ title: product?.title || 'Producto', color: variant.color || 'sin color' }
+			];
+		})
+	);
+	const requestedByInvoiceVariant = new Map<
+		string,
+		{ invoiceId: string; variantId: string; requested: number }
+	>();
+
+	for (const item of items) {
+		if (!item.product_variant_id) continue;
+		const key = `${item.invoice_id}:${item.product_variant_id}`;
+		const current = requestedByInvoiceVariant.get(key);
+		requestedByInvoiceVariant.set(key, {
+			invoiceId: item.invoice_id,
+			variantId: item.product_variant_id,
+			requested: (current?.requested || 0) + Number(item.quantity)
+		});
+	}
+
+	return [...requestedByInvoiceVariant.values()]
+		.filter(({ invoiceId, variantId, requested }) => {
+			const available = Math.max(stockByVariant.get(variantId) || 0, 0);
+			return available < requested && !movedByInvoiceVariant.has(`${invoiceId}:${variantId}`);
+		})
+		.map(({ invoiceId, variantId, requested }) => ({
+			invoiceNumber: invoiceNumbers.get(invoiceId) || invoiceId,
+			title: variantDetails.get(variantId)?.title || 'Producto',
+			color: variantDetails.get(variantId)?.color || 'sin color',
+			available: Math.max(stockByVariant.get(variantId) || 0, 0),
+			requested
+		}));
+}
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { profile } = await parent();
@@ -88,18 +190,38 @@ export const actions: Actions = {
 		}
 
 		try {
-			const { error: paymentError } = await locals.supabase.rpc('record_accounting_payment', {
-				p_client_id: clientId,
-				p_amount: amount,
-				p_payment_date: paymentDate,
-				p_payment_method: paymentMethod,
-				p_reference_number: referenceNumber || null,
-				p_notes: notes || null,
-				p_created_by: user.id
-			});
+			const { data: paymentResult, error: paymentError } = await locals.supabase.rpc(
+				'record_accounting_payment',
+				{
+					p_client_id: clientId,
+					p_amount: amount,
+					p_payment_date: paymentDate,
+					p_payment_method: paymentMethod,
+					p_reference_number: referenceNumber || null,
+					p_notes: notes || null,
+					p_created_by: user.id
+				}
+			);
 
 			if (paymentError) {
 				return fail(400, { error: paymentError.message });
+			}
+
+			const paymentId = (paymentResult as { payment_id?: string } | null)?.payment_id;
+			const stockWarnings = paymentId
+				? await getStockWarningsForPayment(locals.supabase, paymentId)
+				: [];
+			if (stockWarnings.length > 0) {
+				const warningText = stockWarnings
+					.map(
+						(warning) =>
+							`${warning.invoiceNumber}: ${warning.title} (${warning.color}), disponible ${warning.available}, requerido ${warning.requested}`
+					)
+					.join('; ');
+				return {
+					success: true,
+					warning: `Alerta de inventario: ${warningText}.`
+				};
 			}
 		} catch (e: unknown) {
 			console.error('Payment save exception:', e);

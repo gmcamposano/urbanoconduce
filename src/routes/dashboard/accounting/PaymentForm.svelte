@@ -47,6 +47,7 @@
 
 	type FormState = {
 		error?: string;
+		warning?: string;
 	};
 
 	let {
@@ -208,6 +209,20 @@
 		<h1 class="text-2xl font-medium tracking-tight text-[#171717]">{heading}</h1>
 		<p class="mt-0.5 text-xs text-[#707070]">{description}</p>
 	</div>
+
+	{#if form?.warning}
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-[#fde047] bg-[#fef9c3] p-4 text-sm text-[#171717] shadow-sm"
+		>
+			<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+			<div>
+				<p class="font-medium">Pago registrado</p>
+				<p class="mt-0.5 text-xs text-[#707070]">
+					El pago fue registrado, pero el inventario es insuficiente. {form.warning}
+				</p>
+			</div>
+		</div>
+	{/if}
 
 	{#if form?.error}
 		<div

@@ -72,7 +72,7 @@ export async function getInventoryStock(
 				description: string | null;
 				model: string | null;
 			};
-			const stock = stockByVariant[v.id] || 0;
+			const stock = Math.max(stockByVariant[v.id] || 0, 0);
 			return {
 				variant_id: v.id,
 				product_id: product?.id,
@@ -100,7 +100,10 @@ export async function getVariantStock(supabase: TypedSupabase, variantId: string
 		.select('quantity')
 		.eq('product_variant_id', variantId);
 	if (error) return { stock: 0, error };
-	const stock = (data || []).reduce((sum, m) => sum + m.quantity, 0);
+	const stock = Math.max(
+		(data || []).reduce((sum, m) => sum + m.quantity, 0),
+		0
+	);
 	return { stock, error: null };
 }
 
