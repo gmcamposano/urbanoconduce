@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveUnitPrices } from '$lib/server/inventory';
+import { resolveUnitPrices, resolveVariantIdForItem } from '$lib/server/inventory';
 
 const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
@@ -236,6 +236,7 @@ export const actions: Actions = {
 		const productMap = new Map(products.map((product) => [product.id, product]));
 		const normalizedItems: Array<{
 			product_id: string;
+			product_variant_id: string;
 			description: string;
 			color: string | null;
 			model: string | null;
@@ -266,8 +267,20 @@ export const actions: Actions = {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
 			}
 
+			const { id: variantId } = await resolveVariantIdForItem(
+				locals.supabase,
+				item.product_id,
+				color
+			);
+			if (!variantId) {
+				return fail(400, {
+					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`
+				});
+			}
+
 			normalizedItems.push({
 				product_id: item.product_id,
+				product_variant_id: variantId,
 				description: product.title,
 				color: color || null,
 				model,
@@ -345,6 +358,7 @@ export const actions: Actions = {
 			normalizedItems.map((item) => ({
 				invoice_id: params.id,
 				product_id: item.product_id,
+				product_variant_id: item.product_variant_id,
 				description: item.description,
 				color: item.color,
 				model: item.model,
