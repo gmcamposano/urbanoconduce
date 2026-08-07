@@ -4,6 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
+	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import {
 		ArrowLeft,
 		Edit3,
@@ -55,9 +56,29 @@
 
 	let statusUpdating = $state(false);
 	let invoiceCreating = $state(false);
+	let missingVariantsDismissed = $state(false);
 	let showDeleteModal = $state(false);
 	let deleteLoading = $state(false);
 	let confirmText = $state('');
+
+	type MissingVariant = {
+		productId: string;
+		productTitle: string;
+		color: string;
+	};
+
+	type FormWithMissingVariants = ActionData & {
+		missingVariants?: MissingVariant[];
+	};
+
+	const missingVariants = $derived(
+		Array.isArray((form as FormWithMissingVariants | undefined)?.missingVariants)
+			? (form as FormWithMissingVariants).missingVariants
+			: []
+	);
+	const showMissingVariantsDialog = $derived(
+		(missingVariants?.length ?? 0) > 0 && !missingVariantsDismissed
+	);
 
 	type CollectionState = 'draft' | 'pending' | 'partial' | 'paid' | 'overdue';
 
@@ -323,37 +344,38 @@
 					</form>
 				{/if}
 
-			<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3 sm:pl-4">
-				{#if isAdmin && collectionState === 'paid'}
-					<form
-						method="POST"
-						action="?/createInvoice"
-						class="inline-flex"
-						use:enhance={() => {
-							invoiceCreating = true;
-							return async ({ update }) => {
-								invoiceCreating = false;
-								await update();
-							};
-						}}
-					>
-						<Button
-							type="submit"
-							variant="default"
-							size="sm"
-							class="flex items-center gap-1.5"
-							disabled={invoiceCreating}
+				<div class="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3 sm:pl-4">
+					{#if isAdmin && collectionState === 'paid'}
+						<form
+							method="POST"
+							action="?/createInvoice"
+							class="inline-flex"
+							use:enhance={() => {
+								missingVariantsDismissed = false;
+								invoiceCreating = true;
+								return async ({ update }) => {
+									invoiceCreating = false;
+									await update({ reset: false });
+								};
+							}}
 						>
-							<FileText class="h-4 w-4" />
-							<span class="hidden sm:inline">Emitir factura</span>
-							<span class="sm:hidden">Factura</span>
-						</Button>
-					</form>
-				{/if}
+							<Button
+								type="submit"
+								variant="default"
+								size="sm"
+								class="flex items-center gap-1.5"
+								disabled={invoiceCreating}
+							>
+								<FileText class="h-4 w-4" />
+								<span class="hidden sm:inline">Emitir factura</span>
+								<span class="sm:hidden">Factura</span>
+							</Button>
+						</form>
+					{/if}
 
-				<!-- Print Button -->
-				<Button
-					variant="outline"
+					<!-- Print Button -->
+					<Button
+						variant="outline"
 						size="sm"
 						class="flex items-center gap-1.5"
 						onclick={handlePrint}
@@ -778,6 +800,73 @@
 			</div>
 		</Card>
 	</div>
+{/if}
+
+{#if showMissingVariantsDialog}
+	<Dialog
+		open
+		title="Crear variantes faltantes"
+		description="Algunos productos no tienen una variante de inventario. ¿Deseas crearlas y emitir la factura?"
+		class="max-w-md"
+		onClose={invoiceCreating
+			? undefined
+			: () => {
+					missingVariantsDismissed = true;
+				}}
+	>
+		<div class="space-y-3">
+			<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+				<p>Las siguientes variantes se crearán con stock 0:</p>
+			</div>
+			<ul
+				class="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#ededed] bg-[#fafafa] p-3"
+			>
+				{#each missingVariants as variant (variant.productId + ':' + (variant.color || 'none'))}
+					<li class="text-sm text-[#171717]">
+						<span class="font-medium">{variant.productTitle}</span>
+						{#if variant.color}
+							<span class="text-[#707070]">· {variant.color}</span>
+						{:else}
+							<span class="text-[#707070]">· Sin color</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</div>
+
+		{#snippet footer()}
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				disabled={invoiceCreating}
+				onclick={() => (missingVariantsDismissed = true)}
+			>
+				Cancelar
+			</Button>
+			<form
+				action="?/createInvoice"
+				method="POST"
+				use:enhance={() => {
+					invoiceCreating = true;
+					return async ({ update }) => {
+						invoiceCreating = false;
+						await update({ reset: false });
+					};
+				}}
+			>
+				<input type="hidden" name="create_missing_variants" value="true" />
+				<Button type="submit" variant="default" size="sm" disabled={invoiceCreating}>
+					{#if invoiceCreating}
+						Emitiendo factura...
+					{:else}
+						Crear variantes y emitir factura
+					{/if}
+				</Button>
+			</form>
+		{/snippet}
+	</Dialog>
 {/if}
 
 <!-- Delete Confirmation Modal (no-print) -->

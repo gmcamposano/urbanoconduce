@@ -232,7 +232,7 @@ export const actions: Actions = {
 		throw redirect(303, '/dashboard/proforma');
 	},
 
-	createInvoice: async ({ params, locals }) => {
+	createInvoice: async ({ request, params, locals }) => {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
@@ -242,12 +242,17 @@ export const actions: Actions = {
 			return fail(403, { error: 'Solo un administrador puede emitir facturas.' });
 		}
 
+		const formData = await request.formData();
 		const result = await clonePaidProformaToInvoice(locals.supabase, {
 			proformaId: params.id,
-			createdBy: user.id
+			createdBy: user.id,
+			createMissingVariants: formData.get('create_missing_variants') === 'true'
 		});
 
 		if (!result.ok) {
+			if ('missingVariants' in result) {
+				return fail(422, { missingVariants: result.missingVariants });
+			}
 			return fail(400, { error: result.error });
 		}
 

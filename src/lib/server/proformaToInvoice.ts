@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '$lib/database.types';
 import { generateUniqueInvoiceNumber } from '$lib/server/invoiceNumber';
-import { resolveVariantIdForItem } from '$lib/server/inventory';
+import { resolveOrCreateVariant, resolveVariantIdForItem } from '$lib/server/inventory';
 import { toAmount } from '$lib/server/accounting';
 
 type TypedSupabase = SupabaseClient<Database>;
@@ -34,13 +34,19 @@ type ProformaRow = {
 	created_by: string | null;
 };
 
+export type MissingInventoryVariant = {
+	productId: string;
+	productTitle: string;
+	color: string;
+};
+
 function todayIsoDate() {
 	return new Date().toISOString().slice(0, 10);
 }
 
 export async function clonePaidProformaToInvoice(
 	supabase: TypedSupabase,
-	params: { proformaId: string; createdBy: string }
+	params: { proformaId: string; createdBy: string; createMissingVariants?: boolean }
 ) {
 	const { data: sourceInvoice, error: sourceError } = await supabase
 		.from('invoices')
@@ -108,43 +114,85 @@ export async function clonePaidProformaToInvoice(
 		.order('created_at', { ascending: true });
 
 	if (itemsError || !items) {
-		return { ok: false as const, error: itemsError?.message || 'No se pudieron leer los conceptos.' };
+		return {
+			ok: false as const,
+			error: itemsError?.message || 'No se pudieron leer los conceptos.'
+		};
 	}
 
 	if (items.length === 0) {
 		return { ok: false as const, error: 'La proforma no tiene conceptos para convertir.' };
 	}
 
-	const normalizedItems: ProformaItemRow[] = [];
+	const resolvedVariantIds = new Map<string, string>();
+	const missingVariants = new Map<string, MissingInventoryVariant>();
 
 	for (const item of items) {
-		let productVariantId = item.product_variant_id;
+		if (item.product_variant_id) continue;
+		if (!item.product_id) {
+			return {
+				ok: false as const,
+				error: `No se pudo resolver la variante de "${item.description}".`
+			};
+		}
 
-		if (!productVariantId) {
-			if (!item.product_id) {
-				return {
-					ok: false as const,
-					error: `No se pudo resolver la variante de "${item.description}".`
-				};
-			}
+		const color = (item.color || '').trim().toLowerCase();
+		const key = `${item.product_id}:${color}`;
+		if (resolvedVariantIds.has(key) || missingVariants.has(key)) continue;
 
-			const color = (item.color || '').trim().toLowerCase();
-			const { id, error } = await resolveVariantIdForItem(supabase, item.product_id, color);
+		const { id, error } = await resolveVariantIdForItem(supabase, item.product_id, color);
 
+		if (error || !id) {
+			missingVariants.set(key, {
+				productId: item.product_id,
+				productTitle: item.description,
+				color
+			});
+		} else {
+			resolvedVariantIds.set(key, id);
+		}
+	}
+
+	if (missingVariants.size > 0 && !params.createMissingVariants) {
+		return {
+			ok: false as const,
+			error: 'Faltan variantes de inventario.',
+			missingVariants: [...missingVariants.values()]
+		};
+	}
+
+	if (missingVariants.size > 0) {
+		for (const [key, variant] of missingVariants) {
+			const { id, error } = await resolveOrCreateVariant(supabase, {
+				productId: variant.productId,
+				color: variant.color,
+				sku: '',
+				purchasePrice: null,
+				userId: params.createdBy
+			});
 			if (error || !id) {
 				return {
 					ok: false as const,
-					error: `No existe una variante de inventario para "${item.description}".`
+					error: error?.message || `No se pudo crear la variante de "${variant.productTitle}".`
 				};
 			}
-
-			productVariantId = id;
+			resolvedVariantIds.set(key, id);
 		}
+	}
 
-		normalizedItems.push({
-			...item,
-			product_variant_id: productVariantId
-		});
+	const normalizedItems: ProformaItemRow[] = [];
+	for (const item of items) {
+		const color = (item.color || '').trim().toLowerCase();
+		const productVariantId =
+			item.product_variant_id ||
+			(item.product_id ? resolvedVariantIds.get(`${item.product_id}:${color}`) : null);
+		if (!productVariantId) {
+			return {
+				ok: false as const,
+				error: `No se pudo resolver la variante de "${item.description}".`
+			};
+		}
+		normalizedItems.push({ ...item, product_variant_id: productVariantId });
 	}
 
 	const invoiceNumber = await generateUniqueInvoiceNumber(supabase, 'INV');
@@ -199,7 +247,10 @@ export async function clonePaidProformaToInvoice(
 		};
 	}
 
-	const { error: paidError } = await supabase.from('invoices').update({ status: 'paid' }).eq('id', invoice.id);
+	const { error: paidError } = await supabase
+		.from('invoices')
+		.update({ status: 'paid' })
+		.eq('id', invoice.id);
 
 	if (paidError) {
 		await supabase.from('invoices').delete().eq('id', invoice.id);
