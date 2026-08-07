@@ -173,6 +173,29 @@
 								display: block !important;
 								min-height: auto !important;
 							}
+							.fiscal-document-title {
+								font-size: 28px !important;
+								line-height: 1.15 !important;
+							}
+							.fiscal-items-table .fiscal-item-row {
+								font-size: 12px !important;
+								line-height: 1.25 !important;
+							}
+							.fiscal-items-table .fiscal-table-heading {
+								font-size: 11px !important;
+								line-height: 1.25 !important;
+							}
+							.fiscal-items-table th,
+							.fiscal-items-table td {
+								padding-top: 6px !important;
+								padding-bottom: 6px !important;
+							}
+							.fiscal-items-table .fiscal-item-row span.inline-flex {
+								height: 20px !important;
+								padding-left: 6px !important;
+								padding-right: 6px !important;
+								font-size: 11px !important;
+							}
 						`;
 						clonedDoc.head.appendChild(breakStyle);
 						clonedDoc.documentElement.style.fontSize = '90%';
