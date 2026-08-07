@@ -177,6 +177,16 @@
 								font-size: 28px !important;
 								line-height: 1.15 !important;
 							}
+							.fiscal-legal-details,
+							.fiscal-ncf,
+							.fiscal-invoice-number,
+							.fiscal-invoice-dates,
+							.fiscal-section-label,
+							.fiscal-client-details,
+							.fiscal-client-details p,
+							.fiscal-invoice .print-badge span {
+								font-size: 0.875rem !important;
+							}
 							.fiscal-items-table .fiscal-item-row {
 								font-size: 12px !important;
 								line-height: 1.25 !important;
