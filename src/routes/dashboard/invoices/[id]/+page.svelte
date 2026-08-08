@@ -187,6 +187,13 @@
 							.fiscal-invoice .print-badge span {
 								font-size: 0.875rem !important;
 							}
+							.fiscal-invoice-dates,
+							.fiscal-invoice-dates span {
+								font-size: 12px !important;
+							}
+							.fiscal-invoice .avoid-break.grid {
+								gap: 12px 24px !important;
+							}
 							.fiscal-items-table .fiscal-item-row {
 								font-size: 12px !important;
 								line-height: 1.25 !important;
