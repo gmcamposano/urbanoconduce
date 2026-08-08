@@ -174,49 +174,81 @@
 								min-height: auto !important;
 							}
 							.fiscal-document-title {
-								font-size: 28px !important;
+								font-size: 22px !important;
 								line-height: 1.15 !important;
 							}
 							.fiscal-legal-details,
 							.fiscal-ncf,
 							.fiscal-invoice-number,
-							.fiscal-invoice-dates,
 							.fiscal-section-label,
 							.fiscal-client-details,
 							.fiscal-client-details p,
 							.fiscal-invoice .print-badge span {
-								font-size: 0.875rem !important;
+								font-size: 12px !important;
 							}
 							.fiscal-invoice-dates,
 							.fiscal-invoice-dates span {
-								font-size: 12px !important;
+								font-size: 10px !important;
+							}
+							#invoice-printable .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+								margin-top: 1.25rem !important;
+							}
+							#invoice-printable .p-6 {
+								padding: 1rem !important;
+							}
+							#invoice-printable .sm\\:p-8 {
+								padding: 1.25rem !important;
+							}
+							#invoice-printable .border-b {
+								padding-bottom: 0.5rem !important;
+							}
+							#invoice-printable .gap-4 {
+								gap: 0.5rem !important;
+							}
+							#invoice-printable .pt-4 {
+								padding-top: 0.5rem !important;
+							}
+							#invoice-printable .mt-3 {
+								margin-top: 0.5rem !important;
+							}
+							#invoice-printable .pt-3 {
+								padding-top: 0.5rem !important;
+							}
+							.fiscal-summary {
+								font-size: 11px !important;
+							}
+							.fiscal-summary .fiscal-total {
+								font-size: 13px !important;
+							}
+							.fiscal-notes {
+								font-size: 11px !important;
 							}
 							.fiscal-invoice .avoid-break.grid {
-								gap: 12px 24px !important;
+								gap: 8px 16px !important;
 							}
 							.fiscal-items-table .fiscal-item-row {
-								font-size: 12px !important;
-								line-height: 1.25 !important;
+								font-size: 11px !important;
+								line-height: 1.2 !important;
 							}
 							.fiscal-items-table .fiscal-table-heading {
-								font-size: 11px !important;
-								line-height: 1.25 !important;
+								font-size: 10px !important;
+								line-height: 1.2 !important;
 							}
 							.fiscal-items-table th,
 							.fiscal-items-table td {
-								padding-top: 6px !important;
-								padding-bottom: 6px !important;
+								padding-top: 4px !important;
+								padding-bottom: 4px !important;
 							}
 							.fiscal-items-table .fiscal-item-row span.inline-flex {
-								height: 20px !important;
-								padding-left: 6px !important;
-								padding-right: 6px !important;
-								font-size: 11px !important;
+								height: 18px !important;
+								padding-left: 4px !important;
+								padding-right: 4px !important;
+								font-size: 10px !important;
 							}
 						`;
 						clonedDoc.head.appendChild(breakStyle);
-						clonedDoc.documentElement.style.fontSize = '90%';
-						clonedDoc.body.style.fontSize = '90%';
+						clonedDoc.documentElement.style.fontSize = '75%';
+						clonedDoc.body.style.fontSize = '75%';
 						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
 							const printableCard = card as HTMLElement;
 							printableCard.style.border = 'none';
@@ -368,12 +400,12 @@
 
 			<!-- Clean layout grid (looks like a paper invoice) -->
 			<div
-				class="print-card print-text-dark fiscal-invoice flex min-h-250 flex-col justify-between bg-white p-8 pb-4 font-sans leading-normal text-[#171717] sm:p-12 sm:pb-6"
+				class="print-card print-text-dark fiscal-invoice flex min-h-250 flex-col justify-between bg-white p-6 pb-3 font-sans leading-normal text-[#171717] sm:p-8 sm:pb-4"
 			>
-				<div class="space-y-12">
+				<div class="space-y-8">
 					<!-- Header Section -->
 					<div
-						class="avoid-break print-border flex flex-col items-start justify-between gap-6 border-b border-[#ededed] pb-8 sm:flex-row"
+						class="avoid-break print-border flex flex-col items-start justify-between gap-4 border-b border-[#ededed] pb-5 sm:flex-row"
 					>
 						<!-- Company Details -->
 						<div>
@@ -447,7 +479,7 @@
 					</div>
 
 					<!-- Billing Address / Information Grid -->
-					<div class="avoid-break grid grid-cols-1 gap-8 sm:grid-cols-2">
+					<div class="avoid-break grid grid-cols-1 gap-6 sm:grid-cols-2">
 						<!-- Client -->
 						<div class="space-y-2">
 							<h3
@@ -520,29 +552,29 @@
 								<tr
 									class="fiscal-table-heading print-border border-b-2 border-[#171717] text-[13px] font-medium tracking-wider text-[#707070] uppercase sm:text-sm"
 								>
-									<th class="w-[38%] py-3 pr-5 font-semibold">Descripción</th>
-									<th class="w-[14%] px-3 py-3 text-center font-semibold">Modelo</th>
-									<th class="w-[14%] px-3 py-3 text-center font-semibold">Color</th>
-									<th class="w-[8%] py-3 text-center font-semibold whitespace-nowrap">Cant.</th>
-									<th class="w-[13%] py-3 text-right font-semibold whitespace-nowrap"
+									<th class="w-[38%] py-2 pr-5 font-semibold">Descripción</th>
+									<th class="w-[14%] px-3 py-2 text-center font-semibold">Modelo</th>
+									<th class="w-[14%] px-3 py-2 text-center font-semibold">Color</th>
+									<th class="w-[8%] py-2 text-center font-semibold whitespace-nowrap">Cant.</th>
+									<th class="w-[13%] py-2 text-right font-semibold whitespace-nowrap"
 										>Precio unitario</th
 									>
-									<th class="w-[13%] py-3 text-right font-semibold whitespace-nowrap">Total</th>
+									<th class="w-[13%] py-2 text-right font-semibold whitespace-nowrap">Total</th>
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="fiscal-item-row text-[15px] text-[#171717] sm:text-base">
-										<td class="py-3 pr-5 align-top">
+										<td class="py-2 pr-5 align-top">
 											<p class="font-medium break-words text-[#171717] capitalize">
 												{item.description}
 											</p>
 										</td>
-										<td class="px-3 py-3 text-center align-top text-[#707070] capitalize">
+										<td class="px-3 py-2 text-center align-top text-[#707070] capitalize">
 											{productModel}
 										</td>
-										<td class="px-3 py-3 text-center align-top">
+										<td class="px-3 py-2 text-center align-top">
 											{#if item.color}
 												<span
 													class="inline-flex h-7 items-center justify-center rounded-md border border-[#dfdfdf] bg-white px-3 text-sm leading-none font-medium whitespace-nowrap text-[#707070] capitalize"
@@ -553,13 +585,13 @@
 												<span class="text-[#9a9a9a]">-</span>
 											{/if}
 										</td>
-										<td class="py-3 text-center font-mono text-[#707070]"
+										<td class="py-2 text-center font-mono text-[#707070]"
 											>{Number(item.quantity)}</td
 										>
-										<td class="py-3 text-right font-mono text-[#707070]"
+										<td class="py-2 text-right font-mono text-[#707070]"
 											>RD$ {formatCurrency(Number(item.unit_price))}</td
 										>
-										<td class="py-3 text-right font-mono font-medium text-[#171717]"
+										<td class="py-2 text-right font-mono font-medium text-[#171717]"
 											>{formatCurrency(Number(item.amount))}</td
 										>
 									</tr>
@@ -569,7 +601,7 @@
 					</div>
 
 					<!-- Summary block -->
-					<div class="flex justify-end pt-6">
+					<div class="flex justify-end pt-4">
 						<div
 							class="fiscal-summary avoid-break w-full space-y-1 text-[15px] text-[#707070] sm:w-80 sm:text-base"
 						>
@@ -603,7 +635,7 @@
 				</div>
 
 				<!-- Footer Notes -->
-				<div class="avoid-break print-border mt-4 space-y-2 border-t border-[#ededed] pt-4">
+				<div class="avoid-break print-border mt-3 space-y-1.5 border-t border-[#ededed] pt-3">
 					{#if invoice.notes}
 						<div class="space-y-1">
 							<h4
