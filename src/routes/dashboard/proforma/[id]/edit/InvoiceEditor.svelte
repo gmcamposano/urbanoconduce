@@ -54,6 +54,11 @@
 	};
 
 	type TaxMode = 'none' | 'included' | 'added';
+	type MissingVariant = {
+		productId: string;
+		productTitle: string;
+		color: string;
+	};
 
 	type ProductOption = InvoiceEditorData['products'][number];
 	type ClientOption = {
@@ -109,6 +114,13 @@
 	onMount(() => {
 		editor = createEditorState(initial);
 		taxMode = initial.includeTax ? 'added' : 'none';
+		const initialMissingVariants = (
+			actionForm as (ActionData & { missingVariants?: MissingVariant[] }) | null
+		)?.missingVariants;
+		if (initialMissingVariants?.length) {
+			missingVariantConfirm = initialMissingVariants;
+			createMissingDialogOpen = true;
+		}
 	});
 
 	function toTitleCase(str: string): string {
@@ -209,10 +221,14 @@
 	}
 
 	let loading = $state(false);
+	let createMissingVariants = $state(false);
 	let taxMode = $state<TaxMode>('none');
 	let quickAddOpen = $state(false);
 	let refreshDialogOpen = $state(false);
 	let showPricesAlreadyAlert = $state(false);
+	let missingVariantConfirm = $state<MissingVariant[] | null>(null);
+	let createMissingDialogOpen = $state(false);
+	let formElement: HTMLFormElement | null = null;
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -367,11 +383,22 @@
 		<form
 			action="?/updateInvoice"
 			method="POST"
-			use:enhance={() => {
+			use:enhance={({ formElement: submittedForm, formData }) => {
+				formElement = submittedForm;
 				loading = true;
-				return async ({ update }) => {
+				formData.set('create_missing_variants', createMissingVariants ? 'true' : 'false');
+				return async ({ result, update }) => {
+					if (result.type === 'failure' && result.data?.missingVariants) {
+						missingVariantConfirm = result.data.missingVariants as MissingVariant[];
+						createMissingDialogOpen = true;
+						loading = false;
+						createMissingVariants = false;
+						await update({ reset: false });
+						return;
+					}
 					loading = false;
-					await update();
+					createMissingVariants = false;
+					await update({ reset: false });
 				};
 			}}
 			class="space-y-6"
@@ -870,6 +897,72 @@
 	</div>
 {/if}
 
+{#if createMissingDialogOpen && missingVariantConfirm}
+	<Dialog
+		open
+		title="Crear variantes faltantes"
+		description="Algunos conceptos no tienen una variante de inventario. ¿Deseas crearlas ahora?"
+		class="max-w-md"
+		onClose={() => {
+			createMissingDialogOpen = false;
+			missingVariantConfirm = null;
+			createMissingVariants = false;
+		}}
+	>
+		<div class="space-y-3">
+			<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+				<p>Las siguientes variantes se crearán con stock 0:</p>
+			</div>
+			<ul
+				class="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#ededed] bg-[#fafafa] p-3"
+			>
+				{#each missingVariantConfirm as variant (variant.productId + ':' + (variant.color || 'none'))}
+					<li class="text-sm text-[#171717]">
+						<span class="font-medium">{toTitleCase(variant.productTitle)}</span>
+						{#if variant.color}
+							<span class="text-[#707070]">· {toTitleCase(variant.color)}</span>
+						{:else}
+							<span class="text-[#707070]">· Sin color</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-md border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				onclick={() => {
+					createMissingDialogOpen = false;
+					missingVariantConfirm = null;
+					createMissingVariants = false;
+				}}
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e] disabled:opacity-50"
+				disabled={loading}
+				onclick={() => {
+					createMissingVariants = true;
+					createMissingDialogOpen = false;
+					formElement?.requestSubmit();
+				}}
+			>
+				{#if loading}
+					Creando...
+				{:else}
+					<Plus class="h-4 w-4" />
+					Crear variantes y guardar
+				{/if}
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}
+
 {#if quickAddOpen}
 	<QuickAddDialog
 		open
@@ -913,6 +1006,29 @@
 			</button>
 		{/snippet}
 	</Dialog>
+{/if}
+
+{#if loading}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm"
+		role="status"
+		aria-live="polite"
+	>
+		<div
+			class="flex max-w-sm flex-col items-center gap-4 rounded-xl border border-[#dfdfdf] bg-white p-6 text-center shadow-[0_16px_48px_rgba(0,0,0,0.12)]"
+		>
+			<div
+				class="h-8 w-8 animate-spin rounded-full border-4 border-[#171717]/20 border-t-[#3ecf8e]"
+			></div>
+			<p class="text-sm font-medium text-[#171717]">
+				{#if createMissingVariants}
+					Guardando variantes nuevas...
+				{:else}
+					Revisando si hay una variante nueva, esto puede tardar unos segundos...
+				{/if}
+			</p>
+		</div>
+	</div>
 {/if}
 
 {#if showPricesAlreadyAlert}

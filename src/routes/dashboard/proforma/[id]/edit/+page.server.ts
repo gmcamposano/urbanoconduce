@@ -144,6 +144,8 @@ export const actions: Actions = {
 		const taxRate = taxMode === 'none' ? 0 : 18;
 		const discountAmount = Number(formData.get('discount_amount') || 0);
 		const itemsJson = String(formData.get('items') ?? '[]');
+		const shouldCreateMissing =
+			String(formData.get('create_missing_variants') ?? '').trim() === 'true';
 
 		if (
 			!invoiceNumber ||
@@ -234,6 +236,53 @@ export const actions: Actions = {
 
 		const { prices: resolvedPrices } = await resolveUnitPrices(locals.supabase, clientId, products);
 		const productMap = new Map(products.map((product) => [product.id, product]));
+		const missingVariantsByKey = new Map<
+			string,
+			{ productId: string; productTitle: string; color: string }
+		>();
+
+		for (const item of items) {
+			const product = productMap.get(item.product_id);
+			const color = (item.color || '').trim().toLowerCase();
+			if (!product) continue;
+
+			const { id: variantId } = await resolveVariantIdForItem(
+				locals.supabase,
+				item.product_id,
+				color
+			);
+			if (!variantId) {
+				missingVariantsByKey.set(`${item.product_id}:${color}`, {
+					productId: item.product_id,
+					productTitle: product.title,
+					color
+				});
+			}
+		}
+
+		if (missingVariantsByKey.size > 0 && !shouldCreateMissing) {
+			return fail(400, {
+				missingVariants: Array.from(missingVariantsByKey.values())
+			});
+		}
+
+		if (shouldCreateMissing && missingVariantsByKey.size > 0) {
+			const { error: createVariantsError } = await locals.supabase.from('product_variants').insert(
+				Array.from(missingVariantsByKey.values()).map((variant) => ({
+					product_id: variant.productId,
+					color: variant.color,
+					min_stock: 0,
+					created_by: user.id
+				}))
+			);
+
+			if (createVariantsError) {
+				return fail(400, {
+					error: `No se pudieron crear las variantes: ${createVariantsError.message}`
+				});
+			}
+		}
+
 		const normalizedItems: Array<{
 			product_id: string;
 			product_variant_id: string;
