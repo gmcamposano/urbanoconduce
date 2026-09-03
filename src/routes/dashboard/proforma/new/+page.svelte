@@ -10,6 +10,7 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
+	import { onMount, tick } from 'svelte';
 	import { SvelteDate } from 'svelte/reactivity';
 	import {
 		Plus,
@@ -184,6 +185,7 @@
 	}> | null>(null);
 	let createMissingDialogOpen = $state(false);
 	let formElement = $state<HTMLFormElement | null>(null);
+	let errorBanner = $state<HTMLDivElement | null>(null);
 
 	const canAddItem = $derived(!!items[items.length - 1]?.product_id);
 
@@ -205,9 +207,45 @@
 	}
 
 	function addItem() {
-		items.push(createItem());
+		const item = createItem();
+		items.push(item);
 		cleanupItems();
+		return item;
 	}
+
+	function getItemRowId(itemId: string) {
+		return `invoice-item-${itemId}`;
+	}
+
+	async function scrollToErrorBanner() {
+		await tick();
+		if (!errorBanner) return;
+
+		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 'auto'
+			: 'smooth';
+		errorBanner.scrollIntoView({ behavior, block: 'start' });
+		errorBanner.focus({ preventScroll: true });
+	}
+
+	async function addItemAndNavigate() {
+		if (loading || !canAddItem) return;
+
+		const item = addItem();
+		await tick();
+		const row = document.getElementById(getItemRowId(item.id));
+		if (!row) return;
+
+		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 'auto'
+			: 'smooth';
+		row.scrollIntoView({ behavior, block: 'center' });
+		row.querySelector<HTMLElement>('[role="combobox"]')?.focus({ preventScroll: true });
+	}
+
+	onMount(() => {
+		if (form?.error && !form?.missingVariants) void scrollToErrorBanner();
+	});
 
 	function removeItem(id: string) {
 		if (items.length > 1) {
@@ -348,6 +386,9 @@
 	<!-- Error Banner -->
 	{#if form?.error}
 		<div
+			bind:this={errorBanner}
+			role="alert"
+			tabindex="-1"
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 		>
 			<svg
@@ -394,6 +435,9 @@
 				loading = false;
 				createMissingVariants = false;
 				await update({ reset: false });
+				if (result.type === 'failure' && result.data?.error) {
+					await scrollToErrorBanner();
+				}
 			};
 		}}
 		class="space-y-6"
@@ -563,7 +607,11 @@
 							{#each items as item (item.id)}
 								{@const availableProducts = getAvailableProducts(item.id) ?? []}
 								{@const availableColors = getAvailableColors(item.id, item.product_id) ?? []}
-								<tr class="hover:bg-[#fafafa]">
+								<tr
+									id={getItemRowId(item.id)}
+									data-invoice-item-id={item.id}
+									class="hover:bg-[#fafafa]"
+								>
 									<td class="px-3 py-2">
 										<SearchableSelect
 											options={availableProducts.map((p: ProductOption) => ({
@@ -872,6 +920,19 @@
 		</div>
 	</form>
 </div>
+
+{#if items.length >= 2}
+	<button
+		type="button"
+		class="fixed right-4 bottom-4 z-40 flex h-11 w-11 items-center justify-center rounded-md bg-[#3ecf8e] text-[#171717] shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-colors hover:bg-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:top-1/2 md:right-6 md:bottom-auto md:-translate-y-1/2"
+		disabled={loading || !canAddItem}
+		onclick={addItemAndNavigate}
+		aria-label="Añadir fila y continuar en la nueva fila"
+		title="Añadir fila"
+	>
+		<Plus class="h-5 w-5" />
+	</button>
+{/if}
 
 {#if createMissingDialogOpen && missingVariantConfirm}
 	<Dialog

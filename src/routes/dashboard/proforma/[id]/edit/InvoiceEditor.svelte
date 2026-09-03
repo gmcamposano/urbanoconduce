@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardHeader from '$lib/components/ui/CardHeader.svelte';
@@ -120,6 +120,8 @@
 		if (initialMissingVariants?.length) {
 			missingVariantConfirm = initialMissingVariants;
 			createMissingDialogOpen = true;
+		} else if (actionForm?.error) {
+			void scrollToErrorBanner();
 		}
 	});
 
@@ -229,6 +231,7 @@
 	let missingVariantConfirm = $state<MissingVariant[] | null>(null);
 	let createMissingDialogOpen = $state(false);
 	let formElement: HTMLFormElement | null = null;
+	let errorBanner = $state<HTMLDivElement | null>(null);
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -254,8 +257,40 @@
 	});
 
 	function addItem() {
-		editor.items.push(createItem());
+		const item = createItem();
+		editor.items.push(item);
 		cleanupItems();
+		return item;
+	}
+
+	function getItemRowId(itemId: string) {
+		return `invoice-item-${itemId}`;
+	}
+
+	async function scrollToErrorBanner() {
+		await tick();
+		if (!errorBanner) return;
+
+		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 'auto'
+			: 'smooth';
+		errorBanner.scrollIntoView({ behavior, block: 'start' });
+		errorBanner.focus({ preventScroll: true });
+	}
+
+	async function addItemAndNavigate() {
+		if (loading || !canAddItem) return;
+
+		const item = addItem();
+		await tick();
+		const row = document.getElementById(getItemRowId(item.id));
+		if (!row) return;
+
+		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 'auto'
+			: 'smooth';
+		row.scrollIntoView({ behavior, block: 'center' });
+		row.querySelector<HTMLElement>('[role="combobox"]')?.focus({ preventScroll: true });
 	}
 
 	function removeItem(id: string) {
@@ -358,6 +393,9 @@
 
 		{#if actionForm?.error}
 			<div
+				bind:this={errorBanner}
+				role="alert"
+				tabindex="-1"
 				class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
 			>
 				<svg
@@ -399,6 +437,9 @@
 					loading = false;
 					createMissingVariants = false;
 					await update({ reset: false });
+					if (result.type === 'failure' && result.data?.error) {
+						await scrollToErrorBanner();
+					}
 				};
 			}}
 			class="space-y-6"
@@ -583,7 +624,11 @@
 								{#each editor.items as item (item.id)}
 									{@const availableProducts = getAvailableProducts(item.id) ?? []}
 									{@const availableColors = getAvailableColors(item.id, item.product_id) ?? []}
-									<tr class="hover:bg-[#fafafa]">
+									<tr
+										id={getItemRowId(item.id)}
+										data-invoice-item-id={item.id}
+										class="hover:bg-[#fafafa]"
+									>
 										<td class="px-3 py-2">
 											<SearchableSelect
 												options={availableProducts.map((p) => ({
@@ -895,6 +940,19 @@
 			</div>
 		</form>
 	</div>
+
+	{#if editor.items.length >= 2}
+		<button
+			type="button"
+			class="fixed right-4 bottom-4 z-40 flex h-11 w-11 items-center justify-center rounded-md bg-[#3ecf8e] text-[#171717] shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-colors hover:bg-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:top-1/2 md:right-6 md:bottom-auto md:-translate-y-1/2"
+			disabled={loading || !canAddItem}
+			onclick={addItemAndNavigate}
+			aria-label="Añadir fila y continuar en la nueva fila"
+			title="Añadir fila"
+		>
+			<Plus class="h-5 w-5" />
+		</button>
+	{/if}
 {/if}
 
 {#if createMissingDialogOpen && missingVariantConfirm}
