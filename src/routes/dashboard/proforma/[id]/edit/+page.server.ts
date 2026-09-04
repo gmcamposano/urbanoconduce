@@ -38,7 +38,10 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			.from('products')
 			.select('id, title, price_without_taxes, model')
 			.order('title', { ascending: true }),
-		locals.supabase.from('product_colors').select('id, color').order('color', { ascending: true }),
+		locals.supabase
+			.from('product_colors')
+			.select('id, color, sort_order')
+			.order('sort_order', { ascending: true }),
 		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
 		locals.supabase
 			.from('clients')

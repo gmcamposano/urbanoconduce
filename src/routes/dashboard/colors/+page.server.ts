@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		const { data: colors, error } = await locals.supabase
 			.from('product_colors')
 			.select('*')
-			.order('created_at', { ascending: false });
+			.order('sort_order', { ascending: true });
 
 		if (error) {
 			console.error('Supabase query error in colors load:', error.message);
@@ -73,8 +73,9 @@ export const actions: Actions = {
 			if (error) {
 				return fail(400, { error: error.message });
 			}
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : '';
+			return fail(400, { error: message || 'Ocurrió un error inesperado.' });
 		}
 
 		return { success: true, message: 'Color guardado.' };
@@ -121,8 +122,9 @@ export const actions: Actions = {
 			if (error) {
 				return fail(400, { error: error.message });
 			}
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : '';
+			return fail(400, { error: message || 'Ocurrió un error inesperado.' });
 		}
 
 		return { success: true, message: 'Color actualizado.' };
@@ -150,10 +152,52 @@ export const actions: Actions = {
 			if (error) {
 				return fail(400, { error: error.message });
 			}
-		} catch (e: any) {
-			return fail(400, { error: e.message || 'Ocurrió un error inesperado.' });
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : '';
+			return fail(400, { error: message || 'Ocurrió un error inesperado.' });
 		}
 
 		return { success: true, message: 'Color borrado.' };
+	},
+	reorderColors: async ({ request, locals }) => {
+		const { user } = await locals.safeGetUser();
+		if (!user) {
+			throw redirect(303, '/login');
+		}
+
+		if (!canManageCatalog(locals.role)) {
+			return fail(403, { error: 'No tienes permisos para ordenar colores.' });
+		}
+
+		const formData = await request.formData();
+		const rawColorIds = String(formData.get('color_ids') ?? '');
+		let colorIds: string[];
+
+		try {
+			const parsed: unknown = JSON.parse(rawColorIds);
+			if (!Array.isArray(parsed) || !parsed.every((id) => typeof id === 'string')) {
+				return fail(400, { error: 'El orden de colores no es válido.' });
+			}
+			colorIds = parsed;
+		} catch {
+			return fail(400, { error: 'El orden de colores no se pudo procesar.' });
+		}
+
+		if (new Set(colorIds).size !== colorIds.length) {
+			return fail(400, { error: 'El orden contiene colores duplicados.' });
+		}
+
+		const { error } = await locals.supabase.rpc('reorder_product_colors', {
+			p_color_ids: colorIds
+		});
+
+		if (error) {
+			console.error('Supabase error reordering colors:', error.message);
+			return fail(400, {
+				error: 'No se pudo guardar el orden. Recarga la página e inténtalo de nuevo.'
+			});
+		}
+
+		return { success: true, message: 'Orden de colores guardado.' };
 	}
 };

@@ -39,6 +39,10 @@ _Avoid_: cuenta, comprador
 Documento comercial emitido a un cliente. Sus líneas (invoice*items) son snapshots: guardan descripción, precio unitario y monto al momento de emisión — no se recalculan si el precio cambia después. Vive en `invoices`; las líneas en `invoice_items`.
 \_Avoid*: recibo, cuenta
 
+**Proforma convertida**:
+Proforma pagada que ya originó una Factura. Se conserva como fuente del historial de pagos e inventario, pero deja de pertenecer al conjunto activo de Proformas.
+_Avoid_: proforma eliminada, factura original
+
 ## Relationships
 
 - Un **Producto** tiene cero o más **Variantes** (una por color)
@@ -47,6 +51,7 @@ Documento comercial emitido a un cliente. Sus líneas (invoice*items) son snapsh
 - Al facturar, el precio unitario de una línea = **Precio por cliente** si existe para (cliente, producto), si no **Precio de catálogo**
 - Una **Factura** pertenece a un **Cliente** y tiene una o más líneas que referencian **Variantes**
 - Las líneas de factura snapshotan el precio al emitir; cambios posteriores a precios no afectan facturas emitidas
+- Una **Proforma convertida** conserva su relación con la **Factura**, pero no aparece entre las Proformas activas
 
 ## Example dialogue
 

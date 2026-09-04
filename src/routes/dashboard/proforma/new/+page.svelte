@@ -26,6 +26,8 @@
 		RefreshCw
 	} from '@lucide/svelte';
 	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
+	import ProformaCsvImport from '$lib/components/ProformaCsvImport.svelte';
+	import type { CsvImportRow } from '$lib/proformaCsv';
 
 	type ProductOption = {
 		id: string;
@@ -287,6 +289,26 @@
 		quickAddOpen = false;
 	}
 
+	function handleCsvImport(rows: CsvImportRow[]) {
+		items = items.filter((i) => i.product_id);
+		for (const row of rows) {
+			const item = createItem();
+			applyProductToItem(item, row.productId);
+			item.color = row.color;
+			item.quantity = row.quantity;
+			items.push(item);
+		}
+		if (items.length === 0) items = [createItem()];
+	}
+
+	const csvExistingPairs = $derived(
+		new Set(
+			items
+				.filter((i) => i.product_id && i.color)
+				.map((i) => `${i.product_id}|${i.color.trim().toLowerCase()}`)
+		)
+	);
+
 	// Totals calculations (derived)
 	const totalQuantity = $derived(
 		items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -516,11 +538,18 @@
 			</CardContent>
 		</Card>
 
-		<!-- Line Items Card -->
 		<Card>
-			<CardHeader class="flex flex-row items-center justify-between">
+			<CardHeader class="flex flex-row flex-wrap items-center justify-between gap-2">
 				<CardTitle>2. Conceptos de cobro</CardTitle>
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
+					<ProformaCsvImport
+						products={clientProducts}
+						{models}
+						{colors}
+						existingPairs={csvExistingPairs}
+						disabled={loading || !selectedClientId}
+						onImport={handleCsvImport}
+					/>
 					<Button
 						type="button"
 						variant="outline"

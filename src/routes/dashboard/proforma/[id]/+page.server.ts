@@ -45,6 +45,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		throw redirect(303, `/dashboard/invoices/${id}`);
 	}
 
+	const { data: generatedInvoice, error: conversionError } = await locals.supabase
+		.from('invoices')
+		.select('id')
+		.eq('source_proforma_id', id)
+		.maybeSingle();
+
+	if (conversionError) {
+		console.error('Error checking proforma conversion:', conversionError.message);
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	if (generatedInvoice) {
+		throw redirect(303, `/dashboard/invoices/${generatedInvoice.id}`);
+	}
+
 	try {
 		const [itemsResult, productsResult, modelsResult, allocationsResult] = await Promise.all([
 			locals.supabase

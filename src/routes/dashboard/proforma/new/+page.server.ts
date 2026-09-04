@@ -19,8 +19,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const { data: colors, error: colorsError } = await locals.supabase
 		.from('product_colors')
-		.select('id, color')
-		.order('color', { ascending: true });
+		.select('id, color, sort_order')
+		.order('sort_order', { ascending: true });
 
 	const { data: models, error: modelsError } = await locals.supabase
 		.from('product_models')

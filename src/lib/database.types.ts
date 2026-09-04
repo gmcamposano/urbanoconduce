@@ -469,6 +469,7 @@ export type Database = {
 					created_at: string;
 					created_by: string | null;
 					id: string;
+					sort_order: number;
 					updated_at: string;
 				};
 				Insert: {
@@ -476,6 +477,7 @@ export type Database = {
 					created_at?: string;
 					created_by?: string | null;
 					id?: string;
+					sort_order?: number;
 					updated_at?: string;
 				};
 				Update: {
@@ -483,6 +485,7 @@ export type Database = {
 					created_at?: string;
 					created_by?: string | null;
 					id?: string;
+					sort_order?: number;
 					updated_at?: string;
 				};
 				Relationships: [
@@ -710,6 +713,10 @@ export type Database = {
 			is_email_allowed: { Args: { email: string }; Returns: boolean };
 			recalculate_invoice_status: {
 				Args: { p_invoice_id: string };
+				Returns: undefined;
+			};
+			reorder_product_colors: {
+				Args: { p_color_ids: string[] };
 				Returns: undefined;
 			};
 			record_accounting_payment: {

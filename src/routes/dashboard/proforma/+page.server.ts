@@ -4,7 +4,7 @@ import { buildInvoiceBalances } from '$lib/server/accounting';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	try {
-		const [invoicesResult, allocationsResult] = await Promise.all([
+		const [invoicesResult, allocationsResult, conversionsResult] = await Promise.all([
 			locals.supabase
 				.from('invoices')
 				.select('*, profiles:created_by(name, email)')
@@ -12,7 +12,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.order('created_at', { ascending: false }),
 			locals.supabase
 				.from('accounting_allocations')
-				.select('id, payment_id, invoice_id, applied_amount')
+				.select('id, payment_id, invoice_id, applied_amount'),
+			locals.supabase
+				.from('invoices')
+				.select('source_proforma_id')
+				.not('source_proforma_id', 'is', null)
 		]);
 
 		if (invoicesResult.error) {
@@ -27,11 +31,27 @@ export const load: PageServerLoad = async ({ locals }) => {
 			);
 		}
 
-		const allInvoiceIds = new Set((invoicesResult.data || []).map((invoice) => invoice.id));
+		if (conversionsResult.error) {
+			console.error(
+				'Supabase query error loading converted proformas:',
+				conversionsResult.error.message
+			);
+			return { invoices: [] };
+		}
+
+		const convertedProformaIds = new Set(
+			(conversionsResult.data || [])
+				.map((invoice) => invoice.source_proforma_id)
+				.filter((id): id is string => id !== null)
+		);
+		const activeProformas = (invoicesResult.data || []).filter(
+			(invoice) => !convertedProformaIds.has(invoice.id)
+		);
+		const allInvoiceIds = new Set(activeProformas.map((invoice) => invoice.id));
 		const allocations = (allocationsResult.data || []).filter((allocation) =>
 			allInvoiceIds.has(allocation.invoice_id)
 		);
-		const invoices = buildInvoiceBalances(invoicesResult.data || [], allocations);
+		const invoices = buildInvoiceBalances(activeProformas, allocations);
 
 		return {
 			invoices
