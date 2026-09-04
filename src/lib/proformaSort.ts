@@ -55,10 +55,10 @@ export function sortProformaItems<T extends SortableItem>(
 				break;
 			}
 			case 'producto_color': {
-				const productComparison = compareText(
-					resolvers.productTitle(a.product_id),
-					resolvers.productTitle(b.product_id)
-				);
+				const productComparison =
+					compareText(resolvers.productTitle(a.product_id), resolvers.productTitle(b.product_id)) ||
+					compareText(resolvers.modelName(a.product_id), resolvers.modelName(b.product_id)) ||
+					compareText(a.product_id, b.product_id);
 				if (productComparison !== 0) return productComparison * dir;
 
 				const aColorRank = resolvers.colorRank(a.color);
@@ -69,12 +69,6 @@ export function sortProformaItems<T extends SortableItem>(
 				if (aColorKnown && bColorKnown && aColorRank !== bColorRank) {
 					return (aColorRank - bColorRank) * dir;
 				}
-
-				const modelComparison = compareText(
-					resolvers.modelName(a.product_id),
-					resolvers.modelName(b.product_id)
-				);
-				if (modelComparison !== 0) return modelComparison * dir;
 				break;
 			}
 			case 'modelo': {

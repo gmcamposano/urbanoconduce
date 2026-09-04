@@ -37,15 +37,33 @@ test('sorts by product, configured color order, then model', () => {
 	const items = [
 		item('beta', 'beta', 'red'),
 		item('blue-suv', 'alphaSuv', 'blue'),
+		item('blue-sedan', 'alphaSedan', 'blue'),
 		item('red-suv', 'alphaSuv', 'red'),
 		item('red-sedan', 'alphaSedan', 'red')
 	];
 
 	assert.deepEqual(sort(items, { key: 'producto_color', dir: 'asc' }), [
 		'red-sedan',
+		'blue-sedan',
 		'red-suv',
 		'blue-suv',
 		'beta'
+	]);
+});
+
+test('keeps separate products grouped when their labels match', () => {
+	const items = [
+		item('suv-blue', 'alphaSuv', 'blue'),
+		item('sedan-red', 'alphaSedan', 'red'),
+		item('suv-red', 'alphaSuv', 'red'),
+		item('sedan-blue', 'alphaSedan', 'blue')
+	];
+
+	assert.deepEqual(sort(items, { key: 'producto_color', dir: 'asc' }), [
+		'sedan-red',
+		'sedan-blue',
+		'suv-red',
+		'suv-blue'
 	]);
 });
 

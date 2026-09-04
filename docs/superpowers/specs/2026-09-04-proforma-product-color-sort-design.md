@@ -16,8 +16,8 @@ Let users of new and existing proforma forms reorder concept rows by product tit
 Compare populated rows by:
 
 1. Product title.
-2. Color `sort_order` from `/dashboard/colors`.
-3. Product model.
+2. Product model and identity, keeping every row for one product together.
+3. Color `sort_order` from `/dashboard/colors` within that product.
 4. Original arrival sequence for stable ties.
 
 Blank or unknown colors follow configured colors in ascending order. Descending reverses product, color, and model comparison while retaining stable arrival order for exact ties.
