@@ -11,6 +11,7 @@
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import { onMount, tick } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { SvelteDate } from 'svelte/reactivity';
 	import {
 		Plus,
@@ -23,11 +24,21 @@
 		DollarSign,
 		AlertTriangle,
 		Zap,
-		RefreshCw
+		RefreshCw,
+		ArrowUp,
+		ArrowDown,
+		ArrowUpDown,
+		History
 	} from '@lucide/svelte';
 	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
 	import ProformaCsvImport from '$lib/components/ProformaCsvImport.svelte';
 	import type { CsvImportRow } from '$lib/proformaCsv';
+	import {
+		nextSortState,
+		sortProformaItems,
+		type ProformaSortKey,
+		type ProformaSortState
+	} from '$lib/proformaSort';
 
 	type ProductOption = {
 		id: string;
@@ -309,6 +320,39 @@
 		)
 	);
 
+	// Orden de filas: clic en cabecera reordena array real (se guarda así).
+	let sortState = $state<ProformaSortState>(null);
+	let seqCounter = 0;
+	const seqById = new Map<string, number>();
+	function seqOf(id: string): number {
+		let seq = seqById.get(id);
+		if (seq === undefined) {
+			seq = seqCounter++;
+			seqById.set(id, seq);
+		}
+		return seq;
+	}
+	function sortProductTitle(productId: string): string {
+		return clientProducts.find((p) => p.id === productId)?.title ?? '';
+	}
+	function sortModelName(productId: string): string {
+		const modelId = clientProducts.find((p) => p.id === productId)?.model ?? null;
+		if (!modelId) return '';
+		return models.find((m) => m.id === modelId)?.model ?? '';
+	}
+	function applySort(key: ProformaSortKey) {
+		for (const item of items) seqOf(item.id);
+		sortState = nextSortState(sortState, key);
+		items = sortProformaItems(items, sortState, {
+			productTitle: sortProductTitle,
+			modelName: sortModelName,
+			seqOf
+		});
+	}
+	function sortDirOf(key: ProformaSortKey): 'asc' | 'desc' | null {
+		return sortState?.key === key ? sortState.dir : null;
+	}
+
 	// Totals calculations (derived)
 	const totalQuantity = $derived(
 		items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -555,6 +599,23 @@
 						variant="outline"
 						size="sm"
 						class="flex items-center gap-1"
+						onclick={() => applySort('reciente')}
+						disabled={loading || items.filter((i) => i.product_id).length < 2}
+						title="Ordenar por último añadido (asc/desc)"
+					>
+						<History class="h-3.5 w-3.5" />
+						Reciente
+						{#if sortDirOf('reciente') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortDirOf('reciente') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="flex items-center gap-1"
 						onclick={() => {
 							const allMatch = items.every((item) => {
 								if (!item.product_id) return true;
@@ -623,11 +684,75 @@
 							class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
 						>
 							<tr>
-								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Producto</th>
-								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">Modelo</th>
+								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">
+									<button
+										type="button"
+										onclick={() => applySort('producto')}
+										class="inline-flex items-center gap-1 tracking-wider uppercase hover:text-[#171717]"
+										title="Ordenar por producto + modelo"
+									>
+										Producto
+										{#if sortDirOf('producto') === 'asc'}
+											<ArrowUp class="h-3 w-3" />
+										{:else if sortDirOf('producto') === 'desc'}
+											<ArrowDown class="h-3 w-3" />
+										{:else}
+											<ArrowUpDown class="h-3 w-3 opacity-40" />
+										{/if}
+									</button>
+								</th>
+								<th class="w-1/4 px-3 py-2.5 text-left font-semibold">
+									<button
+										type="button"
+										onclick={() => applySort('modelo')}
+										class="inline-flex items-center gap-1 tracking-wider uppercase hover:text-[#171717]"
+										title="Ordenar por modelo"
+									>
+										Modelo
+										{#if sortDirOf('modelo') === 'asc'}
+											<ArrowUp class="h-3 w-3" />
+										{:else if sortDirOf('modelo') === 'desc'}
+											<ArrowDown class="h-3 w-3" />
+										{:else}
+											<ArrowUpDown class="h-3 w-3 opacity-40" />
+										{/if}
+									</button>
+								</th>
 								<th class="w-1/5 px-3 py-2.5 text-left font-semibold">Color</th>
-								<th class="w-24 px-3 py-2.5 text-left font-semibold">Cant.</th>
-								<th class="w-32 px-3 py-2.5 text-left font-semibold">Precio unit.</th>
+								<th class="w-24 px-3 py-2.5 text-left font-semibold">
+									<button
+										type="button"
+										onclick={() => applySort('cantidad')}
+										class="inline-flex items-center gap-1 tracking-wider uppercase hover:text-[#171717]"
+										title="Ordenar por cantidad"
+									>
+										Cant.
+										{#if sortDirOf('cantidad') === 'asc'}
+											<ArrowUp class="h-3 w-3" />
+										{:else if sortDirOf('cantidad') === 'desc'}
+											<ArrowDown class="h-3 w-3" />
+										{:else}
+											<ArrowUpDown class="h-3 w-3 opacity-40" />
+										{/if}
+									</button>
+								</th>
+								<th class="w-32 px-3 py-2.5 text-left font-semibold">
+									<button
+										type="button"
+										onclick={() => applySort('precio')}
+										class="inline-flex items-center gap-1 tracking-wider uppercase hover:text-[#171717]"
+										title="Ordenar por precio unitario"
+									>
+										Precio unit.
+										{#if sortDirOf('precio') === 'asc'}
+											<ArrowUp class="h-3 w-3" />
+										{:else if sortDirOf('precio') === 'desc'}
+											<ArrowDown class="h-3 w-3" />
+										{:else}
+											<ArrowUpDown class="h-3 w-3 opacity-40" />
+										{/if}
+									</button>
+								</th>
 								<th class="w-1/6 px-3 py-2.5 text-left font-semibold">Total</th>
 								<th class="w-20 px-2 py-2.5 text-left font-semibold">Acciones</th>
 							</tr>
@@ -953,13 +1078,14 @@
 {#if items.length >= 2}
 	<button
 		type="button"
-		class="fixed right-4 bottom-4 z-40 flex h-11 w-11 items-center justify-center rounded-md bg-[#3ecf8e] text-[#171717] shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-colors hover:bg-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:top-1/2 md:right-6 md:bottom-auto md:-translate-y-1/2"
+		transition:fly={{ y: 16, duration: 220 }}
+		class="group fixed right-5 bottom-5 z-40 flex h-12 w-12 items-center justify-center rounded-md bg-[#3ecf8e] text-[#171717] shadow-[0_8px_24px_rgba(0,0,0,0.12),0_2px_8px_rgba(36,180,126,0.35)] ring-1 ring-[#24b47e]/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#24b47e] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12),0_4px_12px_rgba(36,180,126,0.45)] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0 active:scale-95 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50 md:right-8 md:bottom-8"
 		disabled={loading || !canAddItem}
 		onclick={addItemAndNavigate}
 		aria-label="Añadir fila y continuar en la nueva fila"
 		title="Añadir fila"
 	>
-		<Plus class="h-5 w-5" />
+		<Plus class="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
 	</button>
 {/if}
 

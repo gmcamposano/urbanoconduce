@@ -232,27 +232,44 @@ export function buildSampleCsv(
 	products: CsvProductOption[],
 	models: CsvModelOption[],
 	colors: CsvColorOption[],
-	maxRows = 3
+	maxRows?: number
 ): string {
 	const modelNameById = new Map(models.map((m) => [m.id, m.model]));
 	const lines = [CSV_HEADERS.join(',')];
 	const sorted = [...products].sort((a, b) =>
 		a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
 	);
-	const sampleColors = colors.length > 0 ? colors.map((c) => c.color) : ['', ''];
-	let added = 0;
-	for (let i = 0; i < sorted.length && added < maxRows; i++) {
-		const p = sorted[i];
-		const modelName = p.model ? (modelNameById.get(p.model) ?? '') : '';
-		const color = sampleColors[added % sampleColors.length] ?? '';
-		lines.push(
-			[csvEscape(p.title), csvEscape(modelName), csvEscape(color), csvEscape(added + 1)].join(',')
-		);
-		added++;
+	if (sorted.length === 0) {
+		// Sin productos no inventar nombres: solo cabecera -> evita errores de validación.
+		return '\uFEFF' + lines.join('\n') + '\n';
 	}
-	if (added === 0) {
-		lines.push('Cover,Elite,rojo,2');
-		lines.push('Cover,Pro,azul,5');
+	const colorNames = colors.map((c) => c.color);
+	const limit = maxRows ?? sorted.length;
+	// Una fila ejemplo por cada producto con nombres exactos del catálogo.
+	// Usuario copia/edita cantidades -> cero errores por typos.
+	sorted.slice(0, limit).forEach((p) => {
+		const modelName = p.model ? (modelNameById.get(p.model) ?? '') : '';
+		const idx = lines.length - 1;
+		const color = colorNames.length > 0 ? (colorNames[idx % colorNames.length] ?? '') : '';
+		lines.push(
+			[csvEscape(p.title), csvEscape(modelName), csvEscape(color), csvEscape(1)].join(',')
+		);
+	});
+	// Si hay más colores que productos, añadir filas extra con primer producto
+	// para que cada color aparezca al menos una vez como ejemplo copiable.
+	if (colorNames.length > lines.length - 1 && sorted.length > 0) {
+		const first = sorted[0];
+		const firstModel = first.model ? (modelNameById.get(first.model) ?? '') : '';
+		for (let i = lines.length - 1; i < colorNames.length; i++) {
+			lines.push(
+				[
+					csvEscape(first.title),
+					csvEscape(firstModel),
+					csvEscape(colorNames[i]),
+					csvEscape(1)
+				].join(',')
+			);
+		}
 	}
 	return '\uFEFF' + lines.join('\n') + '\n';
 }

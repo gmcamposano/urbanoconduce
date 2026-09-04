@@ -69,7 +69,7 @@
 	size="sm"
 	class="flex items-center gap-1"
 	onclick={handleDownload}
-	title="Descargar plantilla CSV con columnas producto, modelo, color, cantidad"
+	title="Descargar plantilla CSV con ejemplos reales de tu catálogo: producto, modelo, color, cantidad"
 >
 	<Download class="h-3.5 w-3.5" />
 	Plantilla
@@ -124,8 +124,8 @@
 				{/each}
 			</ul>
 			<p class="mt-3 text-xs text-[#707070]">
-				Formato: <span class="font-mono">producto,modelo,color,cantidad</span>. Nombres deben
-				existir en catálogo. Cantidad &gt; 0.
+				Formato: <span class="font-mono">producto,modelo,color,cantidad</span>. Usa los nombres
+				exactos de la plantilla — ya trae ejemplos reales de tu catálogo. Cantidad &gt; 0.
 			</p>
 		{/if}
 
