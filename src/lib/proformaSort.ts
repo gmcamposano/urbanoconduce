@@ -1,10 +1,17 @@
-export type ProformaSortKey = 'producto' | 'modelo' | 'cantidad' | 'precio' | 'reciente';
+export type ProformaSortKey =
+	| 'producto'
+	| 'producto_color'
+	| 'modelo'
+	| 'cantidad'
+	| 'precio'
+	| 'reciente';
 export type ProformaSortDir = 'asc' | 'desc';
 export type ProformaSortState = { key: ProformaSortKey; dir: ProformaSortDir } | null;
 
 export type SortableItem = {
 	id: string;
 	product_id: string;
+	color: string;
 	quantity: number;
 	unit_price: number;
 };
@@ -12,6 +19,7 @@ export type SortableItem = {
 export type ProformaSortResolvers = {
 	productTitle: (productId: string) => string;
 	modelName: (productId: string) => string;
+	colorRank: (color: string) => number;
 	seqOf: (id: string) => number;
 };
 
@@ -44,6 +52,29 @@ export function sortProformaItems<T extends SortableItem>(
 					compareText(resolvers.productTitle(a.product_id), resolvers.productTitle(b.product_id)) ||
 					compareText(resolvers.modelName(a.product_id), resolvers.modelName(b.product_id));
 				if (t !== 0) return t * dir;
+				break;
+			}
+			case 'producto_color': {
+				const productComparison = compareText(
+					resolvers.productTitle(a.product_id),
+					resolvers.productTitle(b.product_id)
+				);
+				if (productComparison !== 0) return productComparison * dir;
+
+				const aColorRank = resolvers.colorRank(a.color);
+				const bColorRank = resolvers.colorRank(b.color);
+				const aColorKnown = Number.isFinite(aColorRank);
+				const bColorKnown = Number.isFinite(bColorRank);
+				if (aColorKnown !== bColorKnown) return aColorKnown ? -1 : 1;
+				if (aColorKnown && bColorKnown && aColorRank !== bColorRank) {
+					return (aColorRank - bColorRank) * dir;
+				}
+
+				const modelComparison = compareText(
+					resolvers.modelName(a.product_id),
+					resolvers.modelName(b.product_id)
+				);
+				if (modelComparison !== 0) return modelComparison * dir;
 				break;
 			}
 			case 'modelo': {

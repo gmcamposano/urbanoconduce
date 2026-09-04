@@ -11,16 +11,6 @@
 
 	const profile = $derived(data.profile);
 	const activePath = $derived(page.url.pathname);
-
-	$effect(() => {
-		if (mobileMenuOpen) {
-			document.body.style.overflow = 'hidden';
-			document.body.style.height = '100vh';
-		} else {
-			document.body.style.overflow = '';
-			document.body.style.height = '';
-		}
-	});
 </script>
 
 <div class="flex min-h-screen flex-1 flex-col bg-[#fafafa] text-[#171717] md:flex-row">
@@ -50,7 +40,7 @@
 		<MobileMenu {profile} {activePath} onClose={() => (mobileMenuOpen = false)} />
 	{/if}
 
-	<main class="flex flex-1 flex-col bg-[#fafafa] p-6 md:p-10 min-w-0">
+	<main class="flex min-w-0 flex-1 flex-col bg-[#fafafa] p-6 md:p-10">
 		{@render children()}
 	</main>
 </div>

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { lockBodyScroll } from '$lib/bodyScrollLock';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import {
 		LayoutDashboard,
 		Users,
@@ -52,9 +54,20 @@
 			? 'bg-[#3ecf8e] text-[#171717] shadow-sm shadow-black/5'
 			: 'text-[#707070] hover:bg-[#fafafa] hover:text-[#171717]';
 	}
+
+	const lockMobileMenuBody: Attachment<HTMLElement> = () => {
+		const releaseScrollLock = lockBodyScroll();
+		const previousHeight = document.body.style.height;
+		document.body.style.height = '100vh';
+
+		return () => {
+			releaseScrollLock();
+			document.body.style.height = previousHeight;
+		};
+	};
 </script>
 
-<div class="fixed inset-0 z-50 flex overflow-hidden">
+<div class="fixed inset-0 z-50 flex overflow-hidden" {@attach lockMobileMenuBody}>
 	<button
 		class="absolute inset-0 cursor-default bg-black/30"
 		onclick={onClose}

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { fly } from 'svelte/transition';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
@@ -27,7 +28,8 @@
 		ArrowUp,
 		ArrowDown,
 		ArrowUpDown,
-		History
+		History,
+		Palette
 	} from '@lucide/svelte';
 	import QuickAddDialog from '$lib/components/QuickAddDialog.svelte';
 	import ProformaCsvImport from '$lib/components/ProformaCsvImport.svelte';
@@ -369,7 +371,7 @@
 	// Orden de filas: clic en cabecera reordena array real (se guarda así).
 	let sortState = $state<ProformaSortState>(null);
 	let seqCounter = 0;
-	const seqById = new Map<string, number>();
+	const seqById = new SvelteMap<string, number>();
 	function seqOf(id: string): number {
 		let seq = seqById.get(id);
 		if (seq === undefined) {
@@ -386,12 +388,23 @@
 		if (!modelId) return '';
 		return models.find((m) => m.id === modelId)?.model ?? '';
 	}
+	function colorRank(color: string): number {
+		const normalizedColor = color.trim().toLocaleLowerCase();
+		if (!normalizedColor) return Number.POSITIVE_INFINITY;
+		const matchedColor = colors.find(
+			(entry) => (entry.color ?? '').trim().toLocaleLowerCase() === normalizedColor
+		);
+		if (!matchedColor || !('sort_order' in matchedColor)) return Number.POSITIVE_INFINITY;
+		const rank = Number(matchedColor.sort_order);
+		return Number.isFinite(rank) ? rank : Number.POSITIVE_INFINITY;
+	}
 	function applySort(key: ProformaSortKey) {
 		for (const item of editor.items) seqOf(item.id);
 		sortState = nextSortState(sortState, key);
 		editor.items = sortProformaItems(editor.items, sortState, {
 			productTitle: sortProductTitle,
 			modelName: sortModelName,
+			colorRank,
 			seqOf
 		});
 	}
@@ -623,6 +636,23 @@
 							{#if sortDirOf('reciente') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortDirOf('reciente') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="flex items-center gap-1"
+							onclick={() => applySort('producto_color')}
+							disabled={loading || editor.items.filter((i) => i.product_id).length < 2}
+							title="Ordenar primero por producto y luego por el orden de colores del panel (asc/desc)"
+						>
+							<Palette class="h-3.5 w-3.5" />
+							Producto + color
+							{#if sortDirOf('producto_color') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortDirOf('producto_color') === 'desc'}
 								<ArrowDown class="h-3 w-3" />
 							{/if}
 						</Button>

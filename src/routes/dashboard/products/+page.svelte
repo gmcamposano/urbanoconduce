@@ -8,17 +8,7 @@
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-	import {
-		Copy,
-		Edit3,
-		Package,
-		Tags,
-		Trash2,
-		ArrowUp,
-		ArrowDown,
-		Search,
-		Maximize2
-	} from '@lucide/svelte';
+	import { Package, Tags, ArrowUp, ArrowDown, Search, Maximize2 } from '@lucide/svelte';
 	import ProductRow from './ProductRow.svelte';
 
 	let { data, form } = $props();
@@ -188,7 +178,6 @@
 		editDescription = product.description || '';
 		editPriceWithoutTaxes = String(product.price_without_taxes ?? '');
 		editModel = product.model || '';
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closeEditDialog() {
@@ -198,7 +187,6 @@
 		editPriceWithoutTaxes = '';
 		editModel = '';
 		editLoading = false;
-		document.body.style.overflow = '';
 	}
 
 	function openDeleteDialog(product: (typeof products)[number]) {
@@ -206,13 +194,11 @@
 			id: product.id,
 			title: product.title
 		};
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closeDeleteDialog() {
 		productToDelete = null;
 		deleteLoading = false;
-		document.body.style.overflow = '';
 	}
 
 	function openSingleDuplicateModal(product: (typeof products)[number]) {
@@ -220,7 +206,6 @@
 		selectedModelsForDuplicate = [];
 		singleDuplicateError = '';
 		singleDuplicateModalOpen = true;
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closeSingleDuplicateModal() {
@@ -230,7 +215,6 @@
 		singleDuplicateLoading = false;
 		singleDuplicateError = '';
 		singleDuplicateModelSearch = '';
-		document.body.style.overflow = '';
 	}
 
 	function toggleModelForDuplicate(modelId: string) {
@@ -272,12 +256,10 @@
 
 	function openTableModal() {
 		tableExpanded = true;
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closeTableModal() {
 		tableExpanded = false;
-		document.body.style.overflow = '';
 	}
 </script>
 

@@ -53,12 +53,10 @@
 
 	function openPricesModal() {
 		showPricesModal = true;
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closePricesModal() {
 		showPricesModal = false;
-		document.body.style.overflow = '';
 	}
 
 	const catalogPrice = $derived(Number(product.price_without_taxes));
@@ -115,13 +113,11 @@
 			clientName: getClientLabel(client),
 			catalogPrice
 		};
-		document.body.style.overflow = 'hidden';
 	}
 
 	function closeDeletePriceDialog() {
 		priceToDelete = null;
 		deletePriceLoading = false;
-		document.body.style.overflow = '';
 	}
 </script>
 

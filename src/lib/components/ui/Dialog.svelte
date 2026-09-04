@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { bodyScrollLock } from '$lib/bodyScrollLock';
 	import { X } from '@lucide/svelte';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -28,21 +29,6 @@
 			onClose?.();
 		}
 	}
-
-	$effect(() => {
-		if (!open) return;
-		const prevOverflow = document.body.style.overflow;
-		const prevPaddingRight = document.body.style.paddingRight;
-		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-		document.body.style.overflow = 'hidden';
-		if (scrollbarWidth > 0) {
-			document.body.style.paddingRight = `${scrollbarWidth}px`;
-		}
-		return () => {
-			document.body.style.overflow = prevOverflow;
-			document.body.style.paddingRight = prevPaddingRight;
-		};
-	});
 </script>
 
 <svelte:window onkeydown={open ? handleKeydown : undefined} />
@@ -52,6 +38,7 @@
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm"
 		role="presentation"
 		onclick={() => onClose?.()}
+		{@attach bodyScrollLock}
 	>
 		<div
 			class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl border border-[#dfdfdf] bg-white text-[#171717] shadow-[0_16px_48px_rgba(0,0,0,0.12)] {className}"
