@@ -133,6 +133,31 @@ export async function resolveVariantIdForItem(
 	return { id: data.id, error: null };
 }
 
+export function getProductVariantKey(productId: string, color: string) {
+	return `${productId}:${(color || '').trim().toLowerCase()}`;
+}
+
+export async function resolveVariantIdsForItems(
+	supabase: TypedSupabase,
+	items: { product_id: string; color: string }[]
+) {
+	const productIds = [...new Set(items.map((item) => item.product_id).filter(Boolean))];
+	const variants = new Map<string, string>();
+	if (productIds.length === 0) return { variants, error: null };
+
+	const { data, error } = await supabase
+		.from('product_variants')
+		.select('id, product_id, color')
+		.in('product_id', productIds);
+
+	if (error) return { variants, error };
+	for (const variant of data || []) {
+		variants.set(getProductVariantKey(variant.product_id, variant.color), variant.id);
+	}
+
+	return { variants, error: null };
+}
+
 export async function getClientProductPrices(
 	supabase: TypedSupabase,
 	clientId: string,

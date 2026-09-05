@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCurrentRowsCsv } from './proformaCsv.ts';
+import { buildCurrentRowsCsv, parseProformaCsv } from './proformaCsv.ts';
 
 const products = [
 	{ id: 'first', title: 'Producto, "Uno"', model: 'model-one' },
@@ -12,6 +12,73 @@ const colors = [
 	{ id: 'red', color: 'Rojo', sort_order: 1 },
 	{ id: 'blue', color: 'Azul', sort_order: 2 }
 ];
+
+test('separates new rows from changed quantities and ignores unchanged matches', () => {
+	const result = parseProformaCsv(
+		'producto,modelo,color,cantidad\nProducto,Modelo,Rojo,4\nProducto,Modelo,Azul,2\nNuevo,,Rojo,3\n',
+		[
+			{ id: 'product', title: 'Producto', model: 'model' },
+			{ id: 'new', title: 'Nuevo', model: null }
+		],
+		[{ id: 'model', model: 'Modelo' }],
+		colors,
+		[
+			{ product_id: 'product', color: 'rojo', quantity: 1 },
+			{ product_id: 'product', color: 'AZUL', quantity: 2 }
+		]
+	);
+
+	assert.deepEqual(result.rows, [
+		{ productId: 'new', productTitle: 'Nuevo', color: 'Rojo', quantity: 3 }
+	]);
+	assert.deepEqual(result.replacements, [
+		{ productId: 'product', productTitle: 'Producto', color: 'Rojo', quantity: 4 }
+	]);
+	assert.deepEqual(result.errors, []);
+});
+
+test('merges duplicate CSV rows before comparing current quantity', () => {
+	const result = parseProformaCsv(
+		'producto,modelo,color,cantidad\nProducto,Modelo,Rojo,2\nProducto,Modelo,rojo,3\n',
+		[{ id: 'product', title: 'Producto', model: 'model' }],
+		[{ id: 'model', model: 'Modelo' }],
+		colors,
+		[{ product_id: 'product', color: 'ROJO', quantity: '5' }]
+	);
+
+	assert.deepEqual(result.rows, []);
+	assert.deepEqual(result.replacements, []);
+	assert.deepEqual(result.errors, []);
+});
+
+test('matches blank colors when replacing quantities', () => {
+	const result = parseProformaCsv(
+		'producto,modelo,color,cantidad\nProducto,Modelo,,6\n',
+		[{ id: 'product', title: 'Producto', model: 'model' }],
+		[{ id: 'model', model: 'Modelo' }],
+		colors,
+		[{ product_id: 'product', color: '', quantity: 1 }]
+	);
+
+	assert.deepEqual(result.rows, []);
+	assert.deepEqual(result.replacements, [
+		{ productId: 'product', productTitle: 'Producto', color: '', quantity: 6 }
+	]);
+});
+
+test('keeps invalid rows as errors without creating changes', () => {
+	const result = parseProformaCsv(
+		'producto,modelo,color,cantidad\nProducto,Modelo,Rojo,0\n',
+		[{ id: 'product', title: 'Producto', model: 'model' }],
+		[{ id: 'model', model: 'Modelo' }],
+		colors,
+		[{ product_id: 'product', color: 'Rojo', quantity: 1 }]
+	);
+
+	assert.deepEqual(result.rows, []);
+	assert.deepEqual(result.replacements, []);
+	assert.equal(result.errors.length, 1);
+});
 
 test('builds import-compatible BOM CSV in canonical product and color order', () => {
 	const csv = buildCurrentRowsCsv(

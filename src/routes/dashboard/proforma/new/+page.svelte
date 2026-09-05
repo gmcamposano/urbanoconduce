@@ -316,25 +316,30 @@
 		quickAddOpen = false;
 	}
 
-	function handleCsvImport(rows: CsvImportRow[]) {
-		items = items.filter((i) => i.product_id);
+	function handleCsvImport(rows: CsvImportRow[], replacements: CsvImportRow[]) {
+		const replacementQuantityByPair = new Map(
+			replacements.map((row) => [
+				`${row.productId}|${row.color.trim().toLowerCase()}`,
+				row.quantity
+			])
+		);
+		const nextItems = items
+			.filter((item) => item.product_id)
+			.map((item) => {
+				const quantity = replacementQuantityByPair.get(
+					`${item.product_id}|${item.color.trim().toLowerCase()}`
+				);
+				return quantity === undefined ? item : { ...item, quantity };
+			});
 		for (const row of rows) {
 			const item = createItem();
 			applyProductToItem(item, row.productId);
 			item.color = row.color;
 			item.quantity = row.quantity;
-			items.push(item);
+			nextItems.push(item);
 		}
-		if (items.length === 0) items = [createItem()];
+		items = nextItems.length > 0 ? nextItems : [createItem()];
 	}
-
-	const csvExistingPairs = $derived(
-		new Set(
-			items
-				.filter((i) => i.product_id && i.color)
-				.map((i) => `${i.product_id}|${i.color.trim().toLowerCase()}`)
-		)
-	);
 
 	// Orden de filas: clic en cabecera reordena array real (se guarda así).
 	let sortState = $state<ProformaSortState>(null);
@@ -617,7 +622,6 @@
 						products={clientProducts}
 						{models}
 						{colors}
-						existingPairs={csvExistingPairs}
 						currentRows={items}
 						proformaNumber={invoiceNumber}
 						disabled={loading || !selectedClientId}

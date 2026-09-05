@@ -1,6 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveUnitPrices, resolveVariantIdForItem } from '$lib/server/inventory';
+import {
+	getProductVariantKey,
+	resolveUnitPrices,
+	resolveVariantIdsForItems
+} from '$lib/server/inventory';
 
 const VALID_STATUSES = ['draft', 'pending', 'paid', 'overdue'] as const;
 
@@ -239,6 +243,13 @@ export const actions: Actions = {
 
 		const { prices: resolvedPrices } = await resolveUnitPrices(locals.supabase, clientId, products);
 		const productMap = new Map(products.map((product) => [product.id, product]));
+		const { variants: variantIds, error: variantsError } = await resolveVariantIdsForItems(
+			locals.supabase,
+			items
+		);
+		if (variantsError) {
+			return fail(400, { error: variantsError.message });
+		}
 		const missingVariantsByKey = new Map<
 			string,
 			{ productId: string; productTitle: string; color: string }
@@ -249,11 +260,7 @@ export const actions: Actions = {
 			const color = (item.color || '').trim().toLowerCase();
 			if (!product) continue;
 
-			const { id: variantId } = await resolveVariantIdForItem(
-				locals.supabase,
-				item.product_id,
-				color
-			);
+			const variantId = variantIds.get(getProductVariantKey(item.product_id, color));
 			if (!variantId) {
 				missingVariantsByKey.set(`${item.product_id}:${color}`, {
 					productId: item.product_id,
@@ -270,19 +277,25 @@ export const actions: Actions = {
 		}
 
 		if (shouldCreateMissing && missingVariantsByKey.size > 0) {
-			const { error: createVariantsError } = await locals.supabase.from('product_variants').insert(
-				Array.from(missingVariantsByKey.values()).map((variant) => ({
-					product_id: variant.productId,
-					color: variant.color,
-					min_stock: 0,
-					created_by: user.id
-				}))
-			);
+			const { data: createdVariants, error: createVariantsError } = await locals.supabase
+				.from('product_variants')
+				.insert(
+					Array.from(missingVariantsByKey.values()).map((variant) => ({
+						product_id: variant.productId,
+						color: variant.color,
+						min_stock: 0,
+						created_by: user.id
+					}))
+				)
+				.select('id, product_id, color');
 
 			if (createVariantsError) {
 				return fail(400, {
 					error: `No se pudieron crear las variantes: ${createVariantsError.message}`
 				});
+			}
+			for (const variant of createdVariants || []) {
+				variantIds.set(getProductVariantKey(variant.product_id, variant.color), variant.id);
 			}
 		}
 
@@ -319,11 +332,7 @@ export const actions: Actions = {
 				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
 			}
 
-			const { id: variantId } = await resolveVariantIdForItem(
-				locals.supabase,
-				item.product_id,
-				color
-			);
+			const variantId = variantIds.get(getProductVariantKey(item.product_id, color));
 			if (!variantId) {
 				return fail(400, {
 					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`

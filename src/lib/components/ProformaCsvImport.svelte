@@ -2,7 +2,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import type { Attachment } from 'svelte/attachments';
-	import { Download, Upload } from '@lucide/svelte';
+	import { AlertTriangle, Download, Upload } from '@lucide/svelte';
 	import {
 		downloadCurrentRowsCsv,
 		downloadSampleCsv,
@@ -11,6 +11,7 @@
 		type CsvCurrentRow,
 		type CsvImportRow,
 		type CsvModelOption,
+		type CsvParseResult,
 		type CsvProductOption,
 		type CsvRowError
 	} from '$lib/proformaCsv';
@@ -19,18 +20,16 @@
 		products: CsvProductOption[];
 		models: CsvModelOption[];
 		colors: CsvColorOption[];
-		existingPairs?: Set<string>;
 		currentRows: CsvCurrentRow[];
 		proformaNumber: string;
 		disabled?: boolean;
-		onImport: (rows: CsvImportRow[]) => void;
+		onImport: (rows: CsvImportRow[], replacements: CsvImportRow[]) => void;
 	};
 
 	let {
 		products,
 		models,
 		colors,
-		existingPairs,
 		currentRows,
 		proformaNumber,
 		disabled = false,
@@ -40,8 +39,10 @@
 	let fileInput: HTMLInputElement | null = null;
 	let reportOpen = $state(false);
 	let importedCount = $state(0);
+	let updatedCount = $state(0);
 	let rowErrors = $state<CsvRowError[]>([]);
 	let fileName = $state('');
+	let pendingImport = $state<(CsvParseResult & { fileName: string }) | null>(null);
 
 	function handleDownload() {
 		downloadSampleCsv(products, models, colors);
@@ -74,13 +75,34 @@
 		const file = input.files?.[0];
 		input.value = '';
 		if (!file) return;
-		fileName = file.name;
 		const text = await file.text();
-		const { rows, errors } = parseProformaCsv(text, products, models, colors, existingPairs);
-		if (rows.length > 0) onImport(rows);
-		importedCount = rows.length;
-		rowErrors = errors;
+		const result = parseProformaCsv(text, products, models, colors, currentRows);
+		if (result.replacements.length > 0) {
+			pendingImport = { ...result, fileName: file.name };
+			return;
+		}
+		if (result.rows.length > 0) onImport(result.rows, []);
+		showReport(result, file.name);
+	}
+
+	function showReport(result: CsvParseResult, importedFileName: string) {
+		fileName = importedFileName;
+		importedCount = result.rows.length;
+		updatedCount = result.replacements.length;
+		rowErrors = result.errors;
 		reportOpen = true;
+	}
+
+	function cancelPendingImport() {
+		pendingImport = null;
+	}
+
+	function confirmPendingImport() {
+		if (!pendingImport) return;
+		const result = pendingImport;
+		onImport(result.rows, result.replacements);
+		pendingImport = null;
+		showReport(result, result.fileName);
 	}
 </script>
 
@@ -134,27 +156,70 @@
 	Subir CSV
 </Button>
 
+{#if pendingImport}
+	<Dialog
+		open
+		title="Actualizar cantidades existentes"
+		description={`${pendingImport.fileName}: el CSV contiene cantidades distintas para conceptos que ya existen.`}
+		class="max-w-md"
+		onClose={cancelPendingImport}
+	>
+		<div class="space-y-3">
+			<div class="flex items-start gap-2 text-sm text-[#e2005a]">
+				<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+				<p>Confirma antes de reemplazar las cantidades actuales.</p>
+			</div>
+			<div class="rounded-md border border-[#ededed] bg-[#fafafa] p-3 text-sm text-[#171717]">
+				<p>
+					<span class="font-medium">{pendingImport.replacements.length}</span> cantidad(es) existente(s)
+					por actualizar.
+				</p>
+				<p class="mt-1">
+					<span class="font-medium">{pendingImport.rows.length}</span> fila(s) nueva(s) por añadir.
+				</p>
+			</div>
+		</div>
+
+		{#snippet footer()}
+			<button
+				type="button"
+				class="rounded-md border border-[#dfdfdf] bg-white px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#fafafa]"
+				onclick={cancelPendingImport}
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-md bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-[#171717] transition-colors hover:bg-[#24b47e]"
+				onclick={confirmPendingImport}
+			>
+				Actualizar cantidades e importar
+			</button>
+		{/snippet}
+	</Dialog>
+{/if}
+
 {#if reportOpen}
 	<Dialog
 		open
 		title="Importación CSV"
 		description={fileName
-			? `${fileName}: ${importedCount} fila(s) añadida(s)${rowErrors.length ? `, ${rowErrors.length} con error` : ''}. Precio lo pone el sistema.`
+			? `${fileName}: ${importedCount} fila(s) añadida(s), ${updatedCount} cantidad(es) actualizada(s)${rowErrors.length ? `, ${rowErrors.length} con error` : ''}. Precio lo pone el sistema.`
 			: 'Resultado de la importación.'}
 		class="max-w-md"
 		onClose={() => (reportOpen = false)}
 	>
-		{#if importedCount > 0 && rowErrors.length === 0}
+		{#if (importedCount > 0 || updatedCount > 0) && rowErrors.length === 0}
 			<p class="text-sm text-[#171717]">
-				{importedCount} fila(s) añadida(s) sin errores.
+				{importedCount} fila(s) añadida(s) y {updatedCount} cantidad(es) actualizada(s) sin errores.
 			</p>
-		{:else if importedCount === 0 && rowErrors.length > 0}
+		{:else if importedCount === 0 && updatedCount === 0 && rowErrors.length > 0}
 			<p class="text-sm text-[#e2005a]">Nada importado. Corrige el CSV e intenta de nuevo.</p>
-		{:else if importedCount === 0 && rowErrors.length === 0}
-			<p class="text-sm text-[#707070]">Archivo sin filas de datos.</p>
+		{:else if importedCount === 0 && updatedCount === 0 && rowErrors.length === 0}
+			<p class="text-sm text-[#707070]">No hubo filas nuevas ni cantidades por actualizar.</p>
 		{:else}
 			<p class="text-sm text-[#171717]">
-				{importedCount} fila(s) añadida(s). Revisa las omitidas:
+				{importedCount} fila(s) añadida(s) y {updatedCount} cantidad(es) actualizada(s). Revisa las omitidas:
 			</p>
 		{/if}
 

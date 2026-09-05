@@ -1,6 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveVariantIdForItem, resolveUnitPrices } from '$lib/server/inventory';
+import {
+	getProductVariantKey,
+	resolveVariantIdsForItems,
+	resolveUnitPrices
+} from '$lib/server/inventory';
 import { generateUniqueInvoiceNumber, isInvoiceNumberTaken } from '$lib/server/invoiceNumber';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
@@ -161,6 +165,13 @@ export const actions: Actions = {
 			String(formData.get('create_missing_variants') ?? '').trim() === 'true';
 
 		const productMap = new Map((products || []).map((product) => [product.id, product]));
+		const { variants: variantIds, error: variantsError } = await resolveVariantIdsForItems(
+			locals.supabase,
+			items
+		);
+		if (variantsError) {
+			return fail(400, { error: variantsError.message });
+		}
 
 		// Detect items that still lack an inventory variant.
 		const missingVariantsByKey = new Map<
@@ -171,11 +182,7 @@ export const actions: Actions = {
 			const product = productMap.get(item.product_id);
 			const color = (item.color || '').trim().toLowerCase();
 			if (!product) continue;
-			const { id: variantId } = await resolveVariantIdForItem(
-				locals.supabase,
-				item.product_id,
-				color
-			);
+			const variantId = variantIds.get(getProductVariantKey(item.product_id, color));
 			if (!variantId) {
 				const key = `${item.product_id}:${color}`;
 				missingVariantsByKey.set(key, {
@@ -200,14 +207,18 @@ export const actions: Actions = {
 				created_by: user.id
 			}));
 
-			const { error: createVariantsError } = await locals.supabase
+			const { data: createdVariants, error: createVariantsError } = await locals.supabase
 				.from('product_variants')
-				.insert(variantsToCreate);
+				.insert(variantsToCreate)
+				.select('id, product_id, color');
 
 			if (createVariantsError) {
 				return fail(400, {
 					error: `No se pudieron crear las variantes: ${createVariantsError.message}`
 				});
+			}
+			for (const variant of createdVariants || []) {
+				variantIds.set(getProductVariantKey(variant.product_id, variant.color), variant.id);
 			}
 		}
 
@@ -244,11 +255,7 @@ export const actions: Actions = {
 			}
 
 			const model = (item.model || '').trim() || null;
-			const { id: variantId } = await resolveVariantIdForItem(
-				locals.supabase,
-				item.product_id,
-				color
-			);
+			const variantId = variantIds.get(getProductVariantKey(item.product_id, color));
 			if (!variantId) {
 				return fail(400, {
 					error: `No existe una variante de inventario para "${product.title}" con color "${color || 'sin color'}". Crea la variante primero.`

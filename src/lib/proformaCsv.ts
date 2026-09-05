@@ -31,6 +31,7 @@ export type CsvRowError = {
 
 export type CsvParseResult = {
 	rows: CsvImportRow[];
+	replacements: CsvImportRow[];
 	errors: CsvRowError[];
 };
 
@@ -86,9 +87,10 @@ export function parseProformaCsv(
 	products: CsvProductOption[],
 	models: CsvModelOption[],
 	colors: CsvColorOption[],
-	existingPairs?: Set<string>
+	currentRows: CsvCurrentRow[] = []
 ): CsvParseResult {
 	const rows: CsvImportRow[] = [];
+	const replacements: CsvImportRow[] = [];
 	const errors: CsvRowError[] = [];
 
 	const cleaned = text
@@ -101,7 +103,7 @@ export function parseProformaCsv(
 		.filter((l) => l.length > 0);
 
 	if (lines.length === 0) {
-		return { rows, errors: [{ line: 0, reason: 'Archivo vacío.', raw: '' }] };
+		return { rows, replacements, errors: [{ line: 0, reason: 'Archivo vacío.', raw: '' }] };
 	}
 
 	const delimiter = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
@@ -116,6 +118,7 @@ export function parseProformaCsv(
 	if (missing.length > 0) {
 		return {
 			rows,
+			replacements,
 			errors: [
 				{
 					line: 1,
@@ -210,11 +213,7 @@ export function parseProformaCsv(
 			continue;
 		}
 
-		const pairKey = `${product.id}|${color}`;
-		if (existingPairs?.has(pairKey)) {
-			fail(`"${rawProducto} · ${color || 'sin color'}" ya está en la proforma. Omitida.`);
-			continue;
-		}
+		const pairKey = `${product.id}|${norm(color)}`;
 
 		const prev = seenInFile.get(pairKey);
 		if (prev) {
@@ -229,7 +228,22 @@ export function parseProformaCsv(
 		}
 	}
 
-	return { rows: [...seenInFile.values()], errors };
+	const currentQuantityByPair = new Map(
+		currentRows
+			.filter((row) => row.product_id)
+			.map((row) => [`${row.product_id}|${norm(row.color)}`, Number(row.quantity)] as const)
+	);
+
+	for (const row of seenInFile.values()) {
+		const currentQuantity = currentQuantityByPair.get(`${row.productId}|${norm(row.color)}`);
+		if (currentQuantity === undefined) {
+			rows.push(row);
+		} else if (currentQuantity !== row.quantity) {
+			replacements.push(row);
+		}
+	}
+
+	return { rows, replacements, errors };
 }
 
 function csvEscape(v: string | number): string {
