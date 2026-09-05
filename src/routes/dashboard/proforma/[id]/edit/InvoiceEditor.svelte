@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { fly } from 'svelte/transition';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -246,7 +247,14 @@
 	let missingVariantConfirm = $state<MissingVariant[] | null>(null);
 	let createMissingDialogOpen = $state(false);
 	let formElement: HTMLFormElement | null = null;
-	let errorBanner = $state<HTMLDivElement | null>(null);
+	let errorBanner: HTMLDivElement | null = null;
+
+	const attachErrorBanner: Attachment<HTMLDivElement> = (element) => {
+		errorBanner = element;
+		return () => {
+			if (errorBanner === element) errorBanner = null;
+		};
+	};
 
 	const totalQuantity = $derived(
 		editor.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -472,7 +480,7 @@
 
 		{#if actionForm?.error}
 			<div
-				bind:this={errorBanner}
+				{@attach attachErrorBanner}
 				role="alert"
 				tabindex="-1"
 				class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
@@ -619,6 +627,8 @@
 							{models}
 							{colors}
 							existingPairs={csvExistingPairs}
+							currentRows={editor.items}
+							proformaNumber={editor.invoiceNumber}
 							disabled={loading || !editor.selectedClientId}
 							onImport={handleCsvImport}
 						/>

@@ -11,6 +11,7 @@
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import { onMount, tick } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import { fly } from 'svelte/transition';
 	import { SvelteDate, SvelteMap } from 'svelte/reactivity';
 	import {
@@ -198,8 +199,22 @@
 		color: string;
 	}> | null>(null);
 	let createMissingDialogOpen = $state(false);
-	let formElement = $state<HTMLFormElement | null>(null);
-	let errorBanner = $state<HTMLDivElement | null>(null);
+	let formElement: HTMLFormElement | null = null;
+	let errorBanner: HTMLDivElement | null = null;
+
+	const attachFormElement: Attachment<HTMLFormElement> = (element) => {
+		formElement = element;
+		return () => {
+			if (formElement === element) formElement = null;
+		};
+	};
+
+	const attachErrorBanner: Attachment<HTMLDivElement> = (element) => {
+		errorBanner = element;
+		return () => {
+			if (errorBanner === element) errorBanner = null;
+		};
+	};
 
 	const canAddItem = $derived(!!items[items.length - 1]?.product_id);
 
@@ -464,7 +479,7 @@
 	<!-- Error Banner -->
 	{#if form?.error}
 		<div
-			bind:this={errorBanner}
+			{@attach attachErrorBanner}
 			role="alert"
 			tabindex="-1"
 			class="flex items-start gap-2.5 rounded-xl border border-[#e2005a]/20 bg-[#e2005a]/10 p-4 text-sm text-[#e2005a] shadow-sm"
@@ -491,7 +506,7 @@
 
 	<!-- Create Form -->
 	<form
-		bind:this={formElement}
+		{@attach attachFormElement}
 		action="?/createInvoice"
 		method="POST"
 		use:enhance={({ formData }) => {
@@ -603,6 +618,8 @@
 						{models}
 						{colors}
 						existingPairs={csvExistingPairs}
+						currentRows={items}
+						proformaNumber={invoiceNumber}
 						disabled={loading || !selectedClientId}
 						onImport={handleCsvImport}
 					/>

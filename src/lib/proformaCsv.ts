@@ -14,6 +14,12 @@ export type CsvImportRow = {
 	quantity: number;
 };
 
+export type CsvCurrentRow = {
+	product_id: string;
+	color: string;
+	quantity: number | string;
+};
+
 export type CsvRowError = {
 	line: number;
 	reason: string;
@@ -225,7 +231,76 @@ export function parseProformaCsv(
 
 function csvEscape(v: string | number): string {
 	const s = String(v);
-	return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+	return /[",;\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export function buildCurrentRowsCsv(
+	rows: CsvCurrentRow[],
+	products: CsvProductOption[],
+	models: CsvModelOption[]
+): string {
+	const productsById = new Map(products.map((product) => [product.id, product]));
+	const modelNameById = new Map(models.map((model) => [model.id, model.model]));
+	const lines = [CSV_HEADERS.join(',')];
+
+	for (const row of rows) {
+		const product = row.product_id ? productsById.get(row.product_id) : undefined;
+		if (!product) continue;
+
+		const modelName = product.model ? (modelNameById.get(product.model) ?? '') : '';
+		lines.push(
+			[
+				csvEscape(product.title),
+				csvEscape(modelName),
+				csvEscape(row.color),
+				csvEscape(row.quantity)
+			].join(',')
+		);
+	}
+
+	return '\uFEFF' + lines.join('\n') + '\n';
+}
+
+export function buildCurrentRowsFilename(proformaNumber: string): string {
+	const withoutControls = [...proformaNumber.trim()]
+		.filter((character) => {
+			const code = character.charCodeAt(0);
+			return code >= 32 && code !== 127;
+		})
+		.join('');
+	const safeNumber = withoutControls
+		.replace(/[<>:"/\\|?*]+/g, '-')
+		.replace(/\s+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^\.+|[.-]+$/g, '')
+		.slice(0, 80)
+		.replace(/[.-]+$/g, '');
+
+	return `proforma-${safeNumber || 'sin-numero'}.csv`;
+}
+
+function downloadCsv(csv: string, filename: string): void {
+	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = filename;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function downloadCurrentRowsCsv(
+	rows: CsvCurrentRow[],
+	products: CsvProductOption[],
+	models: CsvModelOption[],
+	proformaNumber: string
+): void {
+	downloadCsv(
+		buildCurrentRowsCsv(rows, products, models),
+		buildCurrentRowsFilename(proformaNumber)
+	);
 }
 
 export function buildSampleCsv(
@@ -279,14 +354,5 @@ export function downloadSampleCsv(
 	models: CsvModelOption[],
 	colors: CsvColorOption[]
 ): void {
-	const csv = buildSampleCsv(products, models, colors);
-	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = 'proforma-plantilla.csv';
-	document.body.appendChild(a);
-	a.click();
-	a.remove();
-	setTimeout(() => URL.revokeObjectURL(url), 1000);
+	downloadCsv(buildSampleCsv(products, models, colors), 'proforma-plantilla.csv');
 }

@@ -1,11 +1,14 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import { Download, Upload } from '@lucide/svelte';
 	import {
+		downloadCurrentRowsCsv,
 		downloadSampleCsv,
 		parseProformaCsv,
 		type CsvColorOption,
+		type CsvCurrentRow,
 		type CsvImportRow,
 		type CsvModelOption,
 		type CsvProductOption,
@@ -17,13 +20,24 @@
 		models: CsvModelOption[];
 		colors: CsvColorOption[];
 		existingPairs?: Set<string>;
+		currentRows: CsvCurrentRow[];
+		proformaNumber: string;
 		disabled?: boolean;
 		onImport: (rows: CsvImportRow[]) => void;
 	};
 
-	let { products, models, colors, existingPairs, disabled = false, onImport }: Props = $props();
+	let {
+		products,
+		models,
+		colors,
+		existingPairs,
+		currentRows,
+		proformaNumber,
+		disabled = false,
+		onImport
+	}: Props = $props();
 
-	let fileInput = $state<HTMLInputElement | null>(null);
+	let fileInput: HTMLInputElement | null = null;
 	let reportOpen = $state(false);
 	let importedCount = $state(0);
 	let rowErrors = $state<CsvRowError[]>([]);
@@ -32,6 +46,23 @@
 	function handleDownload() {
 		downloadSampleCsv(products, models, colors);
 	}
+
+	function handleCurrentRowsDownload() {
+		downloadCurrentRowsCsv(currentRows, products, models, proformaNumber);
+	}
+
+	const hasExportableRows = $derived(
+		currentRows.some(
+			(row) => row.product_id && products.some((product) => product.id === row.product_id)
+		)
+	);
+
+	const attachFileInput: Attachment<HTMLInputElement> = (input) => {
+		fileInput = input;
+		return () => {
+			if (fileInput === input) fileInput = null;
+		};
+	};
 
 	function handlePickFile() {
 		if (disabled) return;
@@ -54,7 +85,7 @@
 </script>
 
 <input
-	bind:this={fileInput}
+	{@attach attachFileInput}
 	type="file"
 	accept=".csv,text/csv"
 	class="hidden"
@@ -73,6 +104,21 @@
 >
 	<Download class="h-3.5 w-3.5" />
 	Plantilla
+</Button>
+
+<Button
+	type="button"
+	variant="outline"
+	size="sm"
+	class="flex items-center gap-1"
+	onclick={handleCurrentRowsDownload}
+	disabled={disabled || !hasExportableRows}
+	title={hasExportableRows
+		? 'Descargar los conceptos actuales en CSV: producto, modelo, color, cantidad'
+		: 'Añade al menos un producto para descargar el CSV'}
+>
+	<Download class="h-3.5 w-3.5" />
+	Descargar CSV
 </Button>
 
 <Button
