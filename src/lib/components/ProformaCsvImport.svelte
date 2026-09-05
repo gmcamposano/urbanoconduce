@@ -48,7 +48,7 @@
 	}
 
 	function handleCurrentRowsDownload() {
-		downloadCurrentRowsCsv(currentRows, products, models, proformaNumber);
+		downloadCurrentRowsCsv(currentRows, products, models, colors, proformaNumber);
 	}
 
 	const hasExportableRows = $derived(

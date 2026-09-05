@@ -8,20 +8,25 @@ const products = [
 ];
 
 const models = [{ id: 'model-one', model: 'Modelo, Premium' }];
+const colors = [
+	{ id: 'red', color: 'Rojo', sort_order: 1 },
+	{ id: 'blue', color: 'Azul', sort_order: 2 }
+];
 
-test('builds import-compatible BOM CSV and preserves current row order and quantities', () => {
+test('builds import-compatible BOM CSV in canonical product and color order', () => {
 	const csv = buildCurrentRowsCsv(
 		[
 			{ product_id: 'second', color: '', quantity: 2.5 },
 			{ product_id: 'first', color: 'Azul', quantity: 7 }
 		],
 		products,
-		models
+		models,
+		colors
 	);
 
 	assert.equal(
 		csv,
-		'\uFEFFproducto,modelo,color,cantidad\n"Producto; Dos\nEspecial",,,2.5\n"Producto, ""Uno""","Modelo, Premium",Azul,7\n'
+		'\uFEFFproducto,modelo,color,cantidad\n"Producto, ""Uno""","Modelo, Premium",Azul,7\n"Producto; Dos\nEspecial",,,2.5\n'
 	);
 });
 
@@ -29,13 +34,14 @@ test('escapes commas, semicolons, quotes, and newlines in current row fields', (
 	const csv = buildCurrentRowsCsv(
 		[{ product_id: 'first', color: 'Azul; "claro"\nmate', quantity: 3 }],
 		products,
-		models
+		models,
+		colors
 	);
 
 	assert.match(csv, /"Producto, ""Uno""","Modelo, Premium","Azul; ""claro""\nmate",3/);
 });
 
-test('omits empty and unknown product rows without disturbing known row order', () => {
+test('omits empty and unknown product rows', () => {
 	const csv = buildCurrentRowsCsv(
 		[
 			{ product_id: '', color: 'Rojo', quantity: 1 },
@@ -44,11 +50,55 @@ test('omits empty and unknown product rows without disturbing known row order', 
 			{ product_id: 'second', color: 'Negro', quantity: 4 }
 		],
 		products,
-		models
+		models,
+		colors
 	);
 
 	assert.equal(
 		csv,
 		'\uFEFFproducto,modelo,color,cantidad\n"Producto, ""Uno""","Modelo, Premium",,2\n"Producto; Dos\nEspecial",,Negro,4\n'
+	);
+});
+
+test('uses configured color order instead of current row order', () => {
+	const csv = buildCurrentRowsCsv(
+		[
+			{ product_id: 'first', color: 'Azul', quantity: 2 },
+			{ product_id: 'first', color: '', quantity: 3 },
+			{ product_id: 'first', color: 'Desconocido', quantity: 4 },
+			{ product_id: 'first', color: 'Rojo', quantity: 1 }
+		],
+		products,
+		models,
+		colors
+	);
+
+	assert.equal(
+		csv,
+		'\uFEFFproducto,modelo,color,cantidad\n"Producto, ""Uno""","Modelo, Premium",Rojo,1\n"Producto, ""Uno""","Modelo, Premium",Azul,2\n"Producto, ""Uno""","Modelo, Premium",,3\n"Producto, ""Uno""","Modelo, Premium",Desconocido,4\n'
+	);
+});
+
+test('matches shared product-id grouping when labels and models are duplicates', () => {
+	const duplicateProducts = [
+		{ id: 'zeta', title: 'Duplicado', model: 'shared-model' },
+		{ id: 'alpha', title: 'Duplicado', model: 'shared-model' }
+	];
+	const duplicateModels = [{ id: 'shared-model', model: 'Mismo' }];
+	const csv = buildCurrentRowsCsv(
+		[
+			{ product_id: 'zeta', color: 'Rojo', quantity: 1 },
+			{ product_id: 'alpha', color: 'Azul', quantity: 2 },
+			{ product_id: 'zeta', color: 'Azul', quantity: 3 },
+			{ product_id: 'alpha', color: 'Rojo', quantity: 4 }
+		],
+		duplicateProducts,
+		duplicateModels,
+		colors
+	);
+
+	assert.equal(
+		csv,
+		'\uFEFFproducto,modelo,color,cantidad\nDuplicado,Mismo,Rojo,4\nDuplicado,Mismo,Azul,2\nDuplicado,Mismo,Rojo,1\nDuplicado,Mismo,Azul,3\n'
 	);
 });

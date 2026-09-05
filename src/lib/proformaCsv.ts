@@ -1,3 +1,5 @@
+import { sortProformaItems } from './proformaSort.ts';
+
 export type CsvProductOption = {
 	id: string;
 	title: string;
@@ -5,7 +7,8 @@ export type CsvProductOption = {
 };
 
 export type CsvModelOption = { id: string; model: string };
-export type CsvColorOption = { id: string; color: string };
+
+export type CsvColorOption = { id: string; color: string; sort_order?: number };
 
 export type CsvImportRow = {
 	productId: string;
@@ -237,14 +240,50 @@ function csvEscape(v: string | number): string {
 export function buildCurrentRowsCsv(
 	rows: CsvCurrentRow[],
 	products: CsvProductOption[],
-	models: CsvModelOption[]
+	models: CsvModelOption[],
+	colors: CsvColorOption[]
 ): string {
 	const productsById = new Map(products.map((product) => [product.id, product]));
 	const modelNameById = new Map(models.map((model) => [model.id, model.model]));
 	const lines = [CSV_HEADERS.join(',')];
+	const sortableRows = rows.flatMap((row, index) => {
+		if (!row.product_id || !productsById.has(row.product_id)) return [];
+		return [
+			{
+				id: String(index),
+				product_id: row.product_id,
+				color: row.color,
+				quantity: Number(row.quantity) || 0,
+				unit_price: 0,
+				source: row
+			}
+		];
+	});
+	const sortedRows = sortProformaItems(
+		sortableRows,
+		{ key: 'producto_color', dir: 'asc' },
+		{
+			productTitle: (productId) => productsById.get(productId)?.title ?? '',
+			modelName: (productId) => {
+				const modelId = productsById.get(productId)?.model;
+				return modelId ? (modelNameById.get(modelId) ?? '') : '';
+			},
+			colorRank: (color) => {
+				const normalizedColor = color.trim().toLocaleLowerCase();
+				if (!normalizedColor) return Number.POSITIVE_INFINITY;
+				const matchedColor = colors.find(
+					(entry) => entry.color.trim().toLocaleLowerCase() === normalizedColor
+				);
+				const rank = Number(matchedColor?.sort_order);
+				return Number.isFinite(rank) ? rank : Number.POSITIVE_INFINITY;
+			},
+			seqOf: (id) => Number(id)
+		}
+	);
 
-	for (const row of rows) {
-		const product = row.product_id ? productsById.get(row.product_id) : undefined;
+	for (const sortableRow of sortedRows) {
+		const row = sortableRow.source;
+		const product = productsById.get(row.product_id);
 		if (!product) continue;
 
 		const modelName = product.model ? (modelNameById.get(product.model) ?? '') : '';
@@ -295,10 +334,11 @@ export function downloadCurrentRowsCsv(
 	rows: CsvCurrentRow[],
 	products: CsvProductOption[],
 	models: CsvModelOption[],
+	colors: CsvColorOption[],
 	proformaNumber: string
 ): void {
 	downloadCsv(
-		buildCurrentRowsCsv(rows, products, models),
+		buildCurrentRowsCsv(rows, products, models, colors),
 		buildCurrentRowsFilename(proformaNumber)
 	);
 }

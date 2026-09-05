@@ -8,7 +8,7 @@ Add an import-compatible CSV download to new and edit proforma forms. Unlike the
 
 - Add an outline `Descargar CSV` button beside `Plantilla` and `Subir CSV`.
 - Export only rows that have a selected product.
-- Preserve current table order and quantities.
+- Export in canonical `Producto + color` ascending order and preserve quantities. This is the exact order established by the table's `Producto + color` button: product title, model, product ID, then configured color `sort_order`; known colors come first, while unknown and blank colors remain stable at the end.
 - Disable the button when there are no exportable rows.
 - Name the file `proforma-<numero>.csv`, using the current proforma number shown in the form.
 
@@ -23,7 +23,7 @@ Add an import-compatible CSV download to new and edit proforma forms. Unlike the
 
 ## Implementation
 
-- Extend `src/lib/proformaCsv.ts` with pure current-row CSV serialization plus browser download functions.
+- Extend `src/lib/proformaCsv.ts` with pure current-row CSV serialization plus browser download functions. Reuse `sortProformaItems` with `{ key: 'producto_color', dir: 'asc' }` rather than duplicating its comparator.
 - Extend `ProformaCsvImport.svelte` with current rows and filename props, then render the new button using existing button styles.
 - Pass live row state and the current proforma number from both new and edit forms.
 - Keep all processing client-side. No server, database, or migration changes.
@@ -35,6 +35,6 @@ Add an import-compatible CSV download to new and edit proforma forms. Unlike the
 
 ## Verification
 
-- Add focused unit coverage for row order, label resolution, blank fields, omitted empty/unknown rows, escaping, and BOM/header output.
+- Add focused unit coverage for canonical `Producto + color` order, configured color rank, duplicate product labels/models, label resolution, blank fields, omitted empty/unknown product rows, escaping, and BOM/header output.
 - Run Svelte autofixer on every changed Svelte component.
 - Run `npm run check`, focused tests, and `npm run lint`.
