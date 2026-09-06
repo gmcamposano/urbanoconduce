@@ -257,21 +257,6 @@
 		errorBanner.focus({ preventScroll: true });
 	}
 
-	async function addItemAndNavigate() {
-		if (loading || !canAddItem) return;
-
-		const item = addItem();
-		await tick();
-		const row = document.getElementById(getItemRowId(item.id));
-		if (!row) return;
-
-		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-			? 'auto'
-			: 'smooth';
-		row.scrollIntoView({ behavior, block: 'center' });
-		row.querySelector<HTMLElement>('[role="combobox"]')?.focus({ preventScroll: true });
-	}
-
 	onMount(() => {
 		if (form?.error && !form?.missingVariants) void scrollToErrorBanner();
 	});
@@ -1130,12 +1115,12 @@
 		type="button"
 		transition:fly={{ y: 16, duration: 220 }}
 		class="group fixed right-5 bottom-5 z-40 flex h-12 w-12 items-center justify-center rounded-md bg-[#3ecf8e] text-[#171717] shadow-[0_8px_24px_rgba(0,0,0,0.12),0_2px_8px_rgba(36,180,126,0.35)] ring-1 ring-[#24b47e]/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#24b47e] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12),0_4px_12px_rgba(36,180,126,0.45)] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0 active:scale-95 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50 md:right-8 md:bottom-8"
-		disabled={loading || !canAddItem}
-		onclick={addItemAndNavigate}
-		aria-label="Añadir fila y continuar en la nueva fila"
-		title="Añadir fila"
+		disabled={loading || !selectedClientId || !clientProducts.length}
+		onclick={() => (quickAddOpen = true)}
+		aria-label="Añadir rápido"
+		title="Añadir rápido"
 	>
-		<Plus class="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
+		<Zap class="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
 	</button>
 {/if}
 
