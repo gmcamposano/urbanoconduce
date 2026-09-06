@@ -221,10 +221,10 @@
 					{#if colors.length === 0}
 						<p class="text-xs text-[#707070]">No hay colores disponibles.</p>
 					{:else}
-						<div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+						<div class="columns-2 gap-1.5 sm:columns-3">
 							{#each colors as c (c.id)}
 								<label
-									class="flex cursor-pointer items-center gap-2 rounded-md border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-xs transition-colors hover:bg-[#fafafa]"
+									class="mb-1.5 flex w-full cursor-pointer break-inside-avoid items-center gap-2 rounded-md border border-[#dfdfdf] bg-white px-2.5 py-1.5 text-xs transition-colors hover:bg-[#fafafa]"
 								>
 									<input
 										type="checkbox"
