@@ -87,8 +87,9 @@
 		items.reduce((sum: number, item: { amount: number | string }) => sum + Number(item.amount), 0)
 	);
 
-	const taxAmount = $derived(subtotal * (Number(invoice?.tax_rate || 0) / 100));
 	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
+	const taxableBase = $derived(Math.max(0, subtotal - discountAmount));
+	const taxAmount = $derived(taxableBase * (Number(invoice?.tax_rate || 0) / 100));
 	const showDiscount = $derived(discountAmount > 0);
 
 	function getStatusBadgeVariant(status: string) {
@@ -552,9 +553,9 @@
 								<tr
 									class="fiscal-table-heading print-border border-b-2 border-[#171717] text-[13px] font-medium tracking-wider text-[#707070] uppercase sm:text-sm"
 								>
-									<th class="w-[38%] py-2 pr-5 font-semibold">Descripción</th>
-									<th class="w-[14%] px-3 py-2 text-center font-semibold">Modelo</th>
-									<th class="w-[14%] px-3 py-2 text-center font-semibold">Color</th>
+								<th class="w-[20%] py-2 pr-5 font-semibold">Descripción</th>
+								<th class="w-[32%] px-2 py-2 text-center font-semibold">Modelo</th>
+								<th class="w-[14%] px-2 py-2 text-center font-semibold">Color</th>
 									<th class="w-[8%] py-2 text-center font-semibold whitespace-nowrap">Cant.</th>
 									<th class="w-[13%] py-2 text-right font-semibold whitespace-nowrap"
 										>Precio unitario</th
@@ -566,15 +567,15 @@
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
 									<tr class="fiscal-item-row text-[15px] text-[#171717] sm:text-base">
-										<td class="py-2 pr-5 align-top">
-											<p class="font-medium break-words text-[#171717] capitalize">
-												{item.description}
-											</p>
-										</td>
-										<td class="px-3 py-2 text-center align-top text-[#707070] capitalize">
-											{productModel}
-										</td>
-										<td class="px-3 py-2 text-center align-top">
+									<td class="py-1.5 pr-5 align-top">
+										<p class="font-medium break-words text-[#171717] capitalize">
+											{item.description}
+										</p>
+									</td>
+									<td class="px-2 py-1.5 text-center align-top text-[#707070] capitalize">
+										{productModel}
+									</td>
+									<td class="px-2 py-1.5 text-center align-top">
 											{#if item.color}
 												<span
 													class="inline-flex h-7 items-center justify-center rounded-md border border-[#dfdfdf] bg-white px-3 text-sm leading-none font-medium whitespace-nowrap text-[#707070] capitalize"
@@ -585,15 +586,15 @@
 												<span class="text-[#9a9a9a]">-</span>
 											{/if}
 										</td>
-										<td class="py-2 text-center font-mono text-[#707070]"
-											>{Number(item.quantity)}</td
-										>
-										<td class="py-2 text-right font-mono text-[#707070]"
-											>RD$ {formatCurrency(Number(item.unit_price))}</td
-										>
-										<td class="py-2 text-right font-mono font-medium text-[#171717]"
-											>{formatCurrency(Number(item.amount))}</td
-										>
+									<td class="py-1.5 text-center font-mono text-[#707070]"
+										>{Number(item.quantity)}</td
+									>
+									<td class="py-1.5 text-right font-mono text-[#707070]"
+										>RD$ {formatCurrency(Number(item.unit_price))}</td
+									>
+									<td class="py-1.5 text-right font-mono font-medium text-[#171717]"
+										>{formatCurrency(Number(item.amount))}</td
+									>
 									</tr>
 								{/each}
 							</tbody>
@@ -609,11 +610,6 @@
 								<span class="font-medium">Subtotal</span>
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 							</div>
-							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
-								<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
-								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
-								>
-							</div>
 							{#if showDiscount}
 								<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
 									<span class="font-medium">Descuento</span>
@@ -622,6 +618,11 @@
 									>
 								</div>
 							{/if}
+							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
+								<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
+								>
+							</div>
 							<div
 								class="fiscal-total flex justify-between pt-1.5 text-base font-medium text-[#24b47e] sm:text-lg"
 							>

@@ -353,16 +353,9 @@ export const actions: Actions = {
 
 		const lineTotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
 		const subtotal = taxMode === 'included' ? lineTotal / 1.18 : lineTotal;
-		const taxAmount =
-			taxMode === 'none'
-				? 0
-				: taxMode === 'included'
-					? lineTotal - subtotal
-					: subtotal * (taxRate / 100);
-		const totalAmount = Math.max(
-			0,
-			taxMode === 'none' ? subtotal - discountAmount : subtotal + taxAmount - discountAmount
-		);
+		const taxableBase = Math.max(0, subtotal - discountAmount);
+		const taxAmount = taxMode === 'none' ? 0 : taxableBase * (taxRate / 100);
+		const totalAmount = taxMode === 'none' ? taxableBase : taxableBase + taxAmount;
 
 		const previousInvoice = {
 			invoice_number: invoiceResult.data.invoice_number,

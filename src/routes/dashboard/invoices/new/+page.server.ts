@@ -206,8 +206,9 @@ export const actions: Actions = {
 		}
 
 		const subtotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
-		const taxAmount = subtotal * (taxRate / 100);
-		const totalAmount = Math.max(0, subtotal + taxAmount - discountAmount);
+		const taxableBase = Math.max(0, subtotal - discountAmount);
+		const taxAmount = taxableBase * (taxRate / 100);
+		const totalAmount = taxableBase + taxAmount;
 
 		const targetStatus = status;
 

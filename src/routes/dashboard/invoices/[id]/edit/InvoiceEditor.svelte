@@ -200,10 +200,11 @@
 		)
 	);
 	const taxRate = $derived(editor.includeTax ? 18 : 0);
-	const taxAmount = $derived(subtotal * (taxRate / 100));
-	const totalAmount = $derived(
-		Math.max(0, subtotal + taxAmount - (Number(editor.discountAmount) || 0))
+	const taxableBase = $derived(
+		Math.max(0, subtotal - (Number(editor.discountAmount) || 0))
 	);
+	const taxAmount = $derived(taxableBase * (taxRate / 100));
+	const totalAmount = $derived(taxableBase + taxAmount);
 
 	function addItem() {
 		editor.items.push(createItem());
@@ -609,14 +610,14 @@
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 							</div>
 							<div class="flex justify-between">
-								<span>Impuesto ({taxRate}%)</span>
-								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
-								>
-							</div>
-							<div class="flex justify-between">
 								<span>Descuento</span>
 								<span class="font-mono font-medium text-[#171717]"
 									>-{formatCurrency(editor.discountAmount || 0)}</span
+								>
+							</div>
+							<div class="flex justify-between">
+								<span>Impuesto ({taxRate}%)</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
 								>
 							</div>
 

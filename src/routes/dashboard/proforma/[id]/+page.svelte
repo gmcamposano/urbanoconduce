@@ -95,8 +95,9 @@
 	);
 
 	const taxRate = $derived(Number(invoice?.tax_rate || 0));
-	const taxAmount = $derived(subtotal * (taxRate / 100));
 	const discountAmount = $derived(Number(invoice?.discount_amount || 0));
+	const taxableBase = $derived(Math.max(0, subtotal - discountAmount));
+	const taxAmount = $derived(taxableBase * (taxRate / 100));
 	const showDiscount = $derived(discountAmount > 0);
 	const collectionState = $derived(
 		invoice ? getCollectionState(invoice) : ('draft' as CollectionState)
@@ -607,72 +608,72 @@
 								<tr
 									class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
 								>
-									<th class="w-[30%] px-3 py-3 align-middle font-semibold">Descripción</th>
-									<th class="w-[13%] px-3 py-3 text-left align-middle font-semibold">Modelo</th>
-									<th class="w-[13%] px-3 py-3 text-left align-middle font-semibold">Color</th>
-									<th
-										class="w-[8%] px-3 py-3 text-center align-middle font-semibold whitespace-nowrap"
-										>Cant.</th
-									>
-									<th
-										class="w-[14%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
-										>Precio unitario</th
-									>
-									<th
-										class="w-[10%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
-										>Total</th
-									>
-									<th
-										class="w-[12%] px-3 py-3 text-right align-middle font-semibold whitespace-nowrap"
-										>Total/Imp</th
-									>
+								<th class="w-[14%] px-2 py-2 align-middle font-semibold">Descripción</th>
+								<th class="w-[29%] px-2 py-2 text-left align-middle font-semibold">Modelo</th>
+								<th class="w-[13%] px-2 py-2 text-left align-middle font-semibold">Color</th>
+								<th
+									class="w-[8%] px-2 py-2 text-center align-middle font-semibold whitespace-nowrap"
+									>Cant.</th
+								>
+								<th
+									class="w-[14%] px-2 py-2 text-right align-middle font-semibold whitespace-nowrap"
+									>Precio unitario</th
+								>
+								<th
+									class="w-[10%] px-2 py-2 text-right align-middle font-semibold whitespace-nowrap"
+									>Total</th
+								>
+								<th
+									class="w-[12%] px-2 py-2 text-right align-middle font-semibold whitespace-nowrap"
+									>Total/Imp</th
+								>
 								</tr>
 							</thead>
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
-									<tr class="text-[#171717]">
-										<td class="px-3 py-2.5 align-middle">
-											<p class="font-medium break-words text-[#171717] capitalize">
-												{item.description}
-											</p>
-										</td>
-										<td class="px-3 py-2.5 text-left align-middle text-[#707070] capitalize">
-											{productModel}
-										</td>
-										<td class="px-3 py-2.5 text-left align-middle">
-											{#if item.color}
-												<span class="text-xs font-medium text-[#707070] capitalize">
-													{item.color}
-												</span>
-											{:else}
-												<span class="text-[#9a9a9a]">-</span>
-											{/if}
-										</td>
-										<td class="px-3 py-2.5 text-center align-middle font-mono text-[#707070]"
-											>{Number(item.quantity)}</td
-										>
-										<td class="px-3 py-2.5 text-right align-middle font-mono text-[#707070]"
-											>RD$ {formatCurrency(Number(item.unit_price))}</td
-										>
-										<td
-											class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
-											>{formatCurrency(Number(item.amount))}</td
-										>
-										<td
-											class="px-3 py-2.5 text-right align-middle font-mono font-medium text-[#171717]"
-											>{formatCurrency(itemTotalWithTax(Number(item.amount)))}</td
-										>
-									</tr>
+								<tr class="text-[#171717]">
+									<td class="px-2 py-1.5 align-middle">
+										<p class="font-medium break-words text-[#171717] capitalize">
+											{item.description}
+										</p>
+									</td>
+									<td class="px-2 py-1.5 text-left align-middle text-[#707070] capitalize">
+										{productModel}
+									</td>
+									<td class="px-2 py-1.5 text-left align-middle">
+										{#if item.color}
+											<span class="text-xs font-medium text-[#707070] capitalize">
+												{item.color}
+											</span>
+										{:else}
+											<span class="text-[#9a9a9a]">-</span>
+										{/if}
+									</td>
+									<td class="px-2 py-1.5 text-center align-middle font-mono text-[#707070]"
+										>{Number(item.quantity)}</td
+									>
+									<td class="px-2 py-1.5 text-right align-middle font-mono text-[#707070]"
+										>RD$ {formatCurrency(Number(item.unit_price))}</td
+									>
+									<td
+										class="px-2 py-1.5 text-right align-middle font-mono font-medium text-[#171717]"
+										>{formatCurrency(Number(item.amount))}</td
+									>
+									<td
+										class="px-2 py-1.5 text-right align-middle font-mono font-medium text-[#171717]"
+										>{formatCurrency(itemTotalWithTax(Number(item.amount)))}</td
+									>
+								</tr>
 								{/each}
 							</tbody>
 							<tfoot>
 								<tr class="border-t-2 border-[#171717] font-medium text-[#171717]">
-									<td colspan="3" class="px-3 py-2.5 text-right align-middle text-sm"
-										>Cantidad de artículos</td
-									>
-									<td class="px-3 py-2.5 text-center align-middle font-mono">{totalQuantity}</td>
-									<td colspan="3" class="px-3 py-2.5"></td>
+								<td colspan="3" class="px-2 py-1.5 text-right align-middle text-sm"
+									>Cantidad de artículos</td
+								>
+								<td class="px-2 py-1.5 text-center align-middle font-mono">{totalQuantity}</td>
+								<td colspan="3" class="px-2 py-1.5"></td>
 								</tr>
 							</tfoot>
 						</table>
@@ -685,11 +686,6 @@
 								<span class="font-medium">Subtotal</span>
 								<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 							</div>
-							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
-								<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
-								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
-								>
-							</div>
 							{#if showDiscount}
 								<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
 									<span class="font-medium">Descuento</span>
@@ -698,6 +694,11 @@
 									>
 								</div>
 							{/if}
+							<div class="print-border flex justify-between border-b border-[#ededed] pb-1.5">
+								<span class="font-medium">Impuesto ({invoice.tax_rate}%)</span>
+								<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span
+								>
+							</div>
 							<div class="flex justify-between pt-1.5 text-base font-medium text-[#24b47e]">
 								<span class="tracking-wide uppercase">Total a pagar</span>
 								<span class="font-mono text-lg text-[#171717]"

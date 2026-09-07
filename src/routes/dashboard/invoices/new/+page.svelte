@@ -194,9 +194,10 @@
 	);
 
 	const taxRate = $derived(includeTax ? 18 : 0);
-	const taxAmount = $derived(subtotal * (taxRate / 100));
+	const taxableBase = $derived(Math.max(0, subtotal - (Number(discountAmount) || 0)));
+	const taxAmount = $derived(taxableBase * (taxRate / 100));
 
-	const totalAmount = $derived(Math.max(0, subtotal + taxAmount - (Number(discountAmount) || 0)));
+	const totalAmount = $derived(taxableBase + taxAmount);
 
 	// Helpers to add or remove line items
 
@@ -602,14 +603,14 @@
 							<span class="font-mono font-medium text-[#171717]">{formatCurrency(subtotal)}</span>
 						</div>
 						<div class="flex justify-between">
-							<span>Impuesto ({taxRate}%)</span>
-							<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
-						</div>
-						<div class="flex justify-between">
 							<span>Descuento</span>
 							<span class="font-mono font-medium text-[#171717]"
 								>-{formatCurrency(discountAmount || 0)}</span
 							>
+						</div>
+						<div class="flex justify-between">
+							<span>Impuesto ({taxRate}%)</span>
+							<span class="font-mono font-medium text-[#171717]">{formatCurrency(taxAmount)}</span>
 						</div>
 
 						<div class="flex justify-between border-t border-[#ededed] pt-2 text-base font-medium">
