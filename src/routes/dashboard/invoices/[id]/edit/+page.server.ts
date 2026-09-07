@@ -166,6 +166,7 @@ export const actions: Actions = {
 			color: string;
 			model: string | null;
 			quantity: number;
+			unit_price: number;
 		}>;
 		try {
 			items = JSON.parse(itemsJson);
@@ -249,7 +250,15 @@ export const actions: Actions = {
 				});
 			}
 
-			const unitPrice = resolvedPrices.get(item.product_id) ?? Number(product.price_without_taxes);
+			const submittedPrice = Number(item.unit_price);
+			const unitPrice =
+				Number.isFinite(submittedPrice) && submittedPrice > 0
+					? submittedPrice
+					: (resolvedPrices.get(item.product_id) ?? Number(product.price_without_taxes));
+
+			if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+				return fail(400, { error: 'Los conceptos deben tener un precio unitario válido.' });
+			}
 			normalizedItems.push({
 				product_id: item.product_id,
 				description: product.title,
