@@ -227,6 +227,19 @@
 								display: block !important;
 								min-height: auto !important;
 							}
+							.fiscal-items-table .fiscal-item-row {
+								font-size: 11px !important;
+								line-height: 1.2 !important;
+							}
+							.fiscal-items-table .fiscal-table-heading {
+								font-size: 10px !important;
+								line-height: 1.2 !important;
+							}
+							.fiscal-items-table th,
+							.fiscal-items-table td {
+								padding-top: 4px !important;
+								padding-bottom: 4px !important;
+							}
 						`;
 						clonedDoc.head.appendChild(breakStyle);
 						clonedDoc.documentElement.style.fontSize = '90%';
@@ -603,10 +616,10 @@
 
 					<!-- Items Table -->
 					<div class="space-y-4">
-						<table class="w-full table-fixed border-collapse text-left text-sm">
+						<table class="fiscal-items-table w-full table-fixed border-collapse text-left text-sm">
 							<thead>
 								<tr
-									class="print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
+									class="fiscal-table-heading print-border border-b-2 border-[#171717] text-xs font-medium tracking-wider text-[#707070] uppercase"
 								>
 								<th class="w-[14%] px-2 py-2 align-middle font-semibold">Descripción</th>
 								<th class="w-[29%] px-2 py-2 text-left align-middle font-semibold">Modelo</th>
@@ -632,7 +645,7 @@
 							<tbody class="print-border divide-y divide-[#ededed]">
 								{#each sortedItems as item (item.id ?? item.description)}
 									{@const productModel = item.model ? getModelName(item.model) : '-'}
-								<tr class="text-[#171717]">
+								<tr class="fiscal-item-row text-[#171717]">
 									<td class="px-2 py-1.5 align-middle">
 										<p class="font-medium break-words text-[#171717] capitalize">
 											{item.description}

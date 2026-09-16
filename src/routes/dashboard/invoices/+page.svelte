@@ -122,6 +122,16 @@
 	function formatCurrency(val: number) {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 	}
+
+	function formatOptionalDate(date: string | null | undefined) {
+		if (!date) return '—';
+		return new Date(date).toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			timeZone: 'UTC'
+		});
+	}
 </script>
 
 <svelte:head>
@@ -289,6 +299,7 @@
 					<tr>
 						<th class="px-6 py-4 font-bold">Factura</th>
 						<th class="px-6 py-4 font-bold capitalize">Cliente</th>
+						<th class="px-6 py-4 font-bold">Creada</th>
 						<th class="px-6 py-4 font-bold">Vence</th>
 						<th class="px-6 py-4 font-bold">Monto</th>
 						<th class="px-6 py-4 font-bold">Estado</th>
@@ -299,7 +310,7 @@
 				<tbody class="divide-y divide-[#ededed]">
 					{#if filteredInvoices.length === 0}
 						<tr>
-							<td colspan="7" class="px-6 py-12 text-center text-xs text-[#707070]">
+							<td colspan="8" class="px-6 py-12 text-center text-xs text-[#707070]">
 								No se encontraron facturas. Agrega una para comenzar.
 							</td>
 						</tr>
@@ -324,6 +335,12 @@
 									<div>
 										<p class="font-medium text-[#171717]">{toTitleCase(inv.client_name || '')}</p>
 										<p class="text-[11px] text-[#707070]">{inv.client_email || ''}</p>
+									</div>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div class="flex items-center gap-1.5 text-xs text-[#707070]">
+										<Calendar class="h-3.5 w-3.5 text-[#9a9a9a]" />
+										{formatOptionalDate(inv.created_at)}
 									</div>
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
