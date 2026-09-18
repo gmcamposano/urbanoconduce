@@ -413,12 +413,10 @@
 						No hay colores disponibles. Crea al menos uno en la sección Colores.
 					</div>
 				{/if}
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[calc(100vh-320px)] overflow-auto">
 					<table class="w-full table-fixed text-left text-xs text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
+						<thead class="tracking-wider text-[#707070] uppercase">
+							<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 								<th class="w-1/4 px-3 py-2.5 font-semibold">Producto</th>
 								<th class="w-1/4 px-3 py-2.5 font-semibold">Modelo</th>
 								<th class="w-1/5 px-3 py-2.5 font-semibold">Color</th>

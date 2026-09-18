@@ -225,7 +225,9 @@
 				</p>
 				{#if form.warningInvoiceCount !== undefined && form.warningCount !== undefined}
 					<p class="mt-1 text-xs text-[#707070]">
-						{form.warningInvoiceCount} {form.warningInvoiceCount === 1 ? 'proforma' : 'proformas'} · {form.warningCount} {form.warningCount === 1 ? 'variante' : 'variantes'} sin existencias.
+						{form.warningInvoiceCount}
+						{form.warningInvoiceCount === 1 ? 'proforma' : 'proformas'} · {form.warningCount}
+						{form.warningCount === 1 ? 'variante' : 'variantes'} sin existencias.
 					</p>
 				{/if}
 				{#if form.warning}

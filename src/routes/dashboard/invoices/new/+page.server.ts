@@ -83,7 +83,8 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const invoiceNumberInput = String(formData.get('invoice_number') ?? '').trim();
-		const invoiceNumber = invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
+		const invoiceNumber =
+			invoiceNumberInput || (await generateUniqueInvoiceNumber(locals.supabase, 'INV'));
 		if (invoiceNumberInput && (await isInvoiceNumberTaken(locals.supabase, invoiceNumberInput))) {
 			return fail(400, { error: `El número de factura "${invoiceNumberInput}" ya está en uso.` });
 		}

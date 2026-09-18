@@ -256,12 +256,10 @@
 					<input {@attach captureReorderInput} type="hidden" name="color_ids" />
 				</form>
 				<p class="sr-only" aria-live="polite" aria-atomic="true">{reorderStatus}</p>
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[calc(100vh-320px)] overflow-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
+						<thead class="text-xs tracking-wider text-[#707070] uppercase">
+							<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 								<th class="w-16 px-6 py-4 font-bold">#</th>
 								<th class="px-6 py-4 font-bold">Color</th>
 								{#if canManage}

@@ -3,8 +3,7 @@
 
 	// Show the bar only when navigating to a different route (not form submissions / hash changes).
 	const isNavigating = $derived(
-		!!navigating.to &&
-			navigating.from?.url.pathname !== navigating.to.url.pathname
+		!!navigating.to && navigating.from?.url.pathname !== navigating.to.url.pathname
 	);
 
 	// Keep the bar mounted briefly after navigation ends so the "complete" animation can play.

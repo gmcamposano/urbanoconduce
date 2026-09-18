@@ -326,12 +326,10 @@
 
 	<Card>
 		<CardContent class="p-0">
-			<div class="w-full overflow-x-auto">
+			<div class="max-h-[calc(100vh-320px)] overflow-auto">
 				<table class="w-full text-left text-sm text-[#171717]">
-					<thead
-						class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-					>
-						<tr>
+					<thead class="text-xs tracking-wider text-[#707070] uppercase">
+						<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 							<th class="px-6 py-4 font-bold">
 								<button
 									type="button"
@@ -618,9 +616,7 @@
 
 		<div class="space-y-4">
 			<div class="relative">
-				<div
-					class="flex items-center gap-3 rounded-md border border-[#dfdfdf] bg-white px-3 py-2"
-				>
+				<div class="flex items-center gap-3 rounded-md border border-[#dfdfdf] bg-white px-3 py-2">
 					<Search class="h-4 w-4 flex-shrink-0 text-[#707070]" />
 					<input
 						type="text"
@@ -632,9 +628,7 @@
 			</div>
 
 			{#if copyTargetItems.length === 0}
-				<p class="py-4 text-center text-xs text-[#707070]">
-					Las demás variantes ya tienen imagen.
-				</p>
+				<p class="py-4 text-center text-xs text-[#707070]">Las demás variantes ya tienen imagen.</p>
 			{:else}
 				<div class="flex items-center justify-between">
 					<p class="text-xs text-[#707070]">

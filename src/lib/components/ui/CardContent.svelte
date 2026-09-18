@@ -6,17 +6,10 @@
 		children?: Snippet;
 	}
 
-	let {
-		class: className = '',
-		children,
-		...rest
-	}: Props = $props();
+	let { class: className = '', children, ...rest }: Props = $props();
 </script>
 
-<div
-	class="p-6 {className}"
-	{...rest}
->
+<div class="p-6 {className}" {...rest}>
 	{#if children}
 		{@render children()}
 	{/if}

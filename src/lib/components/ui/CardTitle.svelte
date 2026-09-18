@@ -6,15 +6,11 @@
 		children?: Snippet;
 	}
 
-	let {
-		class: className = '',
-		children,
-		...rest
-	}: Props = $props();
+	let { class: className = '', children, ...rest }: Props = $props();
 </script>
 
 <h3
-	class="text-[22px] font-medium tracking-tight text-[#171717] leading-none {className}"
+	class="text-[22px] leading-none font-medium tracking-tight text-[#171717] {className}"
 	{...rest}
 >
 	{#if children}

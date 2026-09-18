@@ -19,15 +19,17 @@
 	}: Props = $props();
 </script>
 
-<div class="flex flex-col gap-1.5 w-full">
+<div class="flex w-full flex-col gap-1.5">
 	{#if label}
-		<label for={id} class="text-[11px] font-medium uppercase tracking-[0.12em] text-[#707070]">
+		<label for={id} class="text-[11px] font-medium tracking-[0.12em] text-[#707070] uppercase">
 			{label}
 		</label>
 	{/if}
 	<div class="relative">
 		{#if prefix}
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-medium text-[#707070]">
+			<span
+				class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-medium text-[#707070]"
+			>
 				{prefix}
 			</span>
 		{/if}
@@ -35,11 +37,13 @@
 			{id}
 			{type}
 			bind:value
-			class="flex h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e] disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200 {prefix ? 'pl-14' : ''} {error ? 'border-[#e2005a]/50 focus-visible:ring-[#e2005a]/20' : ''} {className}"
+			class="flex h-9 w-full rounded-[6px] border border-[#dfdfdf] bg-white px-3 py-2 text-sm text-[#171717] transition-colors duration-200 placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 {prefix
+				? 'pl-14'
+				: ''} {error ? 'border-[#e2005a]/50 focus-visible:ring-[#e2005a]/20' : ''} {className}"
 			{...rest}
 		/>
 	</div>
 	{#if error}
-		<p class="text-xs text-[#e2005a] font-medium mt-0.5">{error}</p>
+		<p class="mt-0.5 text-xs font-medium text-[#e2005a]">{error}</p>
 	{/if}
 </div>

@@ -101,12 +101,10 @@
 
 	<!-- Profiles list -->
 	<Card class="bg-white">
-		<div class="w-full overflow-x-auto">
+		<div class="max-h-[calc(100vh-320px)] overflow-auto">
 			<table class="w-full text-left text-sm text-[#171717]">
-				<thead
-					class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-				>
-					<tr>
+				<thead class="text-xs tracking-wider text-[#707070] uppercase">
+					<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 						<th class="px-6 py-4 font-bold">Identidad</th>
 						<th class="px-6 py-4 font-bold">Correo electrónico</th>
 						<th class="px-6 py-4 font-bold">Rol actual</th>
@@ -324,12 +322,10 @@
 				</p>
 			</CardContent>
 		{:else}
-			<div class="w-full overflow-x-auto">
+			<div class="max-h-[calc(100vh-320px)] overflow-auto">
 				<table class="w-full text-left text-sm text-[#171717]">
-					<thead
-						class="border-t border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-					>
-						<tr>
+					<thead class="text-xs tracking-wider text-[#707070] uppercase">
+						<tr class="sticky top-0 z-10 border-t border-b border-[#ededed] bg-[#fafafa]">
 							<th class="px-6 py-3 font-bold">Patrón</th>
 							<th class="px-6 py-3 font-bold">Tipo</th>
 							<th class="px-6 py-3 font-bold">Descripción</th>

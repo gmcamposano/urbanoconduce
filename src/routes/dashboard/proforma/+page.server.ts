@@ -51,7 +51,27 @@ export const load: PageServerLoad = async ({ locals }) => {
 		const allocations = (allocationsResult.data || []).filter((allocation) =>
 			allInvoiceIds.has(allocation.invoice_id)
 		);
-		const invoices = buildInvoiceBalances(activeProformas, allocations);
+		const itemCounts = new Map<string, number>();
+		if (allInvoiceIds.size > 0) {
+			const itemsResult = await locals.supabase
+				.from('invoice_items')
+				.select('invoice_id')
+				.in('invoice_id', [...allInvoiceIds]);
+			if (itemsResult.error) {
+				console.error(
+					'Supabase query error loading proforma item counts:',
+					itemsResult.error.message
+				);
+			} else {
+				(itemsResult.data || []).forEach((item) => {
+					itemCounts.set(item.invoice_id, (itemCounts.get(item.invoice_id) || 0) + 1);
+				});
+			}
+		}
+		const invoices = buildInvoiceBalances(activeProformas, allocations).map((invoice) => ({
+			...invoice,
+			itemCount: itemCounts.get(invoice.id) || 0
+		}));
 
 		return {
 			invoices

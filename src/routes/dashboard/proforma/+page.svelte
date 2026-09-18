@@ -137,7 +137,8 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 	}
 
-	function formatDate(date: string) {
+	function formatDate(date?: string) {
+		if (!date) return '';
 		return new Date(date).toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
@@ -322,16 +323,15 @@
 
 	<!-- Invoices Data Table -->
 	<Card class="bg-white">
-		<div class="w-full overflow-x-auto">
+		<div class="max-h-[calc(100vh-320px)] overflow-auto">
 			<table class="w-full text-left text-sm text-[#171717]">
-				<thead
-					class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-				>
-					<tr>
+				<thead class="text-xs tracking-wider text-[#707070] uppercase">
+					<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 						<th class="w-[16rem] px-6 py-4 font-bold">Factura</th>
 						<th class="px-6 py-4 font-bold capitalize">Cliente</th>
 						<th class="px-6 py-4 font-bold">Creada</th>
 						<th class="px-6 py-4 font-bold">Vence</th>
+						<th class="px-6 py-4 font-bold">Artículos</th>
 						<th class="px-6 py-4 font-bold">Monto</th>
 						<th class="px-6 py-4 font-bold">Estado</th>
 						<th class="px-6 py-4 font-bold capitalize">Creado Por</th>
@@ -341,7 +341,7 @@
 				<tbody class="divide-y divide-[#ededed]">
 					{#if filteredInvoices.length === 0}
 						<tr>
-							<td colspan="8" class="px-6 py-12 text-center text-xs text-[#707070]">
+							<td colspan="9" class="px-6 py-12 text-center text-xs text-[#707070]">
 								No se encontraron proformas. Agrega una para comenzar.
 							</td>
 						</tr>
@@ -364,7 +364,7 @@
 										<p class="text-[11px] text-[#707070]">{inv.client_email || ''}</p>
 									</div>
 								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-xs text-[#707070]">
+								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
 									{formatDate(inv.created_at)}
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap">
@@ -372,6 +372,9 @@
 										<Calendar class="h-3.5 w-3.5 text-[#9a9a9a]" />
 										{formatDate(inv.due_date)}
 									</div>
+								</td>
+								<td class="px-6 py-4 text-xs whitespace-nowrap text-[#707070]">
+									{inv.itemCount || 0}
 								</td>
 								<td class="px-6 py-4 font-mono font-medium text-[#171717]">
 									<div class="space-y-1">

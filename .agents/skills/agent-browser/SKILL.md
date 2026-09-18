@@ -673,9 +673,9 @@ Create `agent-browser.json` in the project root for persistent settings:
 
 ```json
 {
-  "headed": true,
-  "proxy": "http://localhost:8080",
-  "profile": "./browser-data"
+	"headed": true,
+	"proxy": "http://localhost:8080",
+	"profile": "./browser-data"
 }
 ```
 
@@ -710,6 +710,7 @@ agent-browser --engine lightpanda --executable-path /path/to/lightpanda open exa
 ```
 
 Supported engines:
+
 - `chrome` (default) -- Chrome/Chromium via CDP
 - `lightpanda` -- Lightpanda headless browser via CDP (10x faster, 10x less memory than Chrome)
 

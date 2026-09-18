@@ -232,12 +232,10 @@
 				<div class="border-b border-[#ededed] px-6 py-4">
 					<h2 class="text-base font-medium text-[#171717]">Pagos registrados</h2>
 				</div>
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[calc(100vh-320px)] overflow-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
+						<thead class="text-xs tracking-wider text-[#707070] uppercase">
+							<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 								<th class="px-6 py-4 font-bold">Fecha</th>
 								<th class="px-6 py-4 font-bold">Cliente</th>
 								<th class="px-6 py-4 font-bold">Factura</th>

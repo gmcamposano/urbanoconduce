@@ -12,10 +12,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		const [{ data: profiles, error: profilesError }, { data: allowedEmails, error: allowedError }] =
 			await Promise.all([
 				locals.supabase.from('profiles').select('*').order('name', { ascending: true }),
-				locals.supabase
-					.from('allowed_emails')
-					.select('*')
-					.order('created_at', { ascending: false })
+				locals.supabase.from('allowed_emails').select('*').order('created_at', { ascending: false })
 			]);
 
 		if (profilesError) {
@@ -56,7 +53,9 @@ export const actions: Actions = {
 		}
 
 		if (targetProfileId === user.id) {
-			return fail(400, { error: 'No puedes cambiar tu propio rol para evitar bloquear el acceso del administrador.' });
+			return fail(400, {
+				error: 'No puedes cambiar tu propio rol para evitar bloquear el acceso del administrador.'
+			});
 		}
 
 		if (!['admin', 'editor', 'viewer'].includes(targetRole)) {
@@ -98,8 +97,10 @@ export const actions: Actions = {
 			return fail(400, { emailError: 'El patrón de correo es obligatorio.' });
 		}
 
-		const normalizedPattern = pattern.startsWith('@') ? pattern.toLowerCase() : pattern.toLowerCase();
-		const finalPatternType = pattern.startsWith('@') ? 'domain' : (patternType || 'domain');
+		const normalizedPattern = pattern.startsWith('@')
+			? pattern.toLowerCase()
+			: pattern.toLowerCase();
+		const finalPatternType = pattern.startsWith('@') ? 'domain' : patternType || 'domain';
 
 		try {
 			const { error } = await locals.supabase.from('allowed_emails').insert({

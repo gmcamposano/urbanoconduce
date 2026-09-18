@@ -7,7 +7,17 @@
 	import CardTitle from '$lib/components/ui/CardTitle.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-	import { Boxes, Droplets, Edit3, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from '@lucide/svelte';
+	import {
+		Boxes,
+		Droplets,
+		Edit3,
+		Trash2,
+		ArrowUpDown,
+		ArrowUp,
+		ArrowDown,
+		Search,
+		X
+	} from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -28,9 +38,9 @@
 	const sort = $derived(data.sort ?? 'model');
 	const order = $derived(data.order ?? 'asc');
 
-const filteredModels = $derived(
+	const filteredModels = $derived(
 		search.trim()
-			? models.filter(m => m.model.toLowerCase().includes(search.toLowerCase()))
+			? models.filter((m) => m.model.toLowerCase().includes(search.toLowerCase()))
 			: models
 	);
 
@@ -156,9 +166,7 @@ const filteredModels = $derived(
 						<p>Escribe el nombre del modelo manualmente, por ejemplo clásico o sport.</p>
 					</div>
 
-					<Button type="submit" class="w-full" disabled={loading}>
-						Guardar modelo
-					</Button>
+					<Button type="submit" class="w-full" disabled={loading}>Guardar modelo</Button>
 				</form>
 			</CardContent>
 		</Card>
@@ -168,18 +176,18 @@ const filteredModels = $derived(
 				<div class="flex items-center justify-between gap-4">
 					<CardTitle>Modelos disponibles</CardTitle>
 					<div class="relative">
-						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#707070]" />
+						<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#707070]" />
 						<input
 							type="text"
 							placeholder="Buscar modelo..."
 							bind:value={search}
-							class="h-9 w-64 rounded-[6px] border border-[#dfdfdf] bg-white pl-9 pr-8 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:border-[#24b47e]"
+							class="h-9 w-64 rounded-[6px] border border-[#dfdfdf] bg-white pr-8 pl-9 text-sm text-[#171717] placeholder:text-[#9a9a9a] focus-visible:border-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#3ecf8e]/35 focus-visible:outline-none"
 						/>
 						{#if search}
 							<button
 								type="button"
-								onclick={() => search = ''}
-								class="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070] hover:text-[#171717]"
+								onclick={() => (search = '')}
+								class="absolute top-1/2 right-3 -translate-y-1/2 text-[#707070] hover:text-[#171717]"
 							>
 								<X class="h-4 w-4" />
 							</button>
@@ -188,14 +196,15 @@ const filteredModels = $derived(
 				</div>
 			</CardHeader>
 			<CardContent class="p-0">
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[calc(100vh-320px)] overflow-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
+						<thead class="text-xs tracking-wider text-[#707070] uppercase">
+							<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 								<th class="w-16 px-6 py-4 font-bold">#</th>
-								<th class="px-6 py-4 font-bold cursor-pointer select-none hover:text-[#171717]" onclick={() => toggleSort('model')}>
+								<th
+									class="cursor-pointer px-6 py-4 font-bold select-none hover:text-[#171717]"
+									onclick={() => toggleSort('model')}
+								>
 									<div class="flex items-center gap-1.5">
 										Modelo
 										{#if sort === 'model'}
@@ -206,7 +215,10 @@ const filteredModels = $derived(
 										{/if}
 									</div>
 								</th>
-								<th class="px-6 py-4 font-bold cursor-pointer select-none hover:text-[#171717]" onclick={() => toggleSort('created_at')}>
+								<th
+									class="cursor-pointer px-6 py-4 font-bold select-none hover:text-[#171717]"
+									onclick={() => toggleSort('created_at')}
+								>
 									<div class="flex items-center gap-1.5">
 										Fecha ingreso
 										{#if sort === 'created_at'}
@@ -228,7 +240,9 @@ const filteredModels = $derived(
 									<td
 										colspan={canManage ? 4 : 3}
 										class="px-6 py-12 text-center text-xs text-[#707070]"
-									>{search ? `No se encontraron modelos para "${search}"` : 'Aún no hay modelos registrados.'}</td
+										>{search
+											? `No se encontraron modelos para "${search}"`
+											: 'Aún no hay modelos registrados.'}</td
 									>
 								</tr>
 							{:else}
@@ -256,15 +270,15 @@ const filteredModels = $derived(
 														<Edit3 class="h-4 w-4" />
 													</Button>
 													<Button
-															type="button"
-															variant="ghost"
-															size="icon"
-															class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
-															title="Borrar modelo"
-															onclick={() => startDelete(item)}
-														>
-															<Trash2 class="h-4 w-4" />
-														</Button>
+														type="button"
+														variant="ghost"
+														size="icon"
+														class="h-8 w-8 text-[#707070] hover:text-[#e2005a]"
+														title="Borrar modelo"
+														onclick={() => startDelete(item)}
+													>
+														<Trash2 class="h-4 w-4" />
+													</Button>
 												</div>
 											</td>
 										{/if}
@@ -311,9 +325,7 @@ const filteredModels = $derived(
 				disabled={loading}
 			/>
 			<div class="flex gap-3">
-				<Button type="submit" class="flex-1" disabled={loading}>
-					Actualizar modelo
-				</Button>
+				<Button type="submit" class="flex-1" disabled={loading}>Actualizar modelo</Button>
 				<Button type="button" variant="outline" disabled={loading} onclick={closeEditDialog}>
 					Cancelar
 				</Button>
@@ -342,10 +354,20 @@ const filteredModels = $derived(
 		>
 			<input type="hidden" name="id" value={modelToDelete?.id ?? ''} />
 			<div class="flex gap-3">
-				<Button type="submit" variant="destructive" class="flex-1" disabled={deleteLoadingId !== null}>
+				<Button
+					type="submit"
+					variant="destructive"
+					class="flex-1"
+					disabled={deleteLoadingId !== null}
+				>
 					Eliminar modelo
 				</Button>
-				<Button type="button" variant="outline" disabled={deleteLoadingId !== null} onclick={closeDeleteDialog}>
+				<Button
+					type="button"
+					variant="outline"
+					disabled={deleteLoadingId !== null}
+					onclick={closeDeleteDialog}
+				>
 					Cancelar
 				</Button>
 			</div>

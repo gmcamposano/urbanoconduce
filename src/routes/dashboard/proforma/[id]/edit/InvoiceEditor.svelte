@@ -268,8 +268,8 @@
 	);
 	const taxRate = 18;
 	const subtotal = $derived.by(() => (taxMode === 'included' ? lineTotal / 1.18 : lineTotal));
-	const taxableBase = $derived.by(
-		() => Math.max(0, subtotal - (Number(editor.discountAmount) || 0))
+	const taxableBase = $derived.by(() =>
+		Math.max(0, subtotal - (Number(editor.discountAmount) || 0))
 	);
 	const taxAmount = $derived.by(() => {
 		if (taxMode === 'none') return 0;
@@ -726,12 +726,10 @@
 							No hay colores disponibles. Crea al menos uno en la sección Colores.
 						</div>
 					{/if}
-					<div class="w-full overflow-x-auto">
+					<div class="max-h-[calc(100vh-320px)] overflow-auto">
 						<table class="w-full table-fixed text-left text-xs text-[#171717]">
-							<thead
-								class="border-b border-[#ededed] bg-[#fafafa] tracking-wider text-[#707070] uppercase"
-							>
-								<tr>
+							<thead class="tracking-wider text-[#707070] uppercase">
+								<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 									<th class="w-1/4 px-3 py-2.5 text-left font-semibold">
 										<button
 											type="button"

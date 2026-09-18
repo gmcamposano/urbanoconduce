@@ -215,7 +215,9 @@ export const actions: Actions = {
 
 			if (downloadError || !blob) {
 				console.error('Download error:', downloadError?.message);
-				return fail(400, { error: downloadError?.message || 'No se pudo descargar la imagen origen.' });
+				return fail(400, {
+					error: downloadError?.message || 'No se pudo descargar la imagen origen.'
+				});
 			}
 
 			const extension = sourcePath.split('.').pop() || 'jpg';
@@ -235,14 +237,12 @@ export const actions: Actions = {
 
 			for (const target of targets || []) {
 				const targetPath = `${target.id}/${crypto.randomUUID()}.${extension}`;
-				const { error: uploadError } = await locals.supabase.storage.from(bucket).upload(
-					targetPath,
-					new Blob([arrayBuffer], { type: blob.type }),
-					{
+				const { error: uploadError } = await locals.supabase.storage
+					.from(bucket)
+					.upload(targetPath, new Blob([arrayBuffer], { type: blob.type }), {
 						contentType: blob.type,
 						upsert: false
-					}
-				);
+					});
 
 				if (uploadError) {
 					console.error('Copy upload error:', uploadError.message);

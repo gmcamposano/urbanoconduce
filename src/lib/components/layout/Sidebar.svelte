@@ -12,7 +12,8 @@
 		Palette,
 		Boxes,
 		Calculator,
-		Warehouse
+		Warehouse,
+		BarChart3
 	} from '@lucide/svelte';
 
 	let {
@@ -48,6 +49,9 @@
 			return (
 				activePath === '/dashboard/inventory' || activePath.startsWith('/dashboard/inventory/')
 			);
+		}
+		if (path === '/dashboard/stats') {
+			return activePath === '/dashboard/stats' || activePath.startsWith('/dashboard/stats/');
 		}
 		return activePath === path;
 	}
@@ -127,6 +131,17 @@
 			>
 				<Package class="h-4.5 w-4.5" />
 				Productos
+			</a>
+
+			<a
+				href={resolve('/dashboard/stats')}
+				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+					'/dashboard/stats'
+				)}"
+				onclick={onNavigate}
+			>
+				<BarChart3 class="h-4.5 w-4.5" />
+				Estadísticas
 			</a>
 
 			<a

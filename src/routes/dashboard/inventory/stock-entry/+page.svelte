@@ -309,12 +309,10 @@
 				</div>
 
 				{#if parsedRows.length > 0}
-					<div class="w-full overflow-x-auto rounded-md border border-[#ededed]">
+					<div class="max-h-[calc(100vh-320px)] overflow-auto rounded-md border border-[#ededed]">
 						<table class="w-full text-left text-sm text-[#171717]">
-							<thead
-								class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-							>
-								<tr>
+							<thead class="text-xs tracking-wider text-[#707070] uppercase">
+								<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 									<th class="px-4 py-3 font-bold uppercase">Producto</th>
 									<th class="px-4 py-3 font-bold uppercase">Modelo</th>
 									<th class="px-4 py-3 font-bold uppercase">Color</th>
@@ -415,12 +413,10 @@
 				</div>
 			</CardHeader>
 			<CardContent class="p-0">
-				<div class="w-full overflow-x-auto">
+				<div class="max-h-[calc(100vh-320px)] overflow-auto">
 					<table class="w-full text-left text-sm text-[#171717]">
-						<thead
-							class="border-b border-[#ededed] bg-[#fafafa] text-xs tracking-wider text-[#707070] uppercase"
-						>
-							<tr>
+						<thead class="text-xs tracking-wider text-[#707070] uppercase">
+							<tr class="sticky top-0 z-10 border-b border-[#ededed] bg-[#fafafa]">
 								<th class="px-6 py-4 font-bold uppercase">Producto</th>
 								<th class="px-6 py-4 font-bold uppercase">Modelo</th>
 								<th class="px-6 py-4 font-bold uppercase">Color</th>

@@ -43,6 +43,9 @@ export function normalizeFacturaTipoForFamily(family: DocumentFamily, facturaTip
 	return 'ninguna';
 }
 
-export function shouldMoveProformaToInvoices(facturaTipo: string | null | undefined, status: string) {
+export function shouldMoveProformaToInvoices(
+	facturaTipo: string | null | undefined,
+	status: string
+) {
 	return facturaTipo === 'proforma' && status === 'paid';
 }

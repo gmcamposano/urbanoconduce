@@ -43,6 +43,10 @@ Documento comercial emitido a un cliente. Sus líneas (invoice*items) son snapsh
 Proforma pagada que ya originó una Factura. Se conserva como fuente del historial de pagos e inventario, pero deja de pertenecer al conjunto activo de Proformas.
 _Avoid_: proforma eliminada, factura original
 
+**Inventario vendido**:
+Unidades de líneas de Facturas reales (`factura_tipo = 'ninguna'`) y de Proformas **no convertidas**, dentro de un rango de `invoice_date`, opcionalmente filtradas por Cliente. Una Proforma convertida ya cuenta a través de su Factura (sus líneas se copian, no se mueven, así que contarla dos veces duplicaría). Cantidad = suma de `invoice_items.quantity`, agrupada por descripción de línea.
+_Avoid_: unidades despachadas
+
 ## Relationships
 
 - Un **Producto** tiene cero o más **Variantes** (una por color)
@@ -52,6 +56,7 @@ _Avoid_: proforma eliminada, factura original
 - Una **Factura** pertenece a un **Cliente** y tiene una o más líneas que referencian **Variantes**
 - Las líneas de factura snapshotan el precio al emitir; cambios posteriores a precios no afectan facturas emitidas
 - Una **Proforma convertida** conserva su relación con la **Factura**, pero no aparece entre las Proformas activas
+- El **Inventario vendido** se mide sobre Facturas (`factura_tipo = 'ninguna'`) y Proformas no convertidas — nunca sobre Proformas convertidas (duplicarían las líneas copiadas a su Factura)
 
 ## Example dialogue
 

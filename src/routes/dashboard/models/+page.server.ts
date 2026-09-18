@@ -24,10 +24,7 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 	const ascending = order === 'asc';
 
 	try {
-		let query = locals.supabase
-			.from('product_models')
-			.select('*')
-			.order(sortColumn, { ascending });
+		let query = locals.supabase.from('product_models').select('*').order(sortColumn, { ascending });
 
 		if (search) {
 			query = query.ilike('model', `%${search}%`);
@@ -79,7 +76,9 @@ export const actions: Actions = {
 
 			if (error) {
 				if (error.code === '23505') {
-					return fail(400, { error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.' });
+					return fail(400, {
+						error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.'
+					});
 				}
 				return fail(400, { error: error.message });
 			}
@@ -119,7 +118,9 @@ export const actions: Actions = {
 
 			if (error) {
 				if (error.code === '23505') {
-					return fail(400, { error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.' });
+					return fail(400, {
+						error: 'No se pudo guardar el modelo. Ya existe un modelo con ese nombre.'
+					});
 				}
 				return fail(400, { error: error.message });
 			}
