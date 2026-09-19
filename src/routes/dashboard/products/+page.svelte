@@ -329,7 +329,7 @@
 				>
 					<Input
 						bind:value={title}
-						label="Producto"
+						label="Descripción"
 						name="title"
 						placeholder="Cover Elite Colors"
 						required
@@ -350,11 +350,11 @@
 						</p>
 					{:else if availableModels.length === 0 && title.trim() !== ''}
 						<p class="-mt-2 text-[11px] font-medium text-red-600">
-							Ya existe un producto con este nombre y modelo.
+							Ya existe un producto con esta descripción y modelo.
 						</p>
 					{:else if availableModels.length === 0}
 						<p class="-mt-2 text-[11px] text-[#707070]">
-							Escribe el nombre del producto para ver los modelos disponibles.
+							Escribe la descripción del producto para ver los modelos disponibles.
 						</p>
 					{/if}
 
@@ -433,7 +433,7 @@
 			<input
 				type="text"
 				bind:value={searchQuery}
-				placeholder="Buscar por modelo, producto o descripción..."
+				placeholder="Buscar por modelo o descripción..."
 				class="flex-1 bg-transparent text-sm text-[#171717] outline-none placeholder:text-[#707070]"
 			/>
 		</div>
@@ -465,7 +465,7 @@
 							class="flex items-center gap-1 uppercase transition-colors hover:text-[#3ecf8e]"
 							onclick={() => toggleSort('title')}
 						>
-							Producto
+							Descripción
 							{#if sortBy === 'title'}
 								{#if sortOrder === 'asc'}<ArrowUp class="h-3 w-3" />{:else}<ArrowDown
 										class="h-3 w-3"
@@ -580,7 +580,7 @@
 
 			<Input
 				bind:value={editTitle}
-				label="Título"
+				label="Descripción"
 				name="title"
 				placeholder="Consultoría SEO"
 				required
@@ -601,11 +601,11 @@
 				</p>
 			{:else if availableModelsEdit.length === 0 && editTitle.trim() !== ''}
 				<p class="-mt-2 text-[11px] font-medium text-red-600">
-					Ya existe un producto con este nombre y modelo.
+					Ya existe un producto con esta descripción y modelo.
 				</p>
 			{:else if availableModelsEdit.length === 0}
 				<p class="-mt-2 text-[11px] text-[#707070]">
-					Escribe el nombre del producto para ver los modelos disponibles.
+					Escribe la descripción del producto para ver los modelos disponibles.
 				</p>
 			{/if}
 

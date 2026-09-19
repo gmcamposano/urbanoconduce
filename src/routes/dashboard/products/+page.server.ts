@@ -83,7 +83,7 @@ export const actions: Actions = {
 		const modelId = (formData.get('model') as string)?.trim()?.toLowerCase() || null;
 
 		if (!title) {
-			return fail(400, { error: 'El título del producto es obligatorio.' });
+			return fail(400, { error: 'La descripción del producto es obligatoria.' });
 		}
 
 		if (!modelId) {
@@ -136,7 +136,7 @@ export const actions: Actions = {
 		}
 
 		if (!title) {
-			return fail(400, { error: 'El título del producto es obligatorio.' });
+			return fail(400, { error: 'La descripción del producto es obligatoria.' });
 		}
 
 		if (!modelId) {
@@ -260,7 +260,7 @@ export const actions: Actions = {
 				if (insertError.code === '23505') {
 					return fail(400, {
 						error:
-							'Ya existe un producto con el mismo nombre y modelo. Elige un modelo diferente o cambia el nombre del producto.'
+							'Ya existe un producto con la misma descripción y modelo. Elige un modelo diferente o cambia la descripción del producto.'
 					});
 				}
 				return fail(400, { error: insertError.message });
