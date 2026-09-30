@@ -10,6 +10,21 @@ function isValidDate(value: string): boolean {
 	return /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(new Date(value).getTime());
 }
 
+function toTitleCase(value: string): string {
+	if (!value) return value;
+	return value
+		.split(' ')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+		.join(' ');
+}
+
+function normalizeDescription(value: string): { key: string; label: string } {
+	const collapsed = (value || '').trim().replace(/\s+/g, ' ');
+	if (!collapsed) return { key: 'sin descripción', label: 'Sin Descripción' };
+	const key = collapsed.toLowerCase();
+	return { key, label: toTitleCase(key) };
+}
+
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const now = new Date();
 	const defaultFrom = new Date(now);
@@ -100,16 +115,18 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		} else {
 			const quantities = new Map<string, number>();
 			const amounts = new Map<string, number>();
+			const labels = new Map<string, string>();
 			for (const item of items || []) {
-				const description = (item.description || '').trim() || 'Sin descripción';
-				quantities.set(description, (quantities.get(description) || 0) + Number(item.quantity));
-				amounts.set(description, (amounts.get(description) || 0) + Number(item.amount || 0));
+				const { key, label } = normalizeDescription(item.description || '');
+				labels.set(key, label);
+				quantities.set(key, (quantities.get(key) || 0) + Number(item.quantity));
+				amounts.set(key, (amounts.get(key) || 0) + Number(item.amount || 0));
 			}
 			itemsByDescription = [...quantities.entries()]
-				.map(([description, quantity]) => ({
-					description,
+				.map(([key, quantity]) => ({
+					description: labels.get(key) || toTitleCase(key),
 					quantity,
-					amount: amounts.get(description) || 0
+					amount: amounts.get(key) || 0
 				}))
 				.sort((a, b) => b.quantity - a.quantity);
 			unitsSold = itemsByDescription.reduce((sum, item) => sum + item.quantity, 0);

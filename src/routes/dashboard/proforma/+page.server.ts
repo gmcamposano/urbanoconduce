@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (allInvoiceIds.size > 0) {
 			const itemsResult = await locals.supabase
 				.from('invoice_items')
-				.select('invoice_id')
+				.select('invoice_id, quantity')
 				.in('invoice_id', [...allInvoiceIds]);
 			if (itemsResult.error) {
 				console.error(
@@ -64,7 +64,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 				);
 			} else {
 				(itemsResult.data || []).forEach((item) => {
-					itemCounts.set(item.invoice_id, (itemCounts.get(item.invoice_id) || 0) + 1);
+					itemCounts.set(
+						item.invoice_id,
+						(itemCounts.get(item.invoice_id) || 0) + Number(item.quantity || 0)
+					);
 				});
 			}
 		}

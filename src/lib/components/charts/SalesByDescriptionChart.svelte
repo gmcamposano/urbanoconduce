@@ -13,10 +13,6 @@
 
 	const chartData = $derived(data.filter((d) => d.quantity > 0).slice(0, 8));
 
-	function truncate(text: string, max = 16) {
-		return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-	}
-
 	function formatNumber(value: number) {
 		return new Intl.NumberFormat('es-DO').format(value);
 	}
@@ -31,9 +27,9 @@
 
 	const chartProps = {
 		xAxis: {
-			label: 'Descripción',
-			format: (value: string) => truncate(value),
-			tickLabelProps: { fontSize: 10, fill: '#707070' }
+			label: '',
+			format: () => '',
+			tickLabelProps: { fontSize: 0, fill: 'transparent' }
 		},
 		yAxis: {
 			label: 'Cantidad',
@@ -58,8 +54,8 @@
 			y="quantity"
 			yDomain={[0, null]}
 			cRange={['#24b47e']}
-			padding={{ top: 12, right: 12, bottom: 42, left: 46 }}
-			aria-label="Cantidad vendida por descripción"
+			padding={{ top: 12, right: 12, bottom: 12, left: 46 }}
+			aria-label="Cantidad vendida"
 			role="img"
 			props={chartProps}
 		>
