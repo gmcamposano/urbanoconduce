@@ -166,107 +166,12 @@
 		}
 	}
 
-	function inlineLoadedStyles(clonedDoc: Document) {
-		const style = clonedDoc.createElement('style');
-		const cssText = Array.from(document.styleSheets)
-			.map((sheet) => {
-				try {
-					return Array.from(sheet.cssRules)
-						.map((rule) => rule.cssText)
-						.join('\n');
-				} catch {
-					return '';
-				}
-			})
-			.filter(Boolean)
-			.join('\n');
-
-		style.textContent = cssText;
-		clonedDoc.head.appendChild(style);
-		clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((link) => link.remove());
-	}
-
 	function handlePrint() {
 		window.print();
 	}
 
-	async function handleDownloadPdf() {
-		try {
-			const html2pdf = (await import('html2pdf.js')).default;
-			const element = document.getElementById('invoice-printable');
-			if (!element) return;
-
-			const opt = {
-				margin: 0.5,
-				filename: `${invoice?.invoice_number || 'invoice'}.pdf`,
-				image: { type: 'jpeg' as const, quality: 0.98 },
-				pagebreak: { mode: ['css', 'legacy'] as const },
-				html2canvas: {
-					scale: 2,
-					useCORS: true,
-					logging: false,
-					onclone: (clonedDoc: Document) => {
-						inlineLoadedStyles(clonedDoc);
-						const breakStyle = clonedDoc.createElement('style');
-						breakStyle.textContent = `
-							#invoice-printable p,
-							#invoice-printable tr,
-							#invoice-printable li,
-							#invoice-printable .avoid-break {
-								break-inside: avoid;
-								page-break-inside: avoid;
-							}
-							#invoice-printable > div > div.print-card.print-text-dark {
-								display: block !important;
-								min-height: auto !important;
-							}
-							.fiscal-items-table .fiscal-item-row {
-								font-size: 11px !important;
-								line-height: 1.2 !important;
-							}
-							.fiscal-items-table .fiscal-table-heading {
-								font-size: 10px !important;
-								line-height: 1.2 !important;
-							}
-							.fiscal-items-table th,
-							.fiscal-items-table td {
-								padding-top: 4px !important;
-								padding-bottom: 4px !important;
-							}
-						`;
-						clonedDoc.head.appendChild(breakStyle);
-						clonedDoc.documentElement.style.fontSize = '90%';
-						clonedDoc.body.style.fontSize = '90%';
-						clonedDoc.querySelectorAll<HTMLElement>('.print-card').forEach((card: HTMLElement) => {
-							const printableCard = card as HTMLElement;
-							printableCard.style.border = 'none';
-							printableCard.style.boxShadow = 'none';
-							printableCard.style.borderRadius = '0';
-						});
-						clonedDoc
-							.querySelectorAll<HTMLElement>('.print-badge-label')
-							.forEach((label: HTMLElement) => {
-								const statusLabel = label as HTMLElement;
-								statusLabel.style.display = 'inline-block';
-								statusLabel.style.lineHeight = '1';
-								statusLabel.style.transform = 'translateY(-4px)';
-							});
-						clonedDoc
-							.querySelectorAll<HTMLElement>('.print-badge span')
-							.forEach((badge: HTMLElement) => {
-								const statusBadge = badge as HTMLElement;
-								statusBadge.style.border = 'none';
-								statusBadge.style.boxShadow = 'none';
-							});
-					}
-				},
-				jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
-			};
-			await html2pdf().set(opt).from(element).save();
-		} catch (err) {
-			console.error('PDF generation failed:', err);
-			alert("PDF generation failed. Please use your browser's Print > Save as PDF instead.");
-		}
+	function handleSavePdf() {
+		window.print();
 	}
 </script>
 
@@ -392,12 +297,12 @@
 						<span class="sm:hidden">Imprimir</span>
 					</Button>
 
-					<!-- Download PDF Button -->
+					<!-- Print dialog lets the user save as PDF -->
 					<Button
 						variant="outline"
 						size="sm"
 						class="flex items-center gap-1.5"
-						onclick={handleDownloadPdf}
+						onclick={handleSavePdf}
 					>
 						<Download class="h-4 w-4" />
 						<span class="hidden sm:inline">Guardar PDF</span>
