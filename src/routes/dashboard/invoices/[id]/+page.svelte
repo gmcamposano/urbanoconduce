@@ -17,6 +17,7 @@
 		Check
 	} from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
+	import { descriptionRank, sortInvoiceDisplayItems } from '$lib/invoiceItemOrder';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -34,15 +35,7 @@
 		return found?.model ?? '-';
 	}
 
-	const sortedItems = $derived(
-		[...items].sort((a, b) => {
-			const modelA = getModelName(a.model).toLowerCase();
-			const modelB = getModelName(b.model).toLowerCase();
-			if (modelA === '-') return 1;
-			if (modelB === '-') return -1;
-			return modelA.localeCompare(modelB);
-		})
-	);
+	const sortedItems = $derived(sortInvoiceDisplayItems(items, getModelName));
 
 	function normalizeDescription(description: string | null | undefined): string {
 		return (description ?? '').replace(/\s+/g, ' ').trim();
@@ -65,7 +58,11 @@
 		}
 
 		return grouped
-			.sort((a, b) => a.description.localeCompare(b.description, 'es', { sensitivity: 'base' }))
+			.sort(
+				(a, b) =>
+					descriptionRank(a.description) - descriptionRank(b.description) ||
+					a.description.localeCompare(b.description, 'es', { sensitivity: 'base' })
+			)
 			.map(({ description, quantity }) => ({ description, quantity }));
 	});
 

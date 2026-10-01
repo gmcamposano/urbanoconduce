@@ -16,6 +16,7 @@
 		Check
 	} from '@lucide/svelte';
 	import type { PageData, ActionData } from './$types';
+	import { sortInvoiceDisplayItems } from '$lib/invoiceItemOrder';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -35,15 +36,7 @@
 		return found?.model ?? '-';
 	}
 
-	const sortedItems = $derived(
-		[...items].sort((a, b) => {
-			const modelA = getModelName(a.model).toLowerCase();
-			const modelB = getModelName(b.model).toLowerCase();
-			if (modelA === '-') return 1;
-			if (modelB === '-') return -1;
-			return modelA.localeCompare(modelB);
-		})
-	);
+	const sortedItems = $derived(sortInvoiceDisplayItems(items, getModelName));
 
 	// function getProductModel(productId: string | null): string | null {
 	// 	if (!productId) return null;
