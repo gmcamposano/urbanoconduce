@@ -65,11 +65,12 @@
 		status: 'draft' | 'pending' | 'paid' | 'overdue';
 		notes: string;
 		includeTax: boolean;
-		discountAmount: number;
+		discountAmount: number | undefined;
 		items: InvoiceFormItem[];
 	};
 
 	type TaxMode = 'none' | 'included' | 'added';
+	type DiscountMode = 'amount' | 'percentage';
 	type MissingVariant = {
 		productId: string;
 		productTitle: string;
@@ -241,6 +242,8 @@
 	let loading = $state(false);
 	let createMissingVariants = $state(false);
 	let taxMode = $state<TaxMode>('none');
+	let discountMode = $state<DiscountMode>('amount');
+	let discountPercentage = $state<number | undefined>(0);
 	let quickAddOpen = $state(false);
 	let refreshDialogOpen = $state(false);
 	let showPricesAlreadyAlert = $state(false);
@@ -268,9 +271,12 @@
 	);
 	const taxRate = 18;
 	const subtotal = $derived.by(() => (taxMode === 'included' ? lineTotal / 1.18 : lineTotal));
-	const taxableBase = $derived.by(() =>
-		Math.max(0, subtotal - (Number(editor.discountAmount) || 0))
-	);
+	const calculatedDiscountAmount = $derived.by(() => {
+		if (discountMode === 'amount') return Number(editor.discountAmount) || 0;
+		const percentage = Math.min(100, Math.max(0, Number(discountPercentage) || 0));
+		return Math.round(((Math.max(0, subtotal) * percentage) / 100 + Number.EPSILON) * 100) / 100;
+	});
+	const taxableBase = $derived.by(() => Math.max(0, subtotal - calculatedDiscountAmount));
 	const taxAmount = $derived.by(() => {
 		if (taxMode === 'none') return 0;
 		return taxableBase * (taxRate / 100);
@@ -523,6 +529,7 @@
 			class="space-y-6"
 		>
 			<input type="hidden" name="items" value={JSON.stringify(editor.items)} />
+			<input type="hidden" name="discount_amount" value={calculatedDiscountAmount} />
 
 			<Card>
 				<CardHeader>
@@ -1050,16 +1057,64 @@
 							</div>
 
 							<div class="flex justify-end">
-								<div class="w-full max-w-sm">
-									<Input
-										label="Descuento ($)"
-										name="discount_amount"
-										type="number"
-										min="0"
-										step="any"
-										bind:value={editor.discountAmount}
-										disabled={loading}
-									/>
+								<div class="w-full max-w-sm space-y-2">
+									<p class="text-xs font-medium tracking-wider text-[#707070] uppercase">
+										Descuento
+									</p>
+									<div
+										class="grid grid-cols-2 gap-1 rounded-lg border border-[#dfdfdf] bg-[#fafafa] p-1"
+									>
+										<label class="cursor-pointer">
+											<input
+												type="radio"
+												name="discount_mode"
+												value="amount"
+												bind:group={discountMode}
+												disabled={loading}
+												class="peer sr-only"
+											/>
+											<div
+												class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+											>
+												Monto
+											</div>
+										</label>
+										<label class="cursor-pointer">
+											<input
+												type="radio"
+												name="discount_mode"
+												value="percentage"
+												bind:group={discountMode}
+												disabled={loading}
+												class="peer sr-only"
+											/>
+											<div
+												class="rounded-md border border-transparent px-3 py-2 text-center text-sm font-medium text-[#707070] transition-colors peer-checked:border-[#24b47e] peer-checked:bg-white peer-checked:text-[#171717] peer-checked:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+											>
+												%
+											</div>
+										</label>
+									</div>
+									{#if discountMode === 'amount'}
+										<Input
+											label="Descuento ($)"
+											type="number"
+											min="0"
+											step="any"
+											bind:value={editor.discountAmount}
+											disabled={loading}
+										/>
+									{:else}
+										<Input
+											label="Descuento (%)"
+											type="number"
+											min="0"
+											max="100"
+											step="any"
+											bind:value={discountPercentage}
+											disabled={loading}
+										/>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -1078,9 +1133,11 @@
 								</div>
 								<div class="flex items-center justify-between">
 									<span>Descuento</span>
-									<span class="font-mono font-medium text-[#171717]"
-										>-{formatCurrency(editor.discountAmount || 0)}</span
-									>
+									<span class="font-mono font-medium text-[#171717]">
+										-{formatCurrency(calculatedDiscountAmount)}{discountMode === 'percentage'
+											? ` (${Math.min(100, Math.max(0, Number(discountPercentage) || 0))}%)`
+											: ''}
+									</span>
 								</div>
 								<div class="flex items-center justify-between">
 									<span>Impuesto ({taxRate}%)</span>
