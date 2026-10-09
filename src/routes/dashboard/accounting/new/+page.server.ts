@@ -3,6 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Actions, PageServerLoad } from './$types';
 import type { Database } from '$lib/database.types';
 import { buildClientCreditSummary, buildInvoiceBalances } from '$lib/server/accounting';
+import {
+	clearAccountingStockWarningFlash,
+	setAccountingStockWarningFlash
+} from '$lib/server/accounting-stock-warning-flash';
 
 type StockWarning = {
 	invoiceNumber: string;
@@ -158,7 +162,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 };
 
 export const actions: Actions = {
-	createPayment: async ({ request, locals }) => {
+	createPayment: async ({ request, locals, cookies }) => {
 		const { user } = await locals.safeGetUser();
 		if (!user) {
 			throw redirect(303, '/login');
@@ -212,12 +216,12 @@ export const actions: Actions = {
 				? await getStockWarningsForPayment(locals.supabase, paymentId)
 				: [];
 			if (stockWarnings.length > 0) {
-				return {
-					success: true,
-					warning: 'Registra la entrada de mercancía desde Inventario para completar la salida.',
+				setAccountingStockWarningFlash(cookies, {
 					warningCount: stockWarnings.length,
 					warningInvoiceCount: new Set(stockWarnings.map((warning) => warning.invoiceNumber)).size
-				};
+				});
+			} else {
+				clearAccountingStockWarningFlash(cookies);
 			}
 		} catch (e: unknown) {
 			console.error('Payment save exception:', e);

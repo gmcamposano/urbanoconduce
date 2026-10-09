@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
+	import type { ActionData, PageData } from './$types';
 	import Card from '$lib/components/ui/Card.svelte';
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -16,10 +18,11 @@
 		Eye,
 		Edit3,
 		Receipt,
-		Calendar
+		Calendar,
+		X
 	} from '@lucide/svelte';
 
-	let { data, form } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const profile = $derived(data.profile);
 	const canManage = $derived(profile?.role === 'admin' || profile?.role === 'editor');
@@ -79,6 +82,34 @@
 	);
 
 	const outstandingByClient = $derived(clientBalances);
+	const stockWarning = $derived(data.stockWarning);
+	let dismissedStockWarning = $state<PageData['stockWarning']>(null);
+	let stockWarningTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	onMount(() => {
+		if (!stockWarning) return;
+
+		stockWarningTimeout = setTimeout(() => {
+			dismissedStockWarning = stockWarning;
+			stockWarningTimeout = undefined;
+		}, 7000);
+
+		return () => {
+			if (stockWarningTimeout !== undefined) {
+				clearTimeout(stockWarningTimeout);
+				stockWarningTimeout = undefined;
+			}
+		};
+	});
+
+	function dismissStockWarning(warning: NonNullable<PageData['stockWarning']>) {
+		if (stockWarningTimeout !== undefined) {
+			clearTimeout(stockWarningTimeout);
+			stockWarningTimeout = undefined;
+		}
+
+		dismissedStockWarning = warning;
+	}
 
 	const formatCurrency = (val: number) => {
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -131,6 +162,45 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if stockWarning && stockWarning !== dismissedStockWarning}
+		<div
+			role="status"
+			aria-atomic="true"
+			class="flex items-start gap-3 rounded-lg border border-[#ffdb13] bg-[#ffdb13]/15 p-3 text-[#171717] shadow-sm"
+		>
+			<AlertTriangle class="mt-0.5 h-4.5 w-4.5 shrink-0" aria-hidden="true" />
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Pago registrado</p>
+				<p class="mt-0.5 text-xs text-[#707070]">
+					La proforma tiene productos pendientes de inventario.
+				</p>
+				<p class="mt-1 text-xs text-[#707070]">
+					{stockWarning.warningInvoiceCount}
+					{stockWarning.warningInvoiceCount === 1 ? 'proforma' : 'proformas'} ·
+					{stockWarning.warningCount}
+					{stockWarning.warningCount === 1 ? 'variante' : 'variantes'} sin existencias.
+				</p>
+				<p class="mt-1 text-xs text-[#707070]">
+					Registra la entrada de mercancía desde Inventario para completar la salida.
+					<a
+						href={resolve('/dashboard/inventory')}
+						class="ml-1 inline-flex font-medium text-[#171717] underline underline-offset-2 transition-colors hover:text-[#24b47e] focus-visible:ring-2 focus-visible:ring-[#24b47e]/40 focus-visible:outline-none"
+					>
+						Ver inventario
+					</a>
+				</p>
+			</div>
+			<button
+				type="button"
+				class="-mt-1 -mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#707070] transition-colors hover:bg-black/5 hover:text-[#171717] focus-visible:ring-2 focus-visible:ring-[#24b47e]/40 focus-visible:outline-none"
+				aria-label="Cerrar aviso de inventario"
+				onclick={() => dismissStockWarning(stockWarning)}
+			>
+				<X class="h-4 w-4" aria-hidden="true" />
+			</button>
+		</div>
+	{/if}
 
 	{#if form?.error}
 		<div

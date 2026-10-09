@@ -5,8 +5,10 @@ import {
 	buildInvoiceBalances,
 	buildPaymentSummaries
 } from '$lib/server/accounting';
+import { consumeAccountingStockWarningFlash } from '$lib/server/accounting-stock-warning-flash';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, cookies }) => {
+	const stockWarning = consumeAccountingStockWarningFlash(cookies);
 	const { user } = await locals.safeGetUser();
 
 	if (!user) {
@@ -62,11 +64,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 			payments,
 			outstandingInvoices,
 			clients: clientsResult.data || [],
-			clientBalances
+			clientBalances,
+			stockWarning
 		};
 	} catch (e) {
 		console.error('Unexpected exception in accounting load:', e);
-		return { payments: [], outstandingInvoices: [], clients: [], clientBalances: [] };
+		return {
+			payments: [],
+			outstandingInvoices: [],
+			clients: [],
+			clientBalances: [],
+			stockWarning
+		};
 	}
 };
 
