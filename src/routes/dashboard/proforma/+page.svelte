@@ -379,7 +379,13 @@
 								<td class="px-6 py-4 font-mono font-medium text-[#171717]">
 									<div class="space-y-1">
 										<p>{formatCurrency(Number(inv.total_amount))}</p>
-										{#if Number(inv.paidAmount || 0) > 0}
+										{#if collectionState === 'paid'}
+											<p
+												class="inline-block rounded bg-[#e6f7ef] px-2 py-0.5 text-[11px] text-[#167a50]"
+											>
+												Pagado
+											</p>
+										{:else if Number(inv.paidAmount || 0) > 0}
 											<p class="text-[11px] text-[#24b47e]">
 												Abonado {formatCurrency(Number(inv.paidAmount || 0))}
 											</p>
