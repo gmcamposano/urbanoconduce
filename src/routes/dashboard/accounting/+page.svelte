@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { isOverdueBalance } from '$lib/overdue';
 	import { onMount } from 'svelte';
 	import type { ActionData, PageData } from './$types';
 	import Card from '$lib/components/ui/Card.svelte';
@@ -46,7 +47,7 @@
 
 	const totalOverdue = $derived(
 		outstandingInvoices
-			.filter((i) => i.status === 'overdue')
+			.filter((i) => isOverdueBalance(i.due_date, Number(i.balanceDue)))
 			.reduce((sum, inv) => sum + Number(inv.balanceDue), 0)
 	);
 

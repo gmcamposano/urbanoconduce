@@ -1,3 +1,5 @@
+import { isOverdueBalance } from '$lib/overdue';
+
 type ClientRecord = {
 	id: string;
 	client_type: string;
@@ -258,7 +260,7 @@ export function buildClientCreditSummary(invoices: InvoiceBalanceRow[], clients:
 				current.creditBalance += invoice.balanceDue;
 				current.invoiceCount += 1;
 			}
-			if (invoice.status === 'overdue') {
+			if (isOverdueBalance(invoice.due_date, invoice.balanceDue)) {
 				current.overdueBalance += invoice.balanceDue;
 			}
 		}

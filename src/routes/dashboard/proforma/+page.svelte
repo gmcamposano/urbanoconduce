@@ -5,7 +5,7 @@
 	import CardContent from '$lib/components/ui/CardContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
-	import { SvelteDate } from 'svelte/reactivity';
+	import { isOverdueBalance } from '$lib/overdue';
 	import {
 		Search,
 		Plus,
@@ -48,14 +48,6 @@
 	const invoices = $derived(data.invoices || []);
 
 	type CollectionState = 'draft' | 'pending' | 'partial' | 'paid' | 'overdue';
-
-	const todayTime = new SvelteDate().setHours(0, 0, 0, 0);
-
-	function isExpired(dueDate: string) {
-		if (!dueDate) return false;
-		const due = new SvelteDate(dueDate);
-		return due.getTime() < todayTime;
-	}
 
 	function getCollectionState(invoice: {
 		status: string;
@@ -114,7 +106,7 @@
 	);
 	const totalOverdue = $derived.by(() => {
 		return invoices
-			.filter((inv) => Number(inv.balanceDue || 0) > 0 && isExpired(inv.due_date))
+			.filter((inv) => isOverdueBalance(inv.due_date, Number(inv.balanceDue || 0)))
 			.reduce((sum, inv) => sum + Number(inv.balanceDue || 0), 0);
 	});
 
