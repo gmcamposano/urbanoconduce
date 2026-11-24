@@ -8,6 +8,7 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import { dev } from '$app/environment';
+	import { page } from '$app/state';
 	import { FileText, LogIn, UserPlus, Shield, Eye, EyeOff } from '@lucide/svelte';
 
 	type LoginFormState = {
@@ -144,6 +145,7 @@
 						};
 					}}
 				>
+					<input type="hidden" name="next" value={page.url.searchParams.get('next') ?? ''} />
 					<Input
 						label="Correo electrónico"
 						name="email"

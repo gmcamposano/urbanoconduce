@@ -108,6 +108,50 @@ export type Database = {
 					}
 				];
 			};
+			api_tokens: {
+				Row: {
+					created_at: string;
+					expires_at: string | null;
+					id: string;
+					last_used_at: string | null;
+					name: string;
+					revoked_at: string | null;
+					token_hash: string;
+					token_prefix: string;
+					user_id: string;
+				};
+				Insert: {
+					created_at?: string;
+					expires_at?: string | null;
+					id?: string;
+					last_used_at?: string | null;
+					name: string;
+					revoked_at?: string | null;
+					token_hash: string;
+					token_prefix: string;
+					user_id: string;
+				};
+				Update: {
+					created_at?: string;
+					expires_at?: string | null;
+					id?: string;
+					last_used_at?: string | null;
+					name?: string;
+					revoked_at?: string | null;
+					token_hash?: string;
+					token_prefix?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'api_tokens_user_id_fkey';
+						columns: ['user_id'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			allowed_emails: {
 				Row: {
 					created_at: string;
@@ -711,6 +755,10 @@ export type Database = {
 				Returns: Json;
 			};
 			is_email_allowed: { Args: { email: string }; Returns: boolean };
+			resolve_api_token: {
+				Args: { p_token_hash: string };
+				Returns: { email: string; role: string; user_id: string }[];
+			};
 			recalculate_invoice_status: {
 				Args: { p_invoice_id: string };
 				Returns: undefined;

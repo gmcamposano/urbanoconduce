@@ -3,11 +3,16 @@ import type { Actions, PageServerLoad } from './$types';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 
-export const load: PageServerLoad = async ({ locals }) => {
+/** Only same-site paths, so ?next= cannot send users to another domain. */
+function safeNext(value: string | null | undefined) {
+	return value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard';
+}
+
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const { user } = await locals.safeGetUser();
 
 	if (user) {
-		throw redirect(303, '/dashboard');
+		throw redirect(303, safeNext(url.searchParams.get('next')));
 	}
 };
 
@@ -30,7 +35,7 @@ export const actions: Actions = {
 			return fail(400, { email, error: error.message });
 		}
 
-		throw redirect(303, '/dashboard');
+		throw redirect(303, safeNext(formData.get('next') as string | null));
 	},
 
 	register: async ({ request, locals }) => {

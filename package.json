@@ -40,10 +40,12 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^1.16.0",
+		"@modelcontextprotocol/sdk": "^1.32.2",
 		"@supabase/ssr": "^0.10.3",
 		"@supabase/supabase-js": "^2.106.2",
 		"layerchart": "^2.5.0",
 		"svelte-dnd-action": "^0.9.79",
-		"xlsx": "^0.18.5"
+		"xlsx": "^0.18.5",
+		"zod": "^4.6.7"
 	}
 }

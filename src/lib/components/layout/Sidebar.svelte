@@ -13,7 +13,8 @@
 		Boxes,
 		Calculator,
 		Warehouse,
-		BarChart3
+		BarChart3,
+		KeyRound
 	} from '@lucide/svelte';
 
 	let {
@@ -175,6 +176,17 @@
 			>
 				<Boxes class="h-4.5 w-4.5" />
 				Modelos
+			</a>
+
+			<a
+				href={resolve('/dashboard/tokens')}
+				class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-200 {getNavClass(
+					'/dashboard/tokens'
+				)}"
+				onclick={onNavigate}
+			>
+				<KeyRound class="h-4.5 w-4.5" />
+				Tokens y conexiones
 			</a>
 
 			{#if profile?.role === 'admin'}
