@@ -67,7 +67,7 @@
 	</div>
 
 	<!-- How to connect -->
-	<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+	<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
 		<Card class="bg-white">
 			<CardContent class="space-y-2 p-6">
 				<Badge variant="success">Recomendado</Badge>
@@ -88,6 +88,46 @@
 						Copiar
 					</Button>
 				</div>
+			</CardContent>
+		</Card>
+
+		<Card class="bg-white">
+			<CardContent class="space-y-2 p-6">
+				<Badge variant="outline">Inicio de sesión</Badge>
+				<p class="mt-2 text-sm font-medium">ChatGPT</p>
+				<ol class="list-decimal space-y-1 pl-4 text-xs leading-relaxed text-[#707070]">
+					<li>
+						En chatgpt.com (web), abre <span class="font-medium text-[#171717]">Plugins</span> → + →
+						<span class="font-medium text-[#171717]">Add custom MCP server</span>.
+					</li>
+					<li>
+						Nombre: <span class="font-medium text-[#171717]">Conduce</span>. En Server URL pega esta
+						dirección.
+					</li>
+					<li>
+						Autenticación: <span class="font-medium text-[#171717]">OAuth</span>. Acepta el aviso y
+						pulsa Create.
+					</li>
+					<li>Instálalo, inicia sesión aquí cuando te lo pida y úsalo escribiendo @ en el chat.</li>
+				</ol>
+				<div class="flex items-center gap-2 pt-1">
+					<code
+						class="min-w-0 flex-1 truncate rounded-[6px] border border-[#dfdfdf] bg-[#fafafa] px-3 py-2 font-mono text-xs"
+						>{data.mcpUrl}</code
+					>
+					<Button variant="outline" size="sm" onclick={() => copy(data.mcpUrl, 'url-chatgpt')}>
+						{#if copied === 'url-chatgpt'}<Check class="h-3.5 w-3.5" />{:else}<Copy
+								class="h-3.5 w-3.5"
+							/>{/if}
+						Copiar
+					</Button>
+				</div>
+				{#if !data.oauthAvailable}
+					<p class="text-xs text-[#a16207]">
+						El inicio de sesión aún no está activado en el servidor; ChatGPT no podrá conectar
+						todavía.
+					</p>
+				{/if}
 			</CardContent>
 		</Card>
 
