@@ -1,6 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { matchColor, matchProduct, normalizeText, similarity } from '$lib/catalogMatch';
+import {
+	matchColor,
+	matchProduct,
+	normalizeText,
+	productLabel,
+	similarity
+} from '$lib/catalogMatch';
 import { isOverdueBalance } from '$lib/overdue';
 import { computeProformaTotals, parseTaxMode, type TaxMode } from '$lib/proformaTotals';
 import { buildInvoiceBalances, getClientDisplay, toAmount } from '$lib/server/accounting';
@@ -35,15 +41,13 @@ function round2(n: number) {
 }
 
 function ok(data: unknown) {
-	return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 1) }] };
+	return { content: [{ type: 'text' as const, text: JSON.stringify(data) }] };
 }
 
 function fail(message: string, extra?: Record<string, unknown>) {
 	return {
 		isError: true,
-		content: [
-			{ type: 'text' as const, text: JSON.stringify({ error: message, ...extra }, null, 1) }
-		]
+		content: [{ type: 'text' as const, text: JSON.stringify({ error: message, ...extra }) }]
 	};
 }
 
@@ -266,6 +270,18 @@ async function documentDetail(db: Db, ref: string) {
 	};
 }
 
+/** [1,2,3,7,9,10] → "1-3, 7, 9-10" */
+function lineRanges(nums: number[]) {
+	const out: string[] = [];
+	let start = nums[0];
+	for (let i = 1; i <= nums.length; i++) {
+		if (nums[i] === nums[i - 1] + 1) continue;
+		out.push(start === nums[i - 1] ? String(start) : start + '-' + nums[i - 1]);
+		start = nums[i];
+	}
+	return out.join(', ');
+}
+
 /** accounting helpers expect a string client_id. */
 function withClientId<T extends { client_id: string | null }>(rows: T[]) {
 	return rows.map((row) => ({ ...row, client_id: row.client_id ?? '' }));
@@ -307,8 +323,17 @@ async function openProformaBalances(db: Db, clientId?: string) {
 }
 
 const lineaLibre = z.object({
-	producto: z.string().describe('Nombre del producto tal como viene en el archivo'),
-	modelo: z.string().optional().describe('Modelo si viene aparte (ej. Elite, Pro)'),
+	producto: z
+		.string()
+		.describe(
+			'Producto tal como viene en el archivo; puede incluir el dispositivo (ej. "cover iPhone 15 Pro")'
+		),
+	modelo: z
+		.string()
+		.optional()
+		.describe(
+			'Otra columna que identifique el producto, si viene aparte (ej. la línea "Elite" o el dispositivo "iPhone 15 Pro"). En el catálogo, producto suele ser la línea ("Elite colors") y modelo el dispositivo ("iphone 15 pro").'
+		),
 	color: z.string().optional(),
 	cantidad: z.number().positive(),
 	precio: z
@@ -329,6 +354,213 @@ const lineaResuelta = z.object({
 		.describe('Omitir para usar el precio por cliente o el de catálogo')
 });
 
+const equivalenciasSchema = z
+	.object({
+		productos: z
+			.record(z.string(), z.string())
+			.optional()
+			.describe('"texto" de preparar_proforma → product_id elegido por el usuario'),
+		colores: z
+			.record(z.string(), z.string())
+			.optional()
+			.describe('color tal como viene en el archivo → color del catálogo elegido por el usuario')
+	})
+	.optional()
+	.describe(
+		'Decisiones del usuario sobre textos dudosos. Cada una vale para todas las filas con ese texto.'
+	);
+
+type Equivalencias = z.infer<typeof equivalenciasSchema>;
+type LineaLibre = z.infer<typeof lineaLibre>;
+type Catalog = Awaited<ReturnType<typeof loadCatalog>>;
+
+type ProductGroup = {
+	texto: string;
+	filas: number;
+	unidades: number;
+	confianza: 'exacto' | 'probable' | 'elegido' | 'ambiguo' | 'sin_coincidencia' | 'id_invalido';
+	product_id?: string;
+	producto?: string;
+	precio?: number;
+	origen_precio?: string;
+	precios_archivo?: number[];
+	candidatos?: { product_id: string; producto: string; score: number }[];
+};
+
+type ColorGroup = {
+	texto: string;
+	filas: number;
+	confianza: 'exacto' | 'probable' | 'elegido' | 'ambiguo' | 'sin_coincidencia' | 'falta';
+	color?: string;
+	candidatos?: string[];
+};
+
+type FreeLine = {
+	product_id: string;
+	color: string;
+	cantidad: number;
+	precio: number;
+	variant_id: string | null;
+};
+
+function groupText(l: LineaLibre) {
+	return l.modelo?.trim() ? l.producto.trim() + ' | ' + l.modelo.trim() : l.producto.trim();
+}
+
+function lookup(map: Record<string, string> | undefined, text: string) {
+	if (!map) return undefined;
+	const wanted = normalizeText(text);
+	for (const [k, v] of Object.entries(map)) if (normalizeText(k) === wanted) return v;
+	return undefined;
+}
+
+const RESOLVED = new Set(['exacto', 'probable', 'elegido']);
+
+/**
+ * Resolves free-form lines once per distinct text (not per row): a 125-row file with
+ * 27 products and 9 colors yields 27 + 9 decisions. Shared by preparar, crear and editar.
+ */
+function resolveFreeLines(
+	catalog: Catalog,
+	prices: Map<string, number>,
+	lineas: LineaLibre[],
+	eq: Equivalencias
+) {
+	const byId = new Map(catalog.products.map((p) => [p.id, p]));
+	const variantKeys = new Map(
+		catalog.variants.map((v) => [getProductVariantKey(v.product_id, v.color), v.id])
+	);
+	const products = new Map<string, ProductGroup>();
+	const colors = new Map<string, ColorGroup>();
+	const lines: FreeLine[] = [];
+	const missing = new Map<string, string>();
+
+	for (const linea of lineas) {
+		const text = groupText(linea);
+		const pKey = normalizeText(text);
+		let pg = products.get(pKey);
+		if (!pg) {
+			const forced = lookup(eq?.productos, text);
+			pg = { texto: text, filas: 0, unidades: 0, confianza: 'sin_coincidencia' };
+			if (forced) {
+				if (byId.has(forced)) Object.assign(pg, { confianza: 'elegido', product_id: forced });
+				else pg.confianza = 'id_invalido';
+			} else {
+				const m = matchProduct(catalog.products, linea.producto, linea.modelo);
+				if (m.productId && byId.has(m.productId)) {
+					Object.assign(pg, { confianza: m.confidence, product_id: m.productId });
+				} else {
+					pg.confianza = m.confidence === 'sin_coincidencia' ? 'sin_coincidencia' : 'ambiguo';
+					pg.candidatos = m.candidates.slice(0, 3).map((c) => ({
+						product_id: c.productId,
+						producto: c.label,
+						score: round2(c.score)
+					}));
+				}
+			}
+			const p = pg.product_id ? byId.get(pg.product_id) : null;
+			if (p) {
+				pg.producto = productLabel(p);
+				pg.precio = prices.get(p.id) ?? p.price;
+				pg.origen_precio = prices.has(p.id) ? 'cliente' : 'catálogo';
+			}
+			products.set(pKey, pg);
+		}
+		pg.filas++;
+		pg.unidades += linea.cantidad;
+		if (linea.precio !== undefined && linea.precio !== pg.precio) {
+			pg.precios_archivo = [...new Set([...(pg.precios_archivo ?? []), linea.precio])];
+		}
+
+		const colorText = linea.color?.trim() ?? '';
+		const cKey = normalizeText(colorText);
+		let cg = colors.get(cKey);
+		if (!cg) {
+			cg = { texto: colorText || '(sin color)', filas: 0, confianza: 'falta' };
+			const forced = colorText ? lookup(eq?.colores, colorText) : undefined;
+			if (forced) {
+				const c = matchColor(catalog.colors, forced);
+				if (c.exact && c.color) Object.assign(cg, { confianza: 'elegido', color: c.color });
+				else Object.assign(cg, { confianza: 'sin_coincidencia', candidatos: catalog.colors });
+			} else if (colorText) {
+				const c = matchColor(catalog.colors, colorText);
+				if (c.color) {
+					Object.assign(cg, { confianza: c.exact ? 'exacto' : 'probable', color: c.color });
+				} else {
+					Object.assign(cg, {
+						confianza: c.candidates.length ? 'ambiguo' : 'sin_coincidencia',
+						candidatos: c.candidates.length ? c.candidates : catalog.colors
+					});
+				}
+			} else {
+				cg.candidatos = catalog.colors;
+			}
+			colors.set(cKey, cg);
+		}
+		cg.filas++;
+
+		if (!pg.product_id || !RESOLVED.has(pg.confianza) || !cg.color) continue;
+		const variantId = variantKeys.get(getProductVariantKey(pg.product_id, cg.color)) ?? null;
+		if (!variantId) missing.set(pg.product_id + '|' + cg.color, pg.producto + ' / ' + cg.color);
+		lines.push({
+			product_id: pg.product_id,
+			color: cg.color,
+			cantidad: linea.cantidad,
+			precio: linea.precio ?? pg.precio ?? 0,
+			variant_id: variantId
+		});
+	}
+
+	const productList = [...products.values()];
+	const colorList = [...colors.values()];
+	return {
+		productos: productList,
+		colores: colorList,
+		lines,
+		variantes_faltantes: [...missing.values()],
+		listo: lines.length === lineas.length,
+		pendientes: {
+			productos: productList.filter((g) => !RESOLVED.has(g.confianza)),
+			colores: colorList.filter((g) => !g.color)
+		}
+	};
+}
+
+type FreeResolution = ReturnType<typeof resolveFreeLines>;
+
+/** Compact view for the model: resolved groups lose noise, pending ones keep candidates. */
+function groupsView(r: FreeResolution) {
+	return {
+		productos: r.productos.map((g) =>
+			RESOLVED.has(g.confianza)
+				? {
+						texto: g.texto,
+						confianza: g.confianza,
+						product_id: g.product_id,
+						producto: g.producto,
+						unidades: g.unidades,
+						precio: g.precio,
+						origen_precio: g.origen_precio,
+						...(g.precios_archivo ? { precios_archivo: g.precios_archivo } : {})
+					}
+				: g
+		),
+		colores: r.colores.map((g) =>
+			g.color
+				? { texto: g.texto, confianza: g.confianza, color: g.color }
+				: { texto: g.texto, confianza: g.confianza, filas: g.filas, candidatos: g.candidatos }
+		),
+		variantes_faltantes: r.variantes_faltantes
+	};
+}
+
+function pendingFail(r: FreeResolution) {
+	return fail(
+		'Hay textos sin resolver. Pregunta al usuario y repite con equivalencias {productos: {texto: product_id}, colores: {texto: color}}.',
+		{ productos: r.pendientes.productos, colores: r.pendientes.colores }
+	);
+}
+
 const impuestosSchema = z
 	.enum(['none', 'added', 'included'])
 	.optional()
@@ -338,17 +570,50 @@ const impuestosSchema = z
 
 export function buildMcpServer(ctx: McpContext) {
 	const server = new McpServer(
-		{ name: 'magikalinvoice', version: '1.0.0' },
+		{ name: 'magikalinvoice', version: '1.1.0' },
 		{
 			instructions: [
 				'Herramientas de la app de facturación (Proformas, Facturas, Clientes, Productos, Inventario, Pagos).',
 				'Usuario: ' + ctx.user.email + ' (rol: ' + (ctx.role ?? 'sin rol') + ').',
-				'Para crear una Proforma desde un CSV o Excel: lee el archivo, extrae cliente y líneas (producto, modelo, color, cantidad, precio), llama preparar_proforma, muestra al usuario lo dudoso y lo que no existe, y solo con su visto bueno llama crear_proforma con las líneas resueltas.',
+				'Para cargar un CSV o Excel: extrae las líneas (producto, modelo, color, cantidad, precio) sin subtotales y llama preparar_proforma. Responde una decisión por texto distinto (producto/color), no por fila. Pregunta al usuario solo lo pendiente o "probable", y con su visto bueno llama crear_proforma (lineas_libres) o editar_proforma (agregar_libres) con las MISMAS líneas y las equivalencias elegidas. No armes product_ids a mano.',
+				'Si el cliente del archivo no coincide con el de la proforma, pregunta antes de escribir.',
 				'Nunca elijas tú un producto, color o cliente ambiguo: pregunta. Montos en pesos. Fechas YYYY-MM-DD.',
 				'registrar_pago y convertir_a_factura: primero llama sin confirmar para ver la vista previa, muéstrala y llama con confirmar: true solo si el usuario lo aprueba.'
 			].join('\n')
 		}
 	);
+
+	/** Items for createProforma/updateProforma from resolved and/or free-form lines. */
+	async function itemsFrom(
+		clientId: string | null | undefined,
+		resolved: z.infer<typeof lineaResuelta>[] | undefined,
+		free: LineaLibre[] | undefined,
+		eq: Equivalencias
+	): Promise<{ list: ProformaItemInput[] } | { error: ReturnType<typeof fail> }> {
+		const list: ProformaItemInput[] = (resolved ?? []).map((l) => ({
+			product_id: l.product_id,
+			color: l.color,
+			quantity: l.cantidad,
+			unit_price: l.precio ?? null
+		}));
+		if (free?.length) {
+			const [catalog, prices] = await Promise.all([
+				loadCatalog(ctx.supabase),
+				clientPrices(ctx.supabase, clientId)
+			]);
+			const r = resolveFreeLines(catalog, prices, free, eq);
+			if (!r.listo) return { error: pendingFail(r) };
+			for (const l of r.lines) {
+				list.push({
+					product_id: l.product_id,
+					color: l.color,
+					quantity: l.cantidad,
+					unit_price: l.precio
+				});
+			}
+		}
+		return { list };
+	}
 
 	server.registerTool(
 		'quien_soy',
@@ -418,9 +683,11 @@ export function buildMcpServer(ctx: McpContext) {
 					modelo: p.modelName,
 					precio_catalogo: p.price,
 					precio_cliente: prices.get(p.id) ?? null,
-					colores: variants
-						.filter((v) => v.product_id === p.id)
-						.map((v) => ({ color: v.color, stock: stock.get(v.id) ?? 0 }))
+					stock_por_color: Object.fromEntries(
+						variants
+							.filter((v) => v.product_id === p.id)
+							.map((v) => [v.color, stock.get(v.id) ?? 0])
+					)
 				}))
 			);
 		}
@@ -524,14 +791,60 @@ export function buildMcpServer(ctx: McpContext) {
 	server.registerTool(
 		'ver_proforma',
 		{
-			description: 'Detalle de una Proforma o Factura por id o número: líneas, pagos y saldo.',
-			inputSchema: { proforma: z.string().describe('id o número (ej. INV-2026-1234)') },
+			description:
+				'Detalle de una Proforma o Factura por id o número: totales, líneas, pagos y saldo. Con muchas líneas las agrupa por producto salvo que pidas lineas: "todas" (necesario para quitar/cambiar por número).',
+			inputSchema: {
+				proforma: z.string().describe('id o número (ej. INV-2026-1234)'),
+				lineas: z
+					.enum(['auto', 'todas', 'por_producto', 'ninguna'])
+					.optional()
+					.describe('auto (defecto) = todas si son 30 o menos, si no por_producto')
+			},
 			annotations: { readOnlyHint: true }
 		},
-		async ({ proforma }) => {
+		async ({ proforma, lineas }) => {
 			const detail = await documentDetail(ctx.supabase, proforma);
 			if (!detail) return fail('No se encontró el documento.');
-			return ok(detail.view);
+			const view = detail.view;
+			const mode =
+				!lineas || lineas === 'auto'
+					? view.lineas.length > 30
+						? 'por_producto'
+						: 'todas'
+					: lineas;
+			const resumen = {
+				lineas: view.lineas.length,
+				unidades: view.lineas.reduce((s, l) => s + l.cantidad, 0),
+				subtotal_lineas: round2(view.lineas.reduce((s, l) => s + l.monto, 0))
+			};
+			if (mode === 'todas') return ok({ ...view, resumen });
+			const { lineas: rows, ...header } = view;
+			if (mode === 'ninguna') return ok({ ...header, resumen });
+			const groups = new Map<
+				string,
+				{ producto: string; lineas: number[]; unidades: number; monto: number; colores: string[] }
+			>();
+			for (const l of rows) {
+				const key = (l.descripcion ?? '') + ' - ' + (l.modelo ?? '');
+				const g = groups.get(key) ?? {
+					producto: key,
+					lineas: [],
+					unidades: 0,
+					monto: 0,
+					colores: []
+				};
+				g.lineas.push(l.linea);
+				g.unidades += l.cantidad;
+				g.monto = round2(g.monto + l.monto);
+				g.colores.push(l.color + ' ' + l.cantidad + '@' + l.precio);
+				groups.set(key, g);
+			}
+			return ok({
+				...header,
+				resumen,
+				por_producto: [...groups.values()].map((g) => ({ ...g, lineas: lineRanges(g.lineas) })),
+				nota: 'Agrupado. Usa lineas: "todas" para ver números de línea exactos.'
+			});
 		}
 	);
 
@@ -577,139 +890,66 @@ export function buildMcpServer(ctx: McpContext) {
 		'preparar_proforma',
 		{
 			description:
-				'NO guarda nada. Compara líneas en formato libre (de un CSV/Excel) contra el catálogo y el Cliente: devuelve líneas resueltas listas para crear_proforma, líneas dudosas con candidatos, líneas sin coincidencia, variantes que faltan, precios y total estimado.',
+				'NO guarda nada. Compara líneas libres (de un CSV/Excel) con el catálogo y el Cliente. Agrupa por texto distinto: devuelve una decisión por producto y por color (no por fila), con candidatos solo para lo dudoso, diferencias de precio, variantes que faltan y totales.',
 			inputSchema: {
 				cliente: z.string().describe('id, nombre, alias o RNC del Cliente'),
 				lineas: z.array(lineaLibre).min(1).max(500),
+				equivalencias: equivalenciasSchema,
 				impuestos: impuestosSchema,
-				descuento: z.number().min(0).optional()
+				descuento: z.number().min(0).optional(),
+				detalle_lineas: z
+					.boolean()
+					.optional()
+					.describe('true = incluir cada línea resuelta (normalmente no hace falta)')
 			},
 			annotations: { readOnlyHint: true }
 		},
-		async ({ cliente, lineas, impuestos, descuento }) => {
+		async ({ cliente, lineas, equivalencias, impuestos, descuento, detalle_lineas }) => {
 			const { client, candidates } = await resolveClient(ctx.supabase, cliente);
-			const catalog = await loadCatalog(ctx.supabase);
-			const prices = await clientPrices(ctx.supabase, client?.id);
-			const variantKeys = new Map(
-				catalog.variants.map((v) => [getProductVariantKey(v.product_id, v.color), v.id])
-			);
-
-			type Resolved = {
-				fila: number;
-				product_id: string;
-				producto: string;
-				modelo: string | null;
-				color: string;
-				cantidad: number;
-				precio: number;
-				origen_precio: string;
-				monto: number;
-				variant_id: string | null;
-				seguridad: 'exacto' | 'probable';
-				original?: unknown;
-			};
-			const resueltas: Resolved[] = [];
-			const dudosas: unknown[] = [];
-			const sin_coincidencia: unknown[] = [];
-			const variantes_faltantes: unknown[] = [];
-			let lineTotal = 0;
-
-			lineas.forEach((linea, index) => {
-				const fila = index + 1;
-				const product = matchProduct(catalog.products, linea.producto, linea.modelo);
-				const p = product.productId
-					? catalog.products.find((x) => x.id === product.productId)
-					: null;
-
-				if (!p) {
-					const none = product.confidence === 'sin_coincidencia';
-					(none ? sin_coincidencia : dudosas).push({
-						fila,
-						original: linea,
-						motivo: none ? 'Producto no encontrado' : 'Producto ambiguo',
-						candidatos: product.candidates
-					});
-					return;
-				}
-				const color = matchColor(catalog.colors, linea.color);
-				if (!color.color) {
-					dudosas.push({
-						fila,
-						original: linea,
-						motivo: linea.color ? 'Color no reconocido' : 'Falta el color',
-						product_id: p.id,
-						producto: p.title,
-						modelo: p.modelName,
-						candidatos_color: color.candidates.length ? color.candidates : catalog.colors
-					});
-					return;
-				}
-				const unitPrice = linea.precio ?? prices.get(p.id) ?? p.price;
-				const variantId = variantKeys.get(getProductVariantKey(p.id, color.color)) ?? null;
-				if (!variantId) {
-					variantes_faltantes.push({
-						fila,
-						producto: p.title,
-						modelo: p.modelName,
-						color: color.color
-					});
-				}
-				lineTotal += unitPrice * linea.cantidad;
-				const sure = product.confidence === 'exacto' && color.exact;
-				resueltas.push({
-					fila,
-					product_id: p.id,
-					producto: p.title,
-					modelo: p.modelName,
-					color: color.color,
-					cantidad: linea.cantidad,
-					precio: unitPrice,
-					origen_precio: linea.precio
-						? 'archivo'
-						: prices.has(p.id)
-							? 'precio por cliente'
-							: 'catálogo',
-					monto: round2(unitPrice * linea.cantidad),
-					variant_id: variantId,
-					seguridad: sure ? 'exacto' : 'probable',
-					...(sure ? {} : { original: linea })
-				});
-			});
-
-			const stock = await stockByVariant(
-				ctx.supabase,
-				resueltas.map((r) => r.variant_id).filter((v): v is string => !!v)
-			);
+			const [catalog, prices] = await Promise.all([
+				loadCatalog(ctx.supabase),
+				clientPrices(ctx.supabase, client?.id)
+			]);
+			const r = resolveFreeLines(catalog, prices, lineas, equivalencias);
+			const subtotal = r.lines.reduce((s, l) => s + l.precio * l.cantidad, 0);
 			const taxMode = parseTaxMode(impuestos ?? 'none');
-			const totals = computeProformaTotals(lineTotal, taxMode, descuento ?? 0);
+			const totals = computeProformaTotals(subtotal, taxMode, descuento ?? 0);
 
 			return ok({
 				cliente: client ? clientSummary(client) : null,
 				candidatos_cliente: client ? undefined : candidates,
 				resumen: {
 					lineas: lineas.length,
-					resueltas: resueltas.length,
-					probables: resueltas.filter((r) => r.seguridad === 'probable').length,
-					dudosas: dudosas.length,
-					sin_coincidencia: sin_coincidencia.length,
-					variantes_faltantes: variantes_faltantes.length
+					lineas_listas: r.lines.length,
+					unidades: lineas.reduce((s, l) => s + l.cantidad, 0),
+					productos: r.productos.length,
+					productos_pendientes: r.pendientes.productos.length,
+					colores: r.colores.length,
+					colores_pendientes: r.pendientes.colores.length,
+					variantes_faltantes: r.variantes_faltantes.length
 				},
-				resueltas: resueltas.map(({ variant_id, ...r }) => ({
-					...r,
-					stock_actual: variant_id ? (stock.get(variant_id) ?? 0) : null
-				})),
-				dudosas,
-				sin_coincidencia,
-				variantes_faltantes,
+				...groupsView(r),
+				...(detalle_lineas
+					? {
+							lineas: r.lines.map((l) => ({
+								product_id: l.product_id,
+								color: l.color,
+								cantidad: l.cantidad,
+								precio: l.precio
+							}))
+						}
+					: {}),
 				totales_estimados: {
+					solo_lineas_listas: !r.listo,
 					impuestos: taxMode,
 					subtotal: round2(totals.subtotal),
 					descuento: descuento ?? 0,
 					itbis: round2(totals.taxAmount),
 					total: round2(totals.totalAmount)
 				},
-				siguiente_paso:
-					'Muestra al usuario las líneas probables, dudosas y sin coincidencia. Cuando todo esté resuelto, llama crear_proforma con cliente_id y las líneas {product_id, color, cantidad, precio?}.'
+				siguiente_paso: r.listo
+					? 'Muestra al usuario los productos "probable", las diferencias de precio (precios_archivo) y las variantes que faltan. Con su visto bueno llama crear_proforma o editar_proforma (agregar_libres) con las MISMAS lineas y las mismas equivalencias; no armes las líneas a mano.'
+					: 'Pregunta al usuario solo por los productos y colores sin resolver (y confirma los "probable"). Luego repite con equivalencias {productos: {texto: product_id}, colores: {texto: color}}, o pásalas directo a crear_proforma / editar_proforma con las mismas lineas.'
 			});
 		}
 	);
@@ -718,10 +958,18 @@ export function buildMcpServer(ctx: McpContext) {
 		'crear_proforma',
 		{
 			description:
-				'Crea una Proforma con líneas ya resueltas (product_id + color). Sin precio usa el precio por cliente o el de catálogo. Fecha por defecto hoy; vencimiento por defecto +30 días.',
+				'Crea una Proforma. Pasa lineas_libres (las mismas de preparar_proforma) + equivalencias, o lineas ya resueltas (product_id + color). Sin precio usa el precio por cliente o el de catálogo. Fecha por defecto hoy; vencimiento por defecto +30 días.',
 			inputSchema: {
 				cliente_id: z.string(),
-				lineas: z.array(lineaResuelta).min(1).max(500),
+				lineas: z.array(lineaResuelta).max(500).optional(),
+				lineas_libres: z
+					.array(lineaLibre)
+					.max(500)
+					.optional()
+					.describe(
+						'Líneas tal como vienen del archivo; se resuelven igual que en preparar_proforma'
+					),
+				equivalencias: equivalenciasSchema,
 				fecha: z.string().regex(ISO_DATE).optional(),
 				vencimiento: z.string().regex(ISO_DATE).optional(),
 				notas: z.string().optional(),
@@ -738,6 +986,9 @@ export function buildMcpServer(ctx: McpContext) {
 			if (blocked) return blocked;
 			const { client } = await resolveClient(ctx.supabase, args.cliente_id);
 			if (!client) return fail('Cliente no encontrado. Usa buscar_clientes para obtener el id.');
+			const items = await itemsFrom(client.id, args.lineas, args.lineas_libres, args.equivalencias);
+			if ('error' in items) return items.error;
+			if (!items.list.length) return fail('Sin líneas: pasa lineas o lineas_libres.');
 			const fecha = args.fecha ?? today();
 			const result = await createProforma(ctx.supabase, ctx.user.id, {
 				invoiceNumber: args.numero,
@@ -751,18 +1002,15 @@ export function buildMcpServer(ctx: McpContext) {
 				taxMode: parseTaxMode(args.impuestos ?? 'none'),
 				discountAmount: args.descuento ?? 0,
 				createMissingVariants: args.crear_variantes_faltantes,
-				items: args.lineas.map((l) => ({
-					product_id: l.product_id,
-					color: l.color,
-					quantity: l.cantidad,
-					unit_price: l.precio ?? null
-				}))
+				items: items.list
 			});
 			if (!result.ok) return serviceFail(result);
 			return ok({
 				creada: true,
 				id: result.id,
 				numero: result.invoiceNumber,
+				lineas: items.list.length,
+				unidades: items.list.reduce((s, l) => s + Number(l.quantity), 0),
 				total: round2(result.totalAmount),
 				ruta: '/dashboard/proforma/' + result.id
 			});
@@ -773,10 +1021,18 @@ export function buildMcpServer(ctx: McpContext) {
 		'editar_proforma',
 		{
 			description:
-				'Edita una Proforma: agrega, quita o cambia líneas (número de línea de ver_proforma) y/o datos de cabecera. Si tiene pagos asignados, no se puede cambiar cliente, fechas, estado ni total.',
+				'Edita una Proforma: agrega líneas (agregar_libres + equivalencias, como en preparar_proforma, o agregar ya resueltas), quita o cambia líneas (número de línea de ver_proforma) y/o datos de cabecera. Si tiene pagos asignados, no se puede cambiar cliente, fechas, estado ni total.',
 			inputSchema: {
 				proforma: z.string().describe('id o número'),
 				agregar: z.array(lineaResuelta).optional(),
+				agregar_libres: z
+					.array(lineaLibre)
+					.max(500)
+					.optional()
+					.describe(
+						'Líneas tal como vienen del archivo; se resuelven igual que en preparar_proforma'
+					),
+				equivalencias: equivalenciasSchema,
 				quitar: z
 					.array(z.number().int().positive())
 					.optional()
@@ -839,14 +1095,14 @@ export function buildMcpServer(ctx: McpContext) {
 					unit_price: change?.precio ?? Number(it.unit_price)
 				});
 			});
-			for (const l of args.agregar ?? []) {
-				items.push({
-					product_id: l.product_id,
-					color: l.color,
-					quantity: l.cantidad,
-					unit_price: l.precio ?? null
-				});
-			}
+			const added = await itemsFrom(
+				args.cliente_id ?? invoice.client_id,
+				args.agregar,
+				args.agregar_libres,
+				args.equivalencias
+			);
+			if ('error' in added) return added.error;
+			items.push(...added.list);
 
 			let clientId = invoice.client_id ?? '';
 			let name = invoice.client_name;
@@ -882,7 +1138,9 @@ export function buildMcpServer(ctx: McpContext) {
 				numero: invoice.invoice_number,
 				total_anterior: round2(toAmount(invoice.total_amount)),
 				total_nuevo: round2(result.totalAmount),
-				lineas: items.length
+				lineas: items.length,
+				lineas_agregadas: added.list.length,
+				unidades_agregadas: added.list.reduce((s, l) => s + Number(l.quantity), 0)
 			});
 		}
 	);

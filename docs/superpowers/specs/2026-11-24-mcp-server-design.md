@@ -10,19 +10,20 @@ cargar nada a mano.
 
 ## Decisiones
 
-| Tema | Decisión |
-| --- | --- |
-| Despliegue | Ruta `/mcp` dentro de la misma app SvelteKit. Se despliega en Coolify junto con la app. |
-| Transporte | MCP Streamable HTTP, sin estado (`@modelcontextprotocol/sdk`, transporte web estándar). |
-| Permisos | Cada llamada usa **el usuario que inició sesión**: token de Supabase → cliente con `Authorization: Bearer`. RLS y roles (admin/editor/viewer) aplican igual que en la web. Nada de service role. |
-| Login | OAuth 2.1 con **Supabase Auth como servidor OAuth** (registro dinámico de clientes activado). La app sirve `/.well-known/oauth-protected-resource` y una pantalla de consentimiento `/oauth/consent`. |
-| Formato libre | Claude lee el archivo (columnas variadas) y manda líneas de texto al MCP. El MCP compara contra el catálogo y devuelve coincidencias, dudas y precios. Nunca adivina en silencio. |
+| Tema              | Decisión                                                                                                                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Despliegue        | Ruta `/mcp` dentro de la misma app SvelteKit. Se despliega en Coolify junto con la app.                                                                                                                              |
+| Transporte        | MCP Streamable HTTP, sin estado (`@modelcontextprotocol/sdk`, transporte web estándar).                                                                                                                              |
+| Permisos          | Cada llamada usa **el usuario que inició sesión**: token de Supabase → cliente con `Authorization: Bearer`. RLS y roles (admin/editor/viewer) aplican igual que en la web. Nada de service role.                     |
+| Login             | OAuth 2.1 con **Supabase Auth como servidor OAuth** (registro dinámico de clientes activado). La app sirve `/.well-known/oauth-protected-resource` y una pantalla de consentimiento `/oauth/consent`.                |
+| Formato libre     | Claude lee el archivo (columnas variadas) y manda líneas de texto al MCP. El MCP compara contra el catálogo y devuelve coincidencias, dudas y precios. Nunca adivina en silencio.                                    |
 | Reglas de negocio | Se sacan de los form actions a `src/lib/server/services/`. La web y el MCP llaman las mismas funciones: una sola fuente de reglas (precio por cliente, colores válidos, variantes faltantes, stock, impuestos 18 %). |
-| Escrituras | Toda escritura tiene paso de vista previa. Pagos y conversión a Factura exigen `confirmar: true` tras mostrar la vista previa. |
+| Escrituras        | Toda escritura tiene paso de vista previa. Pagos y conversión a Factura exigen `confirmar: true` tras mostrar la vista previa.                                                                                       |
 
 ## Herramientas
 
 ### Consulta (cualquier rol con acceso)
+
 - `buscar_clientes(texto)`
 - `buscar_productos(texto, cliente_id?)` → producto, modelo, colores, precio que pagaría ese Cliente.
 - `consultar_stock(texto | variante)`
@@ -30,6 +31,7 @@ cargar nada a mano.
 - `saldos_vencidos(cliente_id?)` (misma regla que `src/lib/overdue.ts`).
 
 ### Proformas (admin o editor)
+
 - `preparar_proforma(cliente, lineas[])` — **no escribe**. Cada línea: texto de producto, modelo, color,
   cantidad, precio opcional. Devuelve líneas resueltas, ambiguas (con candidatos) y sin coincidencia,
   variantes faltantes, precios y total.
@@ -38,6 +40,7 @@ cargar nada a mano.
   Respeta `proformaPaymentGuard` (no cambia montos de una Proforma con pagos asignados).
 
 ### Pagos (admin o editor, igual que la web) y Facturas (admin)
+
 - `registrar_pago(cliente_id, monto, metodo, fecha?, referencia?, notas?, confirmar)` — usa el RPC `record_accounting_payment`; se aplica a las Proformas pendientes más antiguas primero. Sin `confirmar` muestra cómo se aplicaría.
 - `convertir_a_factura(proforma_id, tipo, confirmar)` — usa `clonePaidProformaToInvoice`.
 
@@ -57,7 +60,7 @@ El MCP no modifica código. Para mejorar la app se sigue usando Claude Code en e
 
 ## Requisitos fuera del código
 
-- Supabase: activar *OAuth Server* y *Dynamic client registration* (Authentication → OAuth Server),
+- Supabase: activar _OAuth Server_ y _Dynamic client registration_ (Authentication → OAuth Server),
   poner la URL de consentimiento `https://<app>/oauth/consent`. Primero en dev.
 - Coolify: ya existe `PUBLIC_SITE_URL` (`https://conduce.caribedata.com`); no hace falta nada nuevo.
 - claude.ai: Ajustes → Conectores → agregar conector personalizado `https://<app>/mcp`.
@@ -68,3 +71,13 @@ El MCP no modifica código. Para mejorar la app se sigue usando Claude Code en e
   (posible mejora: función RPC en Postgres).
 - La función OAuth Server de Supabase es reciente; si el proyecto no la tiene, plan B: token personal
   generado en la app y guardado con hash (sirve en Claude Code; claude.ai necesita OAuth).
+
+## Carga desde archivo, v1.1 (2026-11-25)
+
+Motivo: cargar un Excel de 125 filas (27 productos, 9 colores) costó ~15k tokens solo en `preparar_proforma`: las 125 filas salían "dudosas" con 5 candidatos cada una, y luego había que armar a mano 125 líneas con product_id.
+
+- **Matcher** (`catalogMatch.ts`): además del parecido por letras, puntúa por palabras. En el catálogo, producto = línea ("Elite colors") y modelo = dispositivo ("iphone 15 pro"); el archivo puede traer "cover iPhone 15 Pro" + "Elite". Todas las palabras del modelo deben estar en el texto, y el texto no puede nombrar otro número ni otra variante (pro, max, plus, ultra, fe…). "17 Pro / 18 Pro" queda ambiguo a propósito.
+- **Colores**: sinónimos (azul marino → azul oscuro, navy, black…) y alternativas con "/" ("Clear / Transparente": si el catálogo tiene las dos, se pregunta).
+- **Agrupado**: `preparar_proforma` devuelve una decisión por texto distinto de producto y de color, no por fila. Los candidatos solo salen en lo pendiente. `precios_archivo` marca precios del archivo distintos al del cliente o al de catálogo.
+- **Equivalencias**: `{productos: {texto: product_id}, colores: {texto: color}}`. `crear_proforma.lineas_libres` y `editar_proforma.agregar_libres` resuelven en el servidor con las mismas reglas; si algo queda pendiente, fallan sin escribir y devuelven solo lo pendiente.
+- **Salidas compactas**: JSON sin sangría. `ver_proforma` agrupa por producto cuando hay más de 30 líneas (`lineas: "todas"` para ver los números de línea). `buscar_productos` devuelve `stock_por_color` como objeto.

@@ -26,7 +26,7 @@ Combinación (producto + color) que tiene existencia física en inventario. Cada
 _Avoid_: presentación, combinación
 
 **Modelo**:
-Sub-clasificación de un producto (ej. "Elite", "Pro"). Forma parte de la unicidad del producto: dos productos con el mismo título pero distinto modelo son productos distintos. Vive en `product_models`.
+Sub-clasificación de un producto (ej. "Elite", "Pro"; en los covers, el dispositivo: "iphone 15 pro"). Forma parte de la unicidad del producto: dos productos con el mismo título pero distinto modelo son productos distintos. Vive en `product_models`.
 _Avoid_: tipo, categoría
 
 ### Comercial

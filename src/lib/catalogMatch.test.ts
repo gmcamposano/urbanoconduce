@@ -54,3 +54,48 @@ test('matchColor exact and fuzzy', () => {
 	assert.equal(matchColor(colors, 'verde').color, null);
 	assert.equal(matchColor(colors, '').color, null);
 });
+
+const covers = [
+	{ id: 'c11', title: 'Elite colors', modelName: 'iphone 11' },
+	{ id: 'c13p', title: 'Elite colors', modelName: 'iphone 13 pro' },
+	{ id: 'c13pm', title: 'Elite colors', modelName: 'iphone 13 pro max' },
+	{ id: 'c1314', title: 'Elite colors', modelName: 'iphone 13 / 14' },
+	{ id: 'c1415', title: 'Elite colors', modelName: 'iphone 14 / 15 plus' },
+	{ id: 'c15', title: 'Elite colors', modelName: 'iphone 15' },
+	{ id: 'c17p', title: 'Elite colors', modelName: 'iphone 17 pro' },
+	{ id: 'c18p', title: 'Elite colors', modelName: 'iphone 18 pro' },
+	{ id: 's11', title: 'Silicone case', modelName: 'iphone 11' }
+];
+
+test('device in product text, line in model text', () => {
+	assert.equal(matchProduct(covers, 'cover iPhone 11', 'Elite').productId, 'c11');
+	assert.equal(matchProduct(covers, 'cover iPhone 13 Pro', 'Elite').productId, 'c13p');
+	assert.equal(matchProduct(covers, 'cover iPhone 13 Pro Max', 'Elite').productId, 'c13pm');
+	assert.equal(matchProduct(covers, 'iPhone 13 / 14', 'Elite').productId, 'c1314');
+	assert.equal(matchProduct(covers, 'iPhone 14 PLUS / 15 Plus', 'Elite').productId, 'c1415');
+	assert.equal(matchProduct(covers, 'iPhone 15', 'Elite').productId, 'c15');
+});
+
+test('two models in one text stay ambiguous', () => {
+	const r = matchProduct(covers, 'iPhone 17 Pro / 18 Pro', 'Elite');
+	assert.equal(r.productId, null);
+	assert.deepEqual(
+		r.candidates
+			.slice(0, 2)
+			.map((c) => c.productId)
+			.sort(),
+		['c17p', 'c18p']
+	);
+});
+
+test('matchColor synonyms and alternatives', () => {
+	const colors = ['negro', 'clear', 'transparente', 'azul oscuro', 'azul claro'];
+	assert.equal(matchColor(colors, 'Azul marino').color, 'azul oscuro');
+	assert.equal(matchColor(colors, 'Clear / Transparente').color, null);
+	assert.deepEqual(matchColor(colors, 'Clear / Transparente').candidates, [
+		'clear',
+		'transparente'
+	]);
+	assert.equal(matchColor(['negro', 'clear'], 'Clear / Transparente').color, 'clear');
+	assert.equal(matchColor(colors, 'Azul claro').color, 'azul claro');
+});
