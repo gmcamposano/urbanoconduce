@@ -6,13 +6,7 @@ function canManage(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
+async function loadData(locals: App.Locals) {
 	const [{ data: items, error }, { data: models }, { data: warehouses }] = await Promise.all([
 		getInventoryStock(locals.supabase),
 		locals.supabase.from('product_models').select('*').order('model', { ascending: true }),
@@ -28,6 +22,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		models: models || [],
 		warehouses: warehouses || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

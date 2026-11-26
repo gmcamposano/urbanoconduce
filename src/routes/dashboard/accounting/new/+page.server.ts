@@ -3,20 +3,13 @@ import type { Actions, PageServerLoad } from './$types';
 import { buildClientCreditSummary, buildInvoiceBalances } from '$lib/server/accounting';
 import { clearAccountingStockWarningFlash } from '$lib/server/accounting-stock-warning-flash';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
-		throw redirect(303, '/dashboard');
-	}
-
-	const { data: clients, error: clientsError } = await locals.supabase
-		.from('clients')
-		.select('id, client_type, full_name, company_name, alias, rnc, email')
-		.order('company_name', { ascending: true })
-		.order('full_name', { ascending: true });
-
-	const [invoicesResult, allocationsResult] = await Promise.all([
+async function loadData(locals: App.Locals) {
+	const [clientsResult, invoicesResult, allocationsResult] = await Promise.all([
+		locals.supabase
+			.from('clients')
+			.select('id, client_type, full_name, company_name, alias, rnc, email')
+			.order('company_name', { ascending: true })
+			.order('full_name', { ascending: true }),
 		locals.supabase
 			.from('invoices')
 			.select(
@@ -28,6 +21,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			.from('accounting_allocations')
 			.select('id, payment_id, invoice_id, applied_amount')
 	]);
+	const { data: clients, error: clientsError } = clientsResult;
 
 	if (clientsError) {
 		console.error('Supabase query error in payment load clients:', clientsError.message);
@@ -54,6 +48,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		clients: clients || [],
 		clientBalances
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
+		throw redirect(303, '/dashboard');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

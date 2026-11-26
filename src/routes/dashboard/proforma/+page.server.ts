@@ -4,15 +4,14 @@ import { buildInvoiceBalances } from '$lib/server/accounting';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	try {
-		const [invoicesResult, allocationsResult, conversionsResult] = await Promise.all([
+		const [invoicesResult, conversionsResult] = await Promise.all([
 			locals.supabase
 				.from('invoices')
-				.select('*, profiles:created_by(name, email)')
+				.select(
+					'*, profiles:created_by(name, email), accounting_allocations(id, payment_id, invoice_id, applied_amount), invoice_items(quantity)'
+				)
 				.eq('factura_tipo', 'proforma')
 				.order('created_at', { ascending: false }),
-			locals.supabase
-				.from('accounting_allocations')
-				.select('id, payment_id, invoice_id, applied_amount'),
 			locals.supabase
 				.from('invoices')
 				.select('source_proforma_id')
@@ -22,13 +21,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (invoicesResult.error) {
 			console.error('Supabase query error in dashboard load:', invoicesResult.error.message);
 			return { invoices: [] };
-		}
-
-		if (allocationsResult.error) {
-			console.error(
-				'Supabase query error in dashboard allocations:',
-				allocationsResult.error.message
-			);
 		}
 
 		if (conversionsResult.error) {
@@ -44,33 +36,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.map((invoice) => invoice.source_proforma_id)
 				.filter((id): id is string => id !== null)
 		);
-		const activeProformas = (invoicesResult.data || []).filter(
+		const activeRows = (invoicesResult.data || []).filter(
 			(invoice) => !convertedProformaIds.has(invoice.id)
 		);
-		const allInvoiceIds = new Set(activeProformas.map((invoice) => invoice.id));
-		const allocations = (allocationsResult.data || []).filter((allocation) =>
-			allInvoiceIds.has(allocation.invoice_id)
-		);
+		const allocations = activeRows.flatMap((row) => row.accounting_allocations || []);
 		const itemCounts = new Map<string, number>();
-		if (allInvoiceIds.size > 0) {
-			const itemsResult = await locals.supabase
-				.from('invoice_items')
-				.select('invoice_id, quantity')
-				.in('invoice_id', [...allInvoiceIds]);
-			if (itemsResult.error) {
-				console.error(
-					'Supabase query error loading proforma item counts:',
-					itemsResult.error.message
-				);
-			} else {
-				(itemsResult.data || []).forEach((item) => {
-					itemCounts.set(
-						item.invoice_id,
-						(itemCounts.get(item.invoice_id) || 0) + Number(item.quantity || 0)
-					);
-				});
-			}
-		}
+		const activeProformas = activeRows.map((row) => {
+			// Strip embedded keys so they are not sent to the client.
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { accounting_allocations, invoice_items, ...invoice } = row;
+			const items: { quantity: number | string | null }[] = invoice_items || [];
+			itemCounts.set(
+				invoice.id,
+				items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+			);
+			return invoice;
+		});
 		const invoices = buildInvoiceBalances(activeProformas, allocations).map((invoice) => ({
 			...invoice,
 			itemCount: itemCounts.get(invoice.id) || 0

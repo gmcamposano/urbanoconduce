@@ -5,13 +5,7 @@ function canManage(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
+async function loadData(locals: App.Locals) {
 	const [{ data: variants }, { data: products }, { data: colors }, { data: models }] =
 		await Promise.all([
 			locals.supabase
@@ -32,6 +26,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		colors: colors || [],
 		models: models || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

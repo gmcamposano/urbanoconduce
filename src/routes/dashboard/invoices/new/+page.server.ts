@@ -3,39 +3,29 @@ import type { Actions, PageServerLoad } from './$types';
 import { resolveVariantIdForItem, resolveUnitPrices } from '$lib/server/inventory';
 import { generateUniqueInvoiceNumber, isInvoiceNumberTaken } from '$lib/server/invoiceNumber';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/proforma');
-	}
-
-	const invoiceNumberPreview = await generateUniqueInvoiceNumber(locals.supabase, 'INV');
-
-	const { data: products, error: productsError } = await locals.supabase
-		.from('products')
-		.select('id, title, price_without_taxes, model')
-		.order('title', { ascending: true });
-
-	const { data: colors, error: colorsError } = await locals.supabase
-		.from('product_colors')
-		.select('id, color')
-		.order('color', { ascending: true });
-
-	const { data: models, error: modelsError } = await locals.supabase
-		.from('product_models')
-		.select('id, model')
-		.order('model', { ascending: true });
-
-	const { data: clients, error: clientsError } = await locals.supabase
-		.from('clients')
-		.select('id, client_type, full_name, company_name, alias, email')
-		.order('company_name', { ascending: true })
-		.order('full_name', { ascending: true });
-
-	const { data: clientPrices, error: clientPricesError } = await locals.supabase
-		.from('client_product_prices')
-		.select('product_id, client_id, unit_price');
+async function loadData(locals: App.Locals) {
+	const [
+		invoiceNumberPreview,
+		{ data: products, error: productsError },
+		{ data: colors, error: colorsError },
+		{ data: models, error: modelsError },
+		{ data: clients, error: clientsError },
+		{ data: clientPrices, error: clientPricesError }
+	] = await Promise.all([
+		generateUniqueInvoiceNumber(locals.supabase, 'INV'),
+		locals.supabase
+			.from('products')
+			.select('id, title, price_without_taxes, model')
+			.order('title', { ascending: true }),
+		locals.supabase.from('product_colors').select('id, color').order('color', { ascending: true }),
+		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
+		locals.supabase
+			.from('clients')
+			.select('id, client_type, full_name, company_name, alias, email')
+			.order('company_name', { ascending: true })
+			.order('full_name', { ascending: true }),
+		locals.supabase.from('client_product_prices').select('product_id, client_id, unit_price')
+	]);
 
 	if (productsError) {
 		console.error('Supabase query error in invoice load products:', productsError.message);
@@ -63,9 +53,22 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		colors: colors || [],
 		models: models || [],
 		clients: clients || [],
-		clientPrices: clientPrices || [],
-		isAdmin: profile?.role === 'admin'
+		clientPrices: clientPrices || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	return { ...(await dataPromise), isAdmin: profile?.role === 'admin' };
 };
 
 export const actions: Actions = {

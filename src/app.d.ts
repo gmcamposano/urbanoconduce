@@ -7,6 +7,12 @@ declare global {
 			supabase: SupabaseClient;
 			safeGetUser(): Promise<{ user: User | null }>;
 			role: 'admin' | 'editor' | 'viewer' | null;
+			profile: {
+				id: string;
+				email: string;
+				name: string | null;
+				role: 'admin' | 'editor' | 'viewer';
+			} | null;
 		}
 		interface PageData {
 			user: User | null;

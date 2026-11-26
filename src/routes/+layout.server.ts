@@ -13,11 +13,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		};
 
 		try {
-			const { data, error } = await locals.supabase
-				.from('profiles')
-				.select('id, email, name, role')
-				.eq('id', user.id)
-				.maybeSingle();
+			// Already fetched by safeGetUser in hooks.server.ts.
+			const data = locals.profile;
 
 			if (data) {
 				profile = data;

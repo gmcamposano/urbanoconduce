@@ -30,11 +30,37 @@ function firstPaymentRelation(payment: unknown): PaymentRelation | null {
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { id } = params;
 
-	const { data: invoice, error: invoiceError } = await locals.supabase
-		.from('invoices')
-		.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
-		.eq('id', id)
-		.single();
+	const [
+		invoiceResult,
+		conversionResult,
+		itemsResult,
+		productsResult,
+		modelsResult,
+		allocationsResult
+	] = await Promise.all([
+		locals.supabase
+			.from('invoices')
+			.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
+			.eq('id', id)
+			.single(),
+		locals.supabase.from('invoices').select('id').eq('source_proforma_id', id).maybeSingle(),
+		locals.supabase
+			.from('invoice_items')
+			.select('*')
+			.eq('invoice_id', id)
+			.order('created_at', { ascending: true }),
+		locals.supabase.from('products').select('id, title, model').order('title', { ascending: true }),
+		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
+		locals.supabase
+			.from('accounting_allocations')
+			.select(
+				'id, payment_id, invoice_id, applied_amount, created_at, payment:payment_id(id, payment_date, payment_method, reference_number, notes, created_at, profiles:created_by(name, email))'
+			)
+			.eq('invoice_id', id)
+			.order('created_at', { ascending: false })
+	]);
+
+	const { data: invoice, error: invoiceError } = invoiceResult;
 
 	if (invoiceError || !invoice) {
 		console.error('Error fetching invoice details:', invoiceError?.message);
@@ -45,11 +71,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		throw redirect(303, `/dashboard/invoices/${id}`);
 	}
 
-	const { data: generatedInvoice, error: conversionError } = await locals.supabase
-		.from('invoices')
-		.select('id')
-		.eq('source_proforma_id', id)
-		.maybeSingle();
+	const { data: generatedInvoice, error: conversionError } = conversionResult;
 
 	if (conversionError) {
 		console.error('Error checking proforma conversion:', conversionError.message);
@@ -61,29 +83,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	try {
-		const [itemsResult, productsResult, modelsResult, allocationsResult] = await Promise.all([
-			locals.supabase
-				.from('invoice_items')
-				.select('*')
-				.eq('invoice_id', id)
-				.order('created_at', { ascending: true }),
-			locals.supabase
-				.from('products')
-				.select('id, title, model')
-				.order('title', { ascending: true }),
-			locals.supabase
-				.from('product_models')
-				.select('id, model')
-				.order('model', { ascending: true }),
-			locals.supabase
-				.from('accounting_allocations')
-				.select(
-					'id, payment_id, invoice_id, applied_amount, created_at, payment:payment_id(id, payment_date, payment_method, reference_number, notes, created_at, profiles:created_by(name, email))'
-				)
-				.eq('invoice_id', id)
-				.order('created_at', { ascending: false })
-		]);
-
 		if (itemsResult.error) {
 			console.error('Error fetching invoice items:', itemsResult.error.message);
 		}

@@ -5,17 +5,7 @@ function canManageCatalog(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
-	if (!canManageCatalog(profile.role)) {
-		throw redirect(303, '/dashboard');
-	}
-
+async function loadData(locals: App.Locals) {
 	try {
 		const { data: colors, error } = await locals.supabase
 			.from('product_colors')
@@ -34,6 +24,24 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Unexpected exception in colors load:', e);
 		return { colors: [] };
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	if (!canManageCatalog(profile.role)) {
+		throw redirect(303, '/dashboard');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

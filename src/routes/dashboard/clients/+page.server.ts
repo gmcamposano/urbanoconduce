@@ -5,13 +5,7 @@ function canManageCatalog(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
+async function loadData(locals: App.Locals) {
 	try {
 		const { data: clients, error } = await locals.supabase
 			.from('clients')
@@ -30,6 +24,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Unexpected exception in clients load:', e);
 		return { clients: [] };
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

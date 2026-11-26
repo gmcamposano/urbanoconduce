@@ -8,13 +8,7 @@ function isValidStatus(status: string): status is (typeof VALID_STATUSES)[number
 	return VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number]);
 }
 
-export const load: PageServerLoad = async ({ parent, params, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/proforma');
-	}
-
+async function loadData(locals: App.Locals, id: string) {
 	const [
 		invoiceResult,
 		itemsResult,
@@ -27,12 +21,12 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		locals.supabase
 			.from('invoices')
 			.select('*, profiles:created_by(name, email)')
-			.eq('id', params.id)
+			.eq('id', id)
 			.single(),
 		locals.supabase
 			.from('invoice_items')
 			.select('*')
-			.eq('invoice_id', params.id)
+			.eq('invoice_id', id)
 			.order('created_at', { ascending: true }),
 		locals.supabase
 			.from('products')
@@ -54,7 +48,7 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 	}
 
 	if (invoiceResult.data.factura_tipo === 'proforma') {
-		throw redirect(303, `/dashboard/proforma/${params.id}/edit`);
+		throw redirect(303, `/dashboard/proforma/${id}/edit`);
 	}
 
 	if (itemsResult.error) {
@@ -112,9 +106,22 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 		colors,
 		models,
 		clients,
-		clientPrices: clientPricesResult.data || [],
-		isAdmin: profile?.role === 'admin'
+		clientPrices: clientPricesResult.data || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, params, locals }) => {
+	const dataPromise = loadData(locals, params.id);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	return { ...(await dataPromise), isAdmin: profile?.role === 'admin' };
 };
 
 export const actions: Actions = {

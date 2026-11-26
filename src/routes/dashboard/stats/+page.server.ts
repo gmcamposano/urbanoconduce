@@ -42,20 +42,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const tipoParam = url.searchParams.get('tipo');
 	const tipo = tipoParam === 'proforma' || tipoParam === 'factura' ? tipoParam : 'all';
 
-	const { data: clients, error: clientsError } = await locals.supabase
-		.from('clients')
-		.select('id, client_type, full_name, company_name, alias')
-		.order('full_name', { ascending: true });
-
-	if (clientsError) {
-		console.error('Stats load error (clients):', clientsError.message);
-	}
-
 	let invoiceTypes = ['ninguna', 'proforma'];
 	if (tipo === 'proforma') invoiceTypes = ['proforma'];
 	if (tipo === 'factura') invoiceTypes = ['ninguna'];
 
-	const [conversionsResult, invoicesResult] = await Promise.all([
+	const [clientsResult, conversionsResult, invoicesResult] = await Promise.all([
+		locals.supabase
+			.from('clients')
+			.select('id, client_type, full_name, company_name, alias')
+			.order('full_name', { ascending: true }),
 		locals.supabase
 			.from('invoices')
 			.select('source_proforma_id')
@@ -68,6 +63,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 			.lte('invoice_date', to)
 			.order('invoice_date', { ascending: true })
 	]);
+	const { data: clients, error: clientsError } = clientsResult;
+
+	if (clientsError) {
+		console.error('Stats load error (clients):', clientsError.message);
+	}
 
 	if (invoicesResult.error) {
 		console.error('Stats load error (invoices):', invoicesResult.error.message);

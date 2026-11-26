@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Handle } from '@sveltejs/kit';
+import type { User } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/public';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -25,27 +26,46 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	event.locals.safeGetUser = async () => {
+	event.locals.profile = null;
+
+	// Memoized per request: layout, page loads and actions share one auth + profile lookup.
+	let userPromise: Promise<{ user: User | null }> | null = null;
+	event.locals.safeGetUser = () => (userPromise ??= loadUser());
+
+	const loadUser = async (): Promise<{ user: User | null }> => {
 		if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
 			return { user: null };
 		}
 
 		try {
-			const {
-				data: { user },
-				error
-			} = await event.locals.supabase.auth.getUser();
+			// getClaims verifies the JWT locally when the project uses asymmetric signing keys
+			// (and falls back to the Auth server otherwise), avoiding a network call per request.
+			const { data, error } = await event.locals.supabase.auth.getClaims();
 
-			if (error) {
+			if (error || !data?.claims?.sub) {
 				return { user: null };
 			}
 
-			if (user && !event.locals.role) {
+			const { claims } = data;
+			const user = {
+				id: claims.sub,
+				aud: Array.isArray(claims.aud) ? (claims.aud[0] ?? '') : (claims.aud ?? ''),
+				email: claims.email,
+				phone: claims.phone,
+				role: claims.role,
+				is_anonymous: claims.is_anonymous,
+				app_metadata: claims.app_metadata ?? {},
+				user_metadata: claims.user_metadata ?? {},
+				created_at: ''
+			} as User;
+
+			if (user) {
 				const { data } = await event.locals.supabase
 					.from('profiles')
-					.select('role')
+					.select('id, email, name, role')
 					.eq('id', user.id)
 					.maybeSingle();
+				event.locals.profile = data ?? null;
 				event.locals.role = data?.role ?? null;
 			}
 

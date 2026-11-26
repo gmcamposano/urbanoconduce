@@ -3,22 +3,16 @@ import type { Actions, PageServerLoad } from './$types';
 import { resolveVariantIdForItem } from '$lib/server/inventory';
 import { generateUniqueInvoiceNumber, isInvoiceNumberTaken } from '$lib/server/invoiceNumber';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
-		throw redirect(303, '/dashboard/inventory');
-	}
-
-	const invoiceNumberPreview = await generateUniqueInvoiceNumber(locals.supabase, 'DES');
-
+async function loadData(locals: App.Locals) {
 	const [
+		invoiceNumberPreview,
 		{ data: products },
 		{ data: colors },
 		{ data: models },
 		{ data: clients },
 		{ data: warehouses }
 	] = await Promise.all([
+		generateUniqueInvoiceNumber(locals.supabase, 'DES'),
 		locals.supabase.from('products').select('id, title, model').order('title', { ascending: true }),
 		locals.supabase.from('product_colors').select('id, color').order('color', { ascending: true }),
 		locals.supabase.from('product_models').select('id, model').order('model', { ascending: true }),
@@ -38,6 +32,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		clients: clients || [],
 		warehouses: warehouses || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin' && profile?.role !== 'editor') {
+		throw redirect(303, '/dashboard/inventory');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

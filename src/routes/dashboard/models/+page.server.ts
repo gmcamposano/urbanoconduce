@@ -5,17 +5,7 @@ function canManageCatalog(role: string | null) {
 	return role === 'admin' || role === 'editor';
 }
 
-export const load: PageServerLoad = async ({ parent, locals, url }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
-	if (!canManageCatalog(profile.role)) {
-		throw redirect(303, '/dashboard');
-	}
-
+async function loadData(locals: App.Locals, url: URL) {
 	const sort = url.searchParams.get('sort') ?? 'model';
 	const order = url.searchParams.get('order') ?? 'asc';
 	const search = url.searchParams.get('search') ?? '';
@@ -47,6 +37,24 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 		console.error('Unexpected exception in models load:', e);
 		return { models: [], sort, order, search };
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, locals, url }) => {
+	const dataPromise = loadData(locals, url);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	if (!canManageCatalog(profile.role)) {
+		throw redirect(303, '/dashboard');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

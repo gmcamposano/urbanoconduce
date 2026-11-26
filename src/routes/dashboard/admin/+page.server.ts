@@ -1,13 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/proforma');
-	}
-
+async function loadData(locals: App.Locals) {
 	try {
 		const [{ data: profiles, error: profilesError }, { data: allowedEmails, error: allowedError }] =
 			await Promise.all([
@@ -31,6 +25,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Unexpected exception in admin load:', e);
 		return { profiles: [], allowedEmails: [] };
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

@@ -3,22 +3,31 @@ import type { Actions, PageServerLoad } from './$types';
 
 const VALID_STATUSES = ['paid'] as const;
 
-export const load: PageServerLoad = async ({ parent, params, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/proforma');
-	}
-
-	const { id } = params;
-
+async function loadData(locals: App.Locals, id: string) {
 	try {
-		// 1. Fetch Invoice Details
-		const { data: invoice, error: invoiceError } = await locals.supabase
-			.from('invoices')
-			.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
-			.eq('id', id)
-			.single();
+		const [invoiceResult, itemsResult, productsResult, modelsResult] = await Promise.all([
+			// 1. Fetch Invoice Details
+			locals.supabase
+				.from('invoices')
+				.select('*, profiles:created_by(name, email), clients:client_id(client_type, rnc)')
+				.eq('id', id)
+				.single(),
+			// 2. Fetch Line Items
+			locals.supabase
+				.from('invoice_items')
+				.select('*')
+				.eq('invoice_id', id)
+				.order('created_at', { ascending: true }),
+			// 3. Fetch Products (for model info)
+			locals.supabase
+				.from('products')
+				.select('id, title, model')
+				.order('title', { ascending: true }),
+			// 4. Fetch Models
+			locals.supabase.from('product_models').select('id, model').order('model', { ascending: true })
+		]);
+
+		const { data: invoice, error: invoiceError } = invoiceResult;
 
 		if (invoiceError || !invoice) {
 			console.error('Error fetching invoice details:', invoiceError?.message);
@@ -29,47 +38,42 @@ export const load: PageServerLoad = async ({ parent, params, locals }) => {
 			throw redirect(303, `/dashboard/proforma/${id}`);
 		}
 
-		// 2. Fetch Line Items
-		const { data: items, error: itemsError } = await locals.supabase
-			.from('invoice_items')
-			.select('*')
-			.eq('invoice_id', id)
-			.order('created_at', { ascending: true });
-
-		if (itemsError) {
-			console.error('Error fetching invoice items:', itemsError.message);
+		if (itemsResult.error) {
+			console.error('Error fetching invoice items:', itemsResult.error.message);
 		}
 
-		// 3. Fetch Products (for model info)
-		const { data: products, error: productsError } = await locals.supabase
-			.from('products')
-			.select('id, title, model')
-			.order('title', { ascending: true });
-
-		if (productsError) {
-			console.error('Error fetching products:', productsError.message);
+		if (productsResult.error) {
+			console.error('Error fetching products:', productsResult.error.message);
 		}
 
-		// 4. Fetch Models
-		const { data: models, error: modelsError } = await locals.supabase
-			.from('product_models')
-			.select('id, model')
-			.order('model', { ascending: true });
-
-		if (modelsError) {
-			console.error('Error fetching models:', modelsError.message);
+		if (modelsResult.error) {
+			console.error('Error fetching models:', modelsResult.error.message);
 		}
 
 		return {
 			invoice,
-			items: items || [],
-			products: products || [],
-			models: models || []
+			items: itemsResult.data || [],
+			products: productsResult.data || [],
+			models: modelsResult.data || []
 		};
 	} catch (e) {
 		console.error('Invoice details load exception:', e);
 		throw redirect(303, '/dashboard/invoices');
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, params, locals }) => {
+	const dataPromise = loadData(locals, params.id);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

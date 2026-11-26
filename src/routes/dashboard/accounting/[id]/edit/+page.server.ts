@@ -2,18 +2,12 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { buildClientCreditSummary, buildInvoiceBalances } from '$lib/server/accounting';
 
-export const load: PageServerLoad = async ({ params, parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, `/dashboard/accounting/${params.id}`);
-	}
-
+async function loadData(locals: App.Locals, id: string) {
 	const [paymentResult, clientsResult, invoicesResult, allocationsResult] = await Promise.all([
 		locals.supabase
 			.from('accounting')
 			.select('id, client_id, amount, payment_date, payment_method, reference_number, notes')
-			.eq('id', params.id)
+			.eq('id', id)
 			.single(),
 		locals.supabase
 			.from('clients')
@@ -67,6 +61,20 @@ export const load: PageServerLoad = async ({ params, parent, locals }) => {
 		initialPayment: paymentResult.data,
 		actionUrl: '?/updatePayment'
 	};
+}
+
+export const load: PageServerLoad = async ({ params, parent, locals }) => {
+	const dataPromise = loadData(locals, params.id);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, `/dashboard/accounting/${params.id}`);
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

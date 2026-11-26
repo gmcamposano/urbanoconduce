@@ -2,28 +2,21 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { buildInvoiceBalances, toAmount } from '$lib/server/accounting';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (profile?.role !== 'admin') {
-		throw redirect(303, '/dashboard/proforma');
-	}
-
+async function loadData(locals: App.Locals) {
 	try {
-		const [facturasResult, proformasResult, allocationsResult] = await Promise.all([
+		const embeddedSelect =
+			'*, profiles:created_by(name, email), accounting_allocations(id, payment_id, invoice_id, applied_amount)';
+		const [facturasResult, proformasResult] = await Promise.all([
 			locals.supabase
 				.from('invoices')
-				.select('*, profiles:created_by(name, email)')
+				.select(embeddedSelect)
 				.neq('factura_tipo', 'proforma')
 				.order('created_at', { ascending: false }),
 			locals.supabase
 				.from('invoices')
-				.select('*, profiles:created_by(name, email)')
+				.select(embeddedSelect)
 				.eq('factura_tipo', 'proforma')
-				.order('created_at', { ascending: false }),
-			locals.supabase
-				.from('accounting_allocations')
-				.select('id, payment_id, invoice_id, applied_amount')
+				.order('created_at', { ascending: false })
 		]);
 
 		if (facturasResult.error) {
@@ -35,23 +28,24 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 			console.error('Supabase query error in proformas load:', proformasResult.error.message);
 		}
 
-		if (allocationsResult.error) {
-			console.error(
-				'Supabase query error in dashboard allocations:',
-				allocationsResult.error.message
-			);
-		}
-
-		const allInvoiceIds = new Set([
-			...(facturasResult.data || []).map((invoice) => invoice.id),
-			...(proformasResult.data || []).map((invoice) => invoice.id)
-		]);
-		const allocations = (allocationsResult.data || []).filter((allocation) =>
-			allInvoiceIds.has(allocation.invoice_id)
-		);
-		const invoices = buildInvoiceBalances(facturasResult.data || [], allocations);
-		const proformas = buildInvoiceBalances(proformasResult.data || [], allocations);
-		const facturaIds = new Set((facturasResult.data || []).map((inv) => inv.id));
+		const allocations = [
+			...(facturasResult.data || []).flatMap((row) => row.accounting_allocations || []),
+			...(proformasResult.data || []).flatMap((row) => row.accounting_allocations || [])
+		];
+		// Strip the embedded allocations so they are not sent to the client.
+		const facturaRows = (facturasResult.data || []).map((row) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { accounting_allocations, ...invoice } = row;
+			return invoice;
+		});
+		const proformaRows = (proformasResult.data || []).map((row) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { accounting_allocations, ...invoice } = row;
+			return invoice;
+		});
+		const invoices = buildInvoiceBalances(facturaRows, allocations);
+		const proformas = buildInvoiceBalances(proformaRows, allocations);
+		const facturaIds = new Set(facturaRows.map((inv) => inv.id));
 		const totalPaid = allocations.reduce(
 			(sum, allocation) =>
 				sum + (facturaIds.has(allocation.invoice_id) ? toAmount(allocation.applied_amount) : 0),
@@ -67,6 +61,20 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		console.error('Unexpected exception in dashboard load:', e);
 		return { invoices: [], proformas: [], totalPaid: 0 };
 	}
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (profile?.role !== 'admin') {
+		throw redirect(303, '/dashboard/proforma');
+	}
+
+	return await dataPromise;
 };
 
 export const actions: Actions = {

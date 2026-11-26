@@ -1,17 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ parent, locals }) => {
-	const { profile } = await parent();
-
-	if (!profile) {
-		throw redirect(303, '/login');
-	}
-
-	const { data: movements, error } = await locals.supabase
-		.from('inventory_movements')
-		.select(
-			`
+async function loadData(locals: App.Locals) {
+	const [{ data: movements, error }, { data: models }] = await Promise.all([
+		locals.supabase
+			.from('inventory_movements')
+			.select(
+				`
 			id,
 			type,
 			quantity,
@@ -25,21 +20,32 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 				products (id, title, model, clients(client_type, full_name, company_name, alias))
 			)
 		`
-		)
-		.order('created_at', { ascending: false })
-		.limit(200);
+			)
+			.order('created_at', { ascending: false })
+			.limit(200),
+		locals.supabase.from('product_models').select('*').order('model', { ascending: true })
+	]);
 
 	if (error) {
 		console.error('Inventory movements load error:', error.message);
 	}
 
-	const { data: models } = await locals.supabase
-		.from('product_models')
-		.select('*')
-		.order('model', { ascending: true });
-
 	return {
 		movements: movements || [],
 		models: models || []
 	};
+}
+
+export const load: PageServerLoad = async ({ parent, locals }) => {
+	const dataPromise = loadData(locals);
+	// Prevent an unhandled rejection if the guard below redirects before we await it.
+	dataPromise.catch(() => {});
+
+	const { profile } = await parent();
+
+	if (!profile) {
+		throw redirect(303, '/login');
+	}
+
+	return await dataPromise;
 };
